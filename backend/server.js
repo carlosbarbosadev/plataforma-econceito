@@ -6,7 +6,6 @@ app.use(express.json()); // 🔥 Sem isso, o req.body vem vazio!
 const produtosRoute = require('./routes/produtos');
 app.use('/produtos', produtosRoute);
 
-
 const loginRoute = require('./routes/login');
 app.use('/login', loginRoute); // 🔐 Garante que a rota funcione
 
