@@ -1,6 +1,7 @@
 const express = require('express');
-const app = express();
+require('dotenv').config();
 
+const app = express();
 app.use(express.json()); // 🔥 Sem isso, o req.body vem vazio!
 
 const produtosRoute = require('./routes/produtos');

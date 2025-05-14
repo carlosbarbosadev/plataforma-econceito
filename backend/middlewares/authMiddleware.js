@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const SECRET = 'embalagens-conceito-123';
+const SECRET = process.env.SECRET;
 
 // Middleware que verifica o token e extrai os dados do usuário
 function autenticarToken(req, res, next) {
@@ -26,7 +26,7 @@ function apenasAdmin(req, res, next) {
 
 // Middleware para checar se é VENDEDOR
 function apenasVendedor(req, res, next) {
-  if (req.usuario.tipo ==! 'vendedor') {
+  if (req.usuario.tipo !== 'vendedor') {
     return res.status(403).json({ mensagem: 'Acesso permitido apenas para vendedor' });
   }
   next();

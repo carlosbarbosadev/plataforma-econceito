@@ -23,7 +23,7 @@ router.post('/', autenticarToken, (req, res) => {
     const { cliente, produtos } = req.body;
 
     if (!cliente || !produtos || Array.isArray(produtos)) {
-        return res.status(400).json({ mensagem: 'Dadosinválidos' });
+        return res.status(400).json({ mensagem: 'Dados inválidos' });
     }
 
     const pedidos = JSON.parse(fs.readFileSync(caminhoArquivo, 'utf-8'));
