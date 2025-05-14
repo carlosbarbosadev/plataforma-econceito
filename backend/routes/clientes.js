@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const fs = riquere('fs');
+const fs = require('fs');
 const { autenticarToken } = require('../middlewares/authMiddleware');
 
 // Rota protegida com autenticação
@@ -9,7 +9,7 @@ router.get('/', autenticarToken, (req, res) => {
 
     if (req.usuario.tipo === 'admin') {
     // Admin vê todos
-    return res.json(todosCliente);
+    return res.json(todosClientes);
     } else if (req.usuario.tipo === 'vendedor') {
     // Vendedor vê  apenas seus clientes
     const clienteDoVendedor = todosClientes.filter(
