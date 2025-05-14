@@ -1,5 +1,5 @@
-const express = require('express');
 require('dotenv').config();
+const express = require('express');
 
 const app = express();
 app.use(express.json()); // 🔥 Sem isso, o req.body vem vazio!
