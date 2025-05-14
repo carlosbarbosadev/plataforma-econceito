@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
-const SECRET = process.env.SECRET;
+console.log('🔐 Valor do SECRET:', process.env.SECRET);
+const SECRET = process.env.SECRET || 'segredo alernativo';
 
 // Middleware que verifica o token e extrai os dados do usuário
 function autenticarToken(req, res, next) {
