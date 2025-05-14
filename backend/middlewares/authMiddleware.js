@@ -1,22 +1,34 @@
 const jwt = require('jsonwebtoken');
-const JWT_SECRET = 'segredo_super_secreto';
+const JWT_SECRET = 'embalagens-conceito-123';
 
 function autenticarToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN_AQUI
 
-  if (!token) {
-    return res.status(401).json({ erro: 'Token não fornecido' });
-  }
+  if (!token) return res.status(401).json({ mensagem: 'Token não fornecido' });
+  
+  jwt.verify(token, SECRET, (err, usuario) => {
+    if (err) return res.status(403).json({ mensagem: 'Token inválido' });
 
-  jwt.verify(token, JWT_SECRET, (err, usuario) => {
-    if (err) {
-      return res.status(403).json({ erro: 'Token inválido' });
-    }
-
-    req.usuario = usuario; // salva o usuário no request
-    next(); // continua para a rota protegida
+    req.usuario = usuario; // Armazena os dados do token no request
+    next(); // Continua para a rota protegida
   });
 }
 
-module.exports = autenticarToken;
+// Middleware para checar se é ADMIN
+function apenasAdmin(req, res, next) {
+  if (req.usuario.tipo !== 'admin') {
+    return res.status(403).json({ mensagem: 'Acesso permitido apenas para administrador' });
+  }
+  next();
+}
+
+// Middleware para checar se é Vendedor
+function apenasVendedor(req, res, next) {
+  if (req.usuario.tipo ==! 'vendedor') {
+    return res.status(403).json({ mensagem: 'Acesso permitido apenas para vendedor' });
+  }
+  next();
+}
+
+module.exports = { autenticarToken, apenasAdmin, apenasVendedor };
