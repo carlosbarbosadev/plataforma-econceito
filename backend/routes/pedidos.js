@@ -6,7 +6,7 @@ const caminhoArquivo = 'pedidos.json';
 
 // GET /pedidos - Lista de pedidos
 router.get('/', autenticarToken, (req, res) => {
-    const pedidos = JSON.parse(fs.read.File.Sync(caminhoArquivo, 'utf-8'));
+    const pedidos = JSON.parse(fs.readFileSync(caminhoArquivo, 'utf-8'));
 
     if (req.usuario.tipo === 'admin') {
         return res.json(pedidos);
@@ -22,7 +22,7 @@ router.get('/', autenticarToken, (req, res) => {
 router.post('/', autenticarToken, (req, res) => {
     const { cliente, produtos } = req.body;
 
-    if (!cliente || !produtos || Array.isArray(produtos)) {
+    if (!cliente || !produtos || !Array.isArray(produtos)) {
         return res.status(400).json({ mensagem: 'Dados inválidos' });
     }
 
