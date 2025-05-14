@@ -17,5 +17,5 @@ app.listen(PORT, () => {
 const clientesRoute = require('./routes/clientes');
 app.use('/clientes', clientesRoute);
 
-const pedidosRoute = require('./route/pedidos');
+const pedidosRoute = require('./routes/pedidos');
 app.use('/pedidos', pedidosRoute);
