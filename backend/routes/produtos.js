@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { autenticarToken, apenasAdmin } = require('../middleware/authMiddleware');
+const { autenticarToken, apenasAdmin } = require('../middlewares/authMiddleware');
 
 // Apenas administradores veem todos os produtos 
 router.get('/', autenticarToken, apenasAdmin, (req, res) => { 
