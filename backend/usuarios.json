@@ -6,7 +6,7 @@
     "tipo": "admin"
   },
   {
-   "nome": "Carlos vendedor",
+   "nome": "João vendedor",
     "email": "vendedor@conceito.com",
     "senha": "vendedor123",
     "tipo": "vendedor" 

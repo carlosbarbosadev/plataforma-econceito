@@ -3,7 +3,7 @@
         "id": 1,
         "cliente": "Cliente A",
         "produtos": ["Produto 1", "Produto 2"],
-        "vendedor": "vendedor@conceito.com",
+        "vendedor": "admin@conceito.com",
         "data": "14/05/2025"
     },
     {
