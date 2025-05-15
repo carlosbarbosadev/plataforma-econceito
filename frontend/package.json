@@ -1,46 +1,71 @@
 {
-  "name": "soft-ui-dashboard",
-  "version": "1.1.0",
-  "description": "Freebie Dashboard for Bootstrap 5",
-  "main": "pages/dashboard.html",
+  "name": "@minimal/material-kit-react",
+  "author": "minimals.cc",
+  "licence": "MIT",
+  "version": "3.0.0",
+  "private": false,
   "type": "module",
-  "directories": {
-    "example": "root"
-  },
   "scripts": {
-    "open-app": "gulp open-app",
-    "start": "npm run open-app",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "watch": "gulp-watch"
+    "dev": "vite",
+    "start": "vite preview",
+    "build": "tsc && vite build",
+    "lint": "eslint \"src/**/*.{js,jsx,ts,tsx}\"",
+    "lint:fix": "eslint --fix \"src/**/*.{js,jsx,ts,tsx}\"",
+    "lint:print": "npx eslint --print-config eslint.config.mjs > eslint-show-config.json",
+    "fm:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx}\"",
+    "fm:fix": "prettier --write \"src/**/*.{js,jsx,ts,tsx}\"",
+    "fix:all": "npm run lint:fix && npm run fm:fix",
+    "clean": "rm -rf node_modules .next out dist build",
+    "re:dev": "yarn clean && yarn install && yarn dev",
+    "re:build": "yarn clean && yarn install && yarn build",
+    "re:build-npm": "npm run clean && npm install && npm run build",
+    "tsc:dev": "yarn dev & yarn tsc:watch",
+    "tsc:watch": "tsc --noEmit --watch",
+    "tsc:print": "npx tsc --showConfig"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/creativetimofficial/soft-ui-dashboard.git"
+  "engines": {
+    "node": ">=20"
   },
-  "keywords": [
-    "soft ui dashboard",
-    "bootstrap 5",
-    "dashboard",
-    "creative tim",
-    "html dashboard",
-    "html css dashboard",
-    "web dashboard",
-    "freebie",
-    "free bootstrap dashboard",
-    "css3 dashboard",
-    "bootstrap dashboard",
-    "frontend",
-    "responsive bootstrap dashboard"
-  ],
-  "author": "Creative Tim <hello@creative-tim.com> (https://www.creative-tim.com/)",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/creativetimofficial/soft-ui-dashboard/issues"
+  "packageManager": "yarn@1.22.22",
+  "dependencies": {
+    "@emotion/cache": "^11.14.0",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@fontsource-variable/dm-sans": "^5.2.5",
+    "@fontsource/barlow": "^5.2.5",
+    "@iconify/react": "^5.2.1",
+    "@mui/lab": "^7.0.0-beta.10",
+    "@mui/material": "^7.0.1",
+    "apexcharts": "^4.5.0",
+    "bootstrap": "^5.3.6",
+    "dayjs": "^1.11.13",
+    "es-toolkit": "^1.34.1",
+    "minimal-shared": "^1.0.7",
+    "react": "^19.1.0",
+    "react-apexcharts": "^1.7.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.4.1",
+    "simplebar-react": "^3.3.0"
   },
   "devDependencies": {
-    "gulp": "5.0.0",
-    "gulp-open": "3.0.1",
-    "sass": "1.80.2"
-  },
-  "homepage": "http://creative-tim.com/product/soft-ui-dashboard"
+    "@eslint/js": "^9.23.0",
+    "@types/node": "^22.14.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.1",
+    "@typescript-eslint/parser": "^8.29.0",
+    "@vitejs/plugin-react-swc": "^3.8.1",
+    "eslint": "^9.23.0",
+    "eslint-import-resolver-typescript": "^4.3.1",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-perfectionist": "^4.11.0",
+    "eslint-plugin-react": "^7.37.4",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-unused-imports": "^4.1.4",
+    "globals": "^16.0.0",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.2",
+    "typescript-eslint": "^8.29.0",
+    "vite": "^6.2.5",
+    "vite-plugin-checker": "^0.9.1"
+  }
 }

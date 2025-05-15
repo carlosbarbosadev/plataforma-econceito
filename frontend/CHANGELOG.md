@@ -1,69 +1,106 @@
-# Change Log
+### v3.0.0
 
-## [1.1.0] 2024-10-25
+###### Apr 3, 2025
 
-### Updates & Bugfixing
+- Support MUI v7.
+- Support React v19.
+- Support Eslint v9.
+- Upgrade and restructure the directory.
+- Upgrade some dependencies to the latest versions.
 
-- upgrade Bootstrap version to v5.3.3
-- all plugins updated to the latest version
+---
 
-## [1.0.7] 2022-12-09
+### v2.0.0
 
-### Updates and Improvements
+###### Aug 24, 2024
 
-- update Bootstrap to v5.2.3
+- [New] Migrate to typescript.
+- Upgrade and restructure the directory.
+- Upgrade some dependencies to the latest versions.
 
-## [1.0.6] 2022-06-03
+---
 
-### Updates and Improvements
+### v1.8.0
 
-- update Bootstrap to v5.2.0-beta1
-- fix input-group focus issue
+###### Wed 11, 2023
 
-## [1.0.5] 2022-03-25
+- [New] Migrate to vite.js.
+- Upgrade and restructure the directory.
+- Upgrade some dependencies to the latest versions
 
-### Update
+---
 
-- update SCSS folder
+### v1.7.0
 
-## [1.0.4] 2022-03-18
+###### Feb 21, 2023
 
-### Updates & Bugfixing
+- Upgrade some dependencies to the latest versions
 
-- upgrade Bootstrap version to v5.1.3
-- upgrade ChartJs plugin version to v3.7.1
-- fix running 'npm install' issue
-- fix SCSS compiling issues
-- update sidebar height
-- fix sidebar button on Safari
-- update dropdown text on RTL page
-- fix navbar scroll error on example pages
+---
 
-## [1.0.3] 2021-06-25
+### v1.6.0
 
-### Updates & Improvements
+###### Oct 17, 2022
 
-- upgrade Bootstrap version to v5.0.2
-- add new page - Virtual Reality
-- add perfectScrollbar for Windows users
-- change headings color from '#252F40' to '#344767'
-- reduce the 'img' folder size - compress images
-- bug fixing
-- fix W3 errors
+- Upgrade and restructure the directory.
+- Upgrade some dependencies to the latest versions
 
-## [1.0.2] 2021-05-10
+---
 
-### Updates & Bugfixing
+### v1.5.0
 
-- upgrade Bootstrap version to v5.0.1
-- bug fixing
+###### Jul 04, 2022
 
-## [1.0.1] 2021-04-06
+- Support react 18.
+- Upgrade some dependencies to the latest versions
 
-### Improvements
+---
 
-- Design changes
+### v1.4.0
 
-## [1.0.0] 2021-04-02
+###### Apr 12, 2022
 
-### Original Release
+- Update `src/components`.
+- Update `src/sections`.
+- Update `src/pages`.
+- Update `src/layouts`.
+- Update `src/theme`.
+- Upgrade some dependencies to the latest versions
+
+---
+
+### v1.3.0
+
+###### Feb 21, 2022
+
+- Support react-script v5.0.0
+- Source code improvement
+- Upgrade some dependencies to the latest versions
+
+---
+
+### v1.2.0
+
+###### Sep 18, 2021
+
+- Support MIU v5.0.0 official release
+- Upgrade some dependencies to the latest versions
+- Update `src/theme/typography.js`
+- Upgrade some dependencies to the latest versions
+
+---
+
+### v1.1.0
+
+###### Jul 23, 2021
+
+- Support MUI v5.0.0-beta.1
+- Upgrade some dependencies to the latest versions
+
+---
+
+### v1.0.0
+
+###### Jun 28, 2021
+
+Initial release.
