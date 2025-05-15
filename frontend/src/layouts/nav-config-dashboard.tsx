@@ -1,5 +1,8 @@
+import Box from '@mui/material/Box';
+
 import { Label } from 'src/components/label';
 import { SvgColor } from 'src/components/svg-color';
+
 
 // ----------------------------------------------------------------------
 
@@ -12,40 +15,80 @@ export type NavItem = {
   info?: React.ReactNode;
 };
 
-export const navData = [
+export const navData: NavItem[] = [
   {
-    title: 'Dashboard',
+    title: 'Painel',
     path: '/',
-    icon: icon('ic-analytics'),
-  },
-  {
-    title: 'User',
-    path: '/user',
-    icon: icon('ic-user'),
-  },
-  {
-    title: 'Product',
-    path: '/products',
-    icon: icon('ic-cart'),
-    info: (
-      <Label color="error" variant="inverted">
-        +3
-      </Label>
+    icon: (
+      <Box
+        sx={{
+          display: 'inline-block',
+          width: 8,
+          height: 8,
+          borderRadius: '50%',
+          bgcolor: 'text.primary',
+        }}
+      />
     ),
   },
   {
-    title: 'Blog',
-    path: '/blog',
-    icon: icon('ic-blog'),
+    title: 'Clientes',
+    path: '/clientes',
+    icon: (
+      <Box
+        sx={{
+          display: 'inline-block',
+          width: 8,
+          height: 8,
+          borderRadius: '50%',
+          bgcolor: 'text.primary',
+        }}
+      />
+    ),
   },
   {
-    title: 'Sign in',
-    path: '/sign-in',
-    icon: icon('ic-lock'),
+    title: 'Pedidos',
+    path: '/pedidos',
+    icon: (
+      <Box
+        sx={{
+          display: 'inline-block',
+          width: 8,
+          height: 8,
+          borderRadius: '50%',
+          bgcolor: 'text.primary',
+        }}
+      />
+    ),
   },
   {
-    title: 'Not found',
-    path: '/404',
-    icon: icon('ic-disabled'),
+    title: 'Produtos',
+    path: '/produtos',
+    icon: (
+      <Box
+        sx={{
+          display: 'inline-block',
+          width: 8,
+          height: 8,
+          borderRadius: '50%',
+          bgcolor: 'text.primary',
+        }}
+      />
+    ),
+  },
+  {
+    title: 'Campanhas',
+    path: '/campanhas',
+    icon: (
+      <Box
+        sx={{
+          display: 'inline-block',
+          width: 8,
+          height: 8,
+          borderRadius: '50%',
+          bgcolor: 'text.primary',
+        }}
+      />
+    ),
   },
 ];
