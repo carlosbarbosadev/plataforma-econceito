@@ -1,7 +1,8 @@
 // src/pages/user.tsx
 import { useEffect, useState } from 'react';
-import api from 'src/services/api';
+
 import { Table, Spinner, Alert } from 'react-bootstrap'; // ou use Bootstrap puro
+import api from 'src/services/api';
 
 type Cliente = { id: number; nome: string; email: string };
 
