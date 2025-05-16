@@ -11,3 +11,5 @@ fs.writeFileSync(
   path.join(__dirname, '../bling-tokens.json'),
   JSON.stringify({ access_token, refresh_token: newRefreshToken }, null, 2)
 );
+
+module.exports = router;
