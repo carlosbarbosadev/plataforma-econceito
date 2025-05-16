@@ -3,7 +3,7 @@ const { Pool } = require('pg');         // Importa o pool do pg
 
 // Configura a conexão usando as variáveis de ambiente
 
-const pool = new pool ({
+const pool = new Pool ({
     host:     process.env.DB_HOST,      // ex: localhost
     port:     process.env.DB_PORT,      // ex: 5432
     user:     process.env.DB_USER,      // seu usuário do Postgres
