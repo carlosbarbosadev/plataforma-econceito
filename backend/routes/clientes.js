@@ -4,7 +4,7 @@ const pool = require('../db');
 const { autenticarToken } = require('../middlewares/authMiddleware');
 
 // Rota protegida com autenticação
-router.get('/', autenticarToken, async (req, res) => {
+router.get('/', /* autenticarToken, */ async (req, res) => {
   try {
     // busca todos os clientes do banco 
     const { rows: todosClientes } = await pool.query(`
