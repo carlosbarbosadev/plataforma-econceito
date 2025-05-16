@@ -1,0 +1,14 @@
+[
+  {
+    "nome": "Administrador",
+    "email": "admin@conceito.com",
+    "senha": "admin123",
+    "tipo": "admin"
+  },
+  {
+   "nome": "João vendedor",
+    "email": "vendedor@conceito.com",
+    "senha": "vendedor123",
+    "tipo": "vendedor" 
+  }
+]

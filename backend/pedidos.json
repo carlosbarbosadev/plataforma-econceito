@@ -1,0 +1,16 @@
+[
+    {
+        "id": 1,
+        "cliente": "Cliente A",
+        "produtos": ["Produto 1", "Produto 2"],
+        "vendedor": "admin@conceito.com",
+        "data": "14/05/2025"
+    },
+    {
+        "id": 2,
+        "cliente": "Cliente B",
+        "produtos": ["Produto 3"],
+        "vendedor": "vendedor@conceito.com",
+        "data": "09/05/2025"
+    }
+]
