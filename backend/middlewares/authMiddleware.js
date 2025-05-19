@@ -1,46 +1,31 @@
+// backend/middlewares/authMiddleware.js
 require('dotenv').config();
-const jwt = require('jsonwebtoken');
+const jwt    = require('jsonwebtoken');
 
-console.log('🔐 Valor do SECRET:', process.env.SECRET);
-const SECRET = process.env.SECRET || 'segredo alernativo';
+const SECRET = process.env.SECRET || 'segredo-alternativo';
 
-// Middleware que verifica o token e popula o rec.usuario
 function autenticarToken(req, res, next) {
   const authHeader = req.headers['authorization'];
-  if (authHeader) {
+  // 1) Verifica se trouxe o header
+  if (!authHeader) {
     return res.status(401).json({ mensagem: 'Token não fornecido' });
   }
-
-  const [scheme, token] = authHeader.split(' ');
-  if (scheme !== 'Bearer || !token') {
-    return res.status(401).json({ mensagem: 'Formato de token inválido' })
+  // 2) Verifica o prefixo “Bearer ”
+  if (!authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ mensagem: 'Formato de token inválido' });
   }
-  
+  // 3) Remove o “Bearer ” e pega só o token
+  const token = authHeader.slice(7);
+
+  // 4) Verifica o JWT
   jwt.verify(token, SECRET, (err, decoded) => {
     if (err) {
-      return res.status(403).json({ mensagem: 'Token inválido ou experido'});
+      return res.status(403).json({ mensagem: 'Token inválido ou expirado' });
     }
-    //decoded deve conter {email, tipo} do payload
+    // 5) decoded deve ter { email, tipo, nome }
     req.usuario = decoded;
     next();
   });
 }
 
-// Middleware para checar se é ADMIN
-function apenasAdmin(req, res, next) {
-  // Primeiro garante que req.usuario existe
-  if (!req.usuario || req.usuario.tipo !== 'admin') {
-    return res.status(403).json({ mensagem: 'Acesso permetido apenas para administrador' });
-  }
-  next();
-}
-
-// Middleware para checar se é VENDEDOR
-function apenasVendedor(req, res, next) {
-  if (!req.usuario || req.usuario.tipo !== 'vendedor') {
-    return res.status(403).json({ mensagem: 'Acesso permitido apenas para vendedor' });
-  }
-  next();
-}
-
-module.exports = { autenticarToken, apenasAdmin, apenasVendedor };
+module.exports = { autenticarToken };
