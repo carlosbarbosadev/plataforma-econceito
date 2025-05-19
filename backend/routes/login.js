@@ -3,7 +3,7 @@ const router = express.Router();
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
 
-const SECRET = 'embalagens-conceito-123'
+const SECRET = process.env.SECRET || 'segredo-alternativo';
 
 router.get ('/', (req, res) => {
   res.send('Rota /login está ativa. Use POST via Postamn para autenticar.');

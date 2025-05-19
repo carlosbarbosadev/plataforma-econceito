@@ -8,7 +8,7 @@
   {
    "nome": "João vendedor",
     "email": "vendedor@conceito.com",
-    "senha": "vendedor123",
+    "senha": "abcd",
     "tipo": "vendedor" 
   }
 ]
