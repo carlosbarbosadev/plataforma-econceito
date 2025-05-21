@@ -40,15 +40,7 @@ export default function App({ children }: AppProps) {
 
   return (
     <ThemeProvider>
-      {/* ======= WRAPPER DE BOOTSTRAP ======= */}
       <div className="container py-4">
-        {/* Título de teste */}
-        <h1 className="mb-4">Olá, Embalagens Conceito!</h1>
-
-        {/* Botão de teste Bootstrap */}
-        <button className="btn btn-primary mb-4">
-          Teste Bootstrap
-        </button>
 
         {/* Conteúdo original das suas rotas */}
         {children}
