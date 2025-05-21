@@ -1,10 +1,16 @@
-// src/pages/user.tsx
 import { useEffect, useState } from 'react';
 import { Table, Spinner, Alert } from 'react-bootstrap'; // ou use Bootstrap puro
 
 import api from 'src/services/api';
 
-type Cliente = { id: number; nome: string; email: string };
+type Cliente = { 
+  id: number; 
+  nome: string; 
+  /* email: string */
+  numeroDocumento?: string;
+  telefone?: string
+  celular?: string 
+};
 
 export default function ClientesPage() {
   const [data, setData] = useState<Cliente[]>([]);
@@ -26,12 +32,24 @@ export default function ClientesPage() {
       <h2>Clientes</h2>
       <Table striped bordered hover>
         <thead>
-          <tr><th>ID</th><th>Nome</th><th>Email</th></tr>
+          <tr>
+            <th>ID</th>
+            <th>Nome</th>
+            {/*<th>Email</th>*/}
+            <th>Documento</th>
+            <th>Telefone</th>
+            <th>Celular</th>
+            </tr>
         </thead>
         <tbody>
           {data.map(c => (
             <tr key={c.id}>
-              <td>{c.id}</td><td>{c.nome}</td><td>{c.email}</td>
+              <td>{c.id}</td>
+              <td>{c.nome}</td>
+              {/*<td>{c.email}</td>*/}
+              <td>{c.numeroDocumento}</td>
+              <td>{c.telefone}</td>
+              <td>{c.celular}</td>
             </tr>
           ))}
         </tbody>
