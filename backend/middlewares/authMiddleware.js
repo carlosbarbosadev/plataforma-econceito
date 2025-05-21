@@ -1,6 +1,6 @@
 // backend/middlewares/authMiddleware.js
 require('dotenv').config();
-const jwt    = require('jsonwebtoken');
+const jwt = require('jsonwebtoken');
 
 const SECRET = process.env.SECRET || 'segredo-alternativo';
 
