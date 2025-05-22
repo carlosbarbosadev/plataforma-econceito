@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
 
@@ -17,16 +19,17 @@ import { AnalyticsConversionRates } from '../analytics-conversion-rates';
 // ----------------------------------------------------------------------
 
 export function OverviewAnalyticsView() {
+  const { t } = useTranslation();
   return (
     <DashboardContent maxWidth="xl">
       <Typography variant="h4" sx={{ mb: { xs: 3, md: 5 } }}>
-        Hi, Welcome back 👋
+      {t('dashboard.welcomeMessage')}
       </Typography>
 
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <AnalyticsWidgetSummary
-            title="Weekly sales"
+            title={t("dashboard2.monthSales")}
             percent={2.6}
             total={714000}
             icon={<img alt="Weekly sales" src="/assets/icons/glass/ic-glass-bag.svg" />}
@@ -39,7 +42,7 @@ export function OverviewAnalyticsView() {
 
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <AnalyticsWidgetSummary
-            title="New users"
+            title={t("dashboard3.newUsers")}
             percent={-0.1}
             total={1352831}
             color="secondary"
@@ -53,7 +56,7 @@ export function OverviewAnalyticsView() {
 
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <AnalyticsWidgetSummary
-            title="Purchase orders"
+            title={t("dashboard4.purchaseOrders")}
             percent={2.8}
             total={1723315}
             color="warning"
@@ -67,7 +70,7 @@ export function OverviewAnalyticsView() {
 
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <AnalyticsWidgetSummary
-            title="Messages"
+            title={t("dashboard5.messages")}
             percent={3.6}
             total={234}
             color="error"
@@ -81,13 +84,13 @@ export function OverviewAnalyticsView() {
 
         <Grid size={{ xs: 12, md: 6, lg: 4 }}>
           <AnalyticsCurrentVisits
-            title="Current visits"
+            title={t("dashboard6.currentVisits")}
             chart={{
               series: [
-                { label: 'America', value: 3500 },
-                { label: 'Asia', value: 2500 },
-                { label: 'Europe', value: 1500 },
-                { label: 'Africa', value: 500 },
+                { label: 'América', value: 3500 },
+                { label: 'Ásia', value: 2500 },
+                { label: 'Europa', value: 1500 },
+                { label: 'África', value: 500 },
               ],
             }}
           />
@@ -95,7 +98,7 @@ export function OverviewAnalyticsView() {
 
         <Grid size={{ xs: 12, md: 6, lg: 8 }}>
           <AnalyticsWebsiteVisits
-            title="Website visits"
+            title={t("dashboard7.webSiteVisits")}
             subheader="(+43%) than last year"
             chart={{
               categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'],
@@ -109,7 +112,7 @@ export function OverviewAnalyticsView() {
 
         <Grid size={{ xs: 12, md: 6, lg: 8 }}>
           <AnalyticsConversionRates
-            title="Conversion rates"
+            title={t("dashboard8.conversionRates")}
             subheader="(+43%) than last year"
             chart={{
               categories: ['Italy', 'Japan', 'China', 'Canada', 'France'],
@@ -123,32 +126,32 @@ export function OverviewAnalyticsView() {
 
         <Grid size={{ xs: 12, md: 6, lg: 4 }}>
           <AnalyticsCurrentSubject
-            title="Current subject"
+            title={t("dashboard9.currentSubject")}
             chart={{
               categories: ['English', 'History', 'Physics', 'Geography', 'Chinese', 'Math'],
               series: [
-                { name: 'Series 1', data: [80, 50, 30, 40, 100, 20] },
-                { name: 'Series 2', data: [20, 30, 40, 80, 20, 80] },
-                { name: 'Series 3', data: [44, 76, 78, 13, 43, 10] },
+                { name: 'Série 1', data: [80, 50, 30, 40, 100, 20] },
+                { name: 'Série 2', data: [20, 30, 40, 80, 20, 80] },
+                { name: 'Série 3', data: [44, 76, 78, 13, 43, 10] },
               ],
             }}
           />
         </Grid>
 
         <Grid size={{ xs: 12, md: 6, lg: 8 }}>
-          <AnalyticsNews title="News" list={_posts.slice(0, 5)} />
+          <AnalyticsNews title={t("dashboard10.news")} list={_posts.slice(0, 5)} />
         </Grid>
 
         <Grid size={{ xs: 12, md: 6, lg: 4 }}>
-          <AnalyticsOrderTimeline title="Order timeline" list={_timeline} />
+          <AnalyticsOrderTimeline title={t("dashboard1.orderTimeLine")} list={_timeline} />
         </Grid>
 
         <Grid size={{ xs: 12, md: 6, lg: 4 }}>
-          <AnalyticsTrafficBySite title="Traffic by site" list={_traffic} />
+          <AnalyticsTrafficBySite title={t("dashboard11.trafficBySite")} list={_traffic} />
         </Grid>
 
         <Grid size={{ xs: 12, md: 6, lg: 8 }}>
-          <AnalyticsTasks title="Tasks" list={_tasks} />
+          <AnalyticsTasks title={t("dashboard12.tasks")} list={_tasks} />
         </Grid>
       </Grid>
     </DashboardContent>

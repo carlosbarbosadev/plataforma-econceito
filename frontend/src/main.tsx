@@ -1,6 +1,7 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
+import './i18n';
 
-import { StrictMode } from 'react';
+import { StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Outlet, RouterProvider, createBrowserRouter } from 'react-router';
 
@@ -26,6 +27,8 @@ const root = createRoot(document.getElementById('root')!);
 
 root.render(
   <StrictMode>
+    <Suspense fallback={<div>Carregando idioma...</div>}>
     <RouterProvider router={router} />
+    </Suspense>
   </StrictMode>
 );

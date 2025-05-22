@@ -1,0 +1,52 @@
+{
+  "clientsPage": {
+    "title": "Meus Clientes",
+    "searchPlaceholder": "Buscar por nome, ID, documento..."
+  },
+  "tableHeaders": {
+    "id": "Cód.",
+    "name": "Nome Completo",
+    "document": "Documento ID",
+    "phone": "Telefone Principal",
+    "cellphone": "Celular Principal"
+  },
+  "dashboard": {
+    "welcomeMessage": "Bem-vindo(a) a Plataforma de vendas"
+  },
+  "dashboard1": {
+    "orderTimeLine": "Cronograma de pedidos"
+  },
+  "dashboard2": {
+    "monthSales": "Vendas do mês"
+  },
+  "dashboard3": {
+    "newUsers": "Novos usuários"
+  },
+  "dashboard4": {
+    "purchaseOrders": "Pedidos de compra"
+  },
+  "dashboard5": {
+    "messages": "Mensagens"
+  },
+  "dashboard6": {
+    "currentVisits": "Visitas Atuais"
+  },
+  "dashboard7": {
+    "webSiteVisits": "Visitas ao site"
+  },
+  "dashboard8": {
+    "conversionRates": "Taxas de conversão"
+  },
+  "dashboard9": {
+    "currentSubject": "Assunto atual"
+  },
+  "dashboard10": {
+    "news": "Novidades"
+  },
+  "dashboard11": {
+    "trafficBySite": "Tráfego por site"
+  },
+  "dashboard12": {
+    "tasks": "Tarefas"
+  }
+}
