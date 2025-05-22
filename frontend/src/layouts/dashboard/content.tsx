@@ -26,25 +26,16 @@ export function DashboardContent({
   return (
     <Container
       className={mergeClasses([layoutClasses.content, className])}
-      maxWidth={maxWidth}
+      maxWidth={maxWidth} 
       sx={[
         (theme) => ({
-          display: 'flex',
-          flex: '1 1 auto',
-          flexDirection: 'column',
           pt: 'var(--layout-dashboard-content-pt)',
           pb: 'var(--layout-dashboard-content-pb)',
           [theme.breakpoints.up(layoutQuery)]: {
             px: 'var(--layout-dashboard-content-px)',
           },
           ...(disablePadding && {
-            p: {
-              xs: 0,
-              sm: 0,
-              md: 0,
-              lg: 0,
-              xl: 0,
-            },
+            p: { xs: 0, sm: 0, md: 0, lg: 0, xl: 0,},
           }),
         }),
         ...(Array.isArray(sx) ? sx : [sx]),
