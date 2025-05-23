@@ -2,10 +2,13 @@ require('dotenv').config();       // carrega as variáveis do .env
 const express = require('express');
 const cors = require('cors');
 const app = express();
+const db = require('./db');
+const authRoutes = require('./routes/auth');
 
 // --- middlewares globais ---
 app.use(cors());
 app.use(express.json());
+app.use('/api/auth', authRoutes);
 
 // --- rotas da sua API ---
 const loginRoute          = require('./routes/login');
