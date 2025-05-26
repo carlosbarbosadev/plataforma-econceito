@@ -10,8 +10,7 @@ import Container from '@mui/material/Container';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 
-// No futuro, importaremos o serviço da API aqui
-// import apiService from 'src/services/apiService'; // Exemplo
+import api from 'src/services/api';
 
 export default function SignInPage() {
   const navigate = useNavigate();
@@ -21,32 +20,37 @@ export default function SignInPage() {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault(); // Previne o comportamento padrão do formulário HTML
-    setError(null); // Limpa erros anteriores
+    event.preventDefault();
+    setError(null);
     setLoading(true);
 
     console.log('Tentando fazer login com:', { email, password });
 
     try {
-      // TODO (Para a próxima vez): Fazer a chamada à API aqui
-      // const response = await apiService.post('/api/auth/login', { email, password });
-      // const { token, usuario } = response.data;
-      // console.log('Login bem-sucedido, token:', token, 'Usuário:', usuario);
-      // localStorage.setItem('authToken', token); // Armazena o token
-      // localStorage.setItem('userData', JSON.stringify(usuario)); // Armazena dados do usuário (opcional)
-      // navigate('/dashboard'); // Ou para a página principal após o login
+      // Faz a chamada POST para a API de login do backend
+      // A URL '/api/auth/login' será redirecionada pelo proxy para http://localhost:3001/api/auth/login
+      const response =  await api.post('/api/auth/login', {
+        email: email,
+        senha: password,
+      });
 
-      // Por enquanto, vamos simular um sucesso ou erro para ver a UI
-      if (email === "carlos@admin.com" && password === "senhaforte123") { // Use suas credenciais de teste
-        alert('Simulação de Login BEM-SUCEDIDO! (Implementar chamada real à API)');
-        // navigate('/dashboard'); // Descomente para testar o redirecionamento
-      } else {
-        setError('Simulação: Credenciais inválidas. (Implementar chamada real à API)');
+      const { token, usuario } = response.data;
+
+      console.log('Login bem-sucedido');
+      console.log('Token JWT:', token );
+      console.log('Dados do usuário', usuario);
+
+      localStorage.setItem('authToken', token);
+      if (usuario) {
+        localStorage.setItem('userData', JSON.stringify(usuario));
       }
+      // Redirecionar para o dashboard/tela principal após o login
+      // Certifique-se de que a rota 'dashboard' existe no seu frontend
+      navigate('/');
 
     } catch (apiError: any) {
-      console.error('Erro na API de login:', apiError);
-      setError(apiError.response?.data?.mensagem || apiError.message || 'Erro ao tentar fazer login.');
+      console.error('Erro ao tentar fazer login:', apiError);
+      setError(apiError.response?.data?.mensagem || apiError.message || 'Nome de usuário ou senha incorretos.');
     } finally {
       setLoading(false);
     }
