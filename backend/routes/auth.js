@@ -63,11 +63,12 @@ router.post('/login', async (req, res) => {
       email: usuario.email,
       nome: usuario.nome,
       tipo: usuario.tipo_usuario, // Este campo 'tipo' será usado no seu authMiddleware
+      id_vendedor_bling: usuario.id_vendedor_bling
     };
 
     // Use o nome exato da sua variável de ambiente para o segredo JWT!
     // No seu .env, você tinha 'SECRET-embalagens-conceito-123'
-    const secretKey = process.env.JWT_SECRET; 
+    const secretKey = process.env.JWT_SECRET;
     
     if (!secretKey) {
         console.error("Erro CRÍTICO: Chave secreta JWT (JWT_SECRET) não definida no .env!");

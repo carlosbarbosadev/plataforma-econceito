@@ -82,7 +82,7 @@ async function fetchClientes(retryCount = 0) {
     let pagina = 1;
     const limitePorPagina = 100; 
 
-    console.log('Iniciando busca de TODOS os contatos do Bling (sem filtro de CNPJ por enquanto)...');
+    console.log('Iniciando busca de TODOS os contatos do Bling');
 
     while (true) {
         const url = `https://api.bling.com.br/Api/v3/contatos?pagina=${pagina}&limite=${limitePorPagina}`;
@@ -146,7 +146,7 @@ async function fetchClientes(retryCount = 0) {
         }
     }
 
-    console.log(`Busca finalizada. Total de ${todosOsContatos.length} contatos encontrados (sem filtro de CNPJ).`);
+    console.log(`Busca finalizada. Total de ${todosOsContatos.length} contatos encontrados`);
     return todosOsContatos; // Retorna TODOS os contatos buscados
 }
 

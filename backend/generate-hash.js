@@ -1,6 +1,6 @@
 const bcrypt = require('bcryptjs');
 
-const senhaParaHash = 'admin';
+const senhaParaHash = 'Diogosilva2024';
 const saltRounds = 10;
 
 bcrypt.hash(senhaParaHash, saltRounds, function(err, hash) {
@@ -9,5 +9,5 @@ bcrypt.hash(senhaParaHash, saltRounds, function(err, hash) {
         return;
     }
     console.log('Senha original:', senhaParaHash);
-    console.log('Senha Hasheada (para guardar no banco:', hash);
+    console.log('Senha Hasheada (para o Vendedor Teste:', hash);
 });

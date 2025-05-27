@@ -1,8 +1,7 @@
-// backend/middlewares/authMiddleware.js
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
 
-const SECRET = process.env.SECRET || 'segredo-alternativo';
+const SECRET_KEY_JWT = process.env.JWT_SECRET;
 
 function autenticarToken(req, res, next) {
   const authHeader = req.headers['authorization'];
@@ -18,7 +17,7 @@ function autenticarToken(req, res, next) {
   const token = authHeader.slice(7);
 
   // 4) Verifica o JWT
-  jwt.verify(token, SECRET, (err, decoded) => {
+  jwt.verify(token, SECRET_KEY_JWT, (err, decoded) => {
     if (err) {
       return res.status(403).json({ mensagem: 'Token inválido ou expirado' });
     }
