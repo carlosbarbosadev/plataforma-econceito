@@ -1,11 +1,13 @@
 import type { Breakpoint } from '@mui/material/styles';
 
 import { merge } from 'es-toolkit';
+import { useNavigate } from 'react-router-dom';
 import { useBoolean } from 'minimal-shared/hooks';
 
 import Box from '@mui/material/Box';
 import Alert from '@mui/material/Alert';
 import AppBar from '@mui/material/AppBar';
+import Button from '@mui/material/Button';
 import Toolbar from '@mui/material/Toolbar';
 import TextField from '@mui/material/TextField';
 import { useTheme } from '@mui/material/styles';
@@ -51,7 +53,15 @@ export function DashboardLayout({
   layoutQuery = 'lg',
 }: DashboardLayoutProps) {
   const theme = useTheme();
-  const { value: open, onFalse: onClose, onTrue: onOpen } = useBoolean(); // Hook para o NavMobile
+  const navigate = useNavigate();
+  const { value: open, onFalse: onClose, onTrue: onOpen } = useBoolean();
+
+  const handleLogout = () => {
+    console.log('Executando logout');
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userData');
+    navigate('/sign-in');
+  };
 
   // Nova barra de pesquisa fixa no topo
   const renderFixedSearchAppBar = () => (
@@ -61,30 +71,52 @@ export function DashboardLayout({
       sx={{
         backgroundColor: 'rgba(240, 240, 240, 0.95)',
         backdropFilter: 'blur(8px)',
-        zIndex: theme.zIndex.drawer + 2, // Acima da sidebar
+        zIndex: theme.zIndex.drawer + 2,
       }}
     >
-      <Toolbar sx={{ justifyContent: 'center' }}>
-        <TextField
-          variant="outlined"
-          size="small"
-          placeholder="Pesquisar em toda a plataforma..." // Placeholder atualizado
+      <Toolbar>
+        <Box sx={{ width: 88 }} />
+        <Box sx={{
+          flexGrow: 1,
+          display: 'flex',
+          justifyContent: 'center',
+        }}>
+          <TextField
+            variant="outlined"
+            size="small"
+            placeholder="Pesquisar"
+            sx={{
+              width: '100%',
+              maxWidth: '480px',
+            }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon sx={{ color: 'text.disabled' }} />
+                </InputAdornment>
+              ),
+              sx: {
+                borderRadius: theme.shape.borderRadius,
+                backgroundColor: theme.palette.mode === 'light'
+                  ? 'rgba(255, 255, 255, 0.85)'
+                  : 'rgba(50, 50, 50, 0.85)',
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderRadius: theme.shape.borderRadius,
+                  },
+              }
+            }}
+          />
+        </Box>
+
+        <Button
+          onClick={handleLogout}
           sx={{
-            width: 'clamp(300px, 50%, 700px)',
-            backgroundColor: theme.palette.mode === 'light' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(50, 50, 50, 0.7)',
-            borderRadius: theme.shape.borderRadius,
-            '& .MuiOutlinedInput-root': {
-              borderRadius: theme.shape.borderRadius,
-            },
+            minWidth: 88,
+            color: 'text.primary'
           }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon sx={{ color: 'text.disabled' }} />
-              </InputAdornment>
-            ),
-          }}
-        />
+        >
+          Sair
+        </Button>
       </Toolbar>
     </AppBar>
   );

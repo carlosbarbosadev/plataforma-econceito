@@ -109,7 +109,7 @@ export default function ClientesPage() {
       )}
 
       {filteredClients.length === 0 && data.length > 0 && searchTerm !== '' && (
-        <Alert variant="info">Nenhum cliente encontrado para o termo "{searchTerm}".</Alert>
+        <Alert variant="info">{`Nenhum cliente encontrado para o termo "${searchTerm}".`}</Alert>
       )}
       
       {/* Só mostra a tabela se houver clientes após o filtro OU se não houver filtro e houver dados */}
