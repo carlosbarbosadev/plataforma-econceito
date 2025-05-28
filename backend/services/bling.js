@@ -150,4 +150,100 @@ async function fetchClientes(retryCount = 0) {
     return todosOsContatos; // Retorna TODOS os contatos buscados
 }
 
-module.exports = { fetchClientes, refreshBlingAccessToken };
+async function fetchPedidosVendas(idVendedorParaFiltrar = null, retryCount = 0) {
+    if (retryCount === 0) { 
+        currentAccessToken = process.env.BLING_ACCESS_TOKEN;
+        currentRefreshToken = process.env.BLING_REFRESH_TOKEN;
+    }
+    
+    if (!currentAccessToken) {
+        console.error('Erro: Access Token do Bling não disponível no início de fetchPedidosVendas.');
+        throw new Error('Erro de configuração: Access Token do Bling não encontrado.');
+    }
+    if (!currentRefreshToken) {
+        console.warn('Aviso: Refresh Token do Bling não disponível no início de fetchPedidosVendas. A renovação automática pode falhar.');
+    }
+
+    const todosOsPedidos = [];
+    let pagina = 1;
+    const limitePorPagina = 100; // Verifique o limite padrão/máximo para pedidos no Bling
+
+    let logMessage = 'Iniciando busca de Pedidos de Venda do Bling';
+    let baseUrlForApi = `https://api.bling.com.br/Api/v3/pedidos/vendas`; // Endpoint base
+
+    if (idVendedorParaFiltrar) {
+        logMessage += ` para o vendedor ID: ${idVendedorParaFiltrar}`;
+    }
+    console.log(logMessage + ' (para inspecionar estrutura)...');
+
+    while (true) {
+        // Monta a URL com os parâmetros de paginação e o filtro de vendedor (se houver)
+        let url = `${baseUrlForApi}?pagina=${pagina}&limite=${limitePorPagina}`;
+        if (idVendedorParaFiltrar) {
+            url += `&idVendedor=${idVendedorParaFiltrar}`;
+        }
+        
+        try {
+            console.log(`Buscando Pedidos de Venda - URL: ${url} com Access Token: ${currentAccessToken ? 'presente' : 'AUSENTE'}`);
+            
+            const response = await axios.get(url, {
+                headers: {
+                    'Authorization': `Bearer ${currentAccessToken}`,
+                    'Accept': 'application/json',
+                },
+            });
+
+            const pedidosDaPagina = response.data.data; // A API do Bling V3 costuma retornar dados em um campo "data"
+
+            if (pedidosDaPagina && pedidosDaPagina.length > 0) {
+                // Log para depurar a estrutura do primeiro PEDIDO da página
+
+                todosOsPedidos.push(...pedidosDaPagina);
+                console.log(`Recebidos ${pedidosDaPagina.length} pedidos da página ${pagina}. Total parcial: ${todosOsPedidos.length}`);
+
+                if (pedidosDaPagina.length < limitePorPagina) {
+                    console.log('Última página de pedidos alcançada (recebidos menos que o limite).');
+                    break; 
+                }
+                pagina++;
+                await new Promise(resolve => setTimeout(resolve, 350)); // Delay para não exceder o rate limit
+            } else {
+                console.log(`Nenhum pedido novo encontrado na página ${pagina}. Fim da busca.`);
+                break;
+            }
+        } catch (error) {
+            if (error.response && error.response.status === 401 && retryCount < 1) {
+                console.warn(`Access Token expirado ou inválido durante busca de pedidos na página ${pagina}. Tentando renovar...`);
+                try {
+                    await refreshBlingAccessToken(); 
+                    console.log(`Token renovado. Re-tentando a página ${pagina} de pedidos automaticamente.`);
+                    continue; // Tenta a mesma página novamente com o novo token
+                } catch (refreshError) {
+                    console.error('Falha DEFINITIVA ao renovar o token durante a paginação de pedidos:', refreshError.message);
+                    // Propaga o erro do refresh, pois não há mais o que fazer automaticamente.
+                    throw refreshError; 
+                }
+            }
+
+            // Se não for um erro 401 para refresh, ou se o retryCount já foi usado, ou se o refresh falhou antes
+            let errorMessage = `Erro ao buscar pedidos do Bling (Página ${pagina}).`;
+            if (error.response) {
+                const blingErrorData = error.response.data;
+                console.error(`Erro detalhado da API Bling V3 (Pedidos - Página ${pagina}, Status ${error.response.status}):`, typeof blingErrorData === 'string' ? blingErrorData : JSON.stringify(blingErrorData, null, 2));
+                errorMessage = `Falha na API Bling (Pedidos - Página ${pagina}): ${typeof blingErrorData === 'object' && blingErrorData !== null && (blingErrorData.error?.description || blingErrorData.error?.message) ? (blingErrorData.error.description || blingErrorData.error.message) : `Status ${error.response.status}`}`;
+            } else if (error.request) {
+                console.error(`Erro de rede ou sem resposta da API Bling V3 (Pedidos - Página ${pagina}):`, error.message);
+                errorMessage = `Falha de conexão com a API Bling (Pedidos - Página ${pagina}).`;
+            } else {
+                console.error(`Erro ao configurar requisição Bling V3 (Pedidos - Página ${pagina}):`, error.message);
+                errorMessage = `Erro interno ao processar requisição Bling (Pedidos - Página ${pagina}): ${error.message}`;
+            }
+            throw new Error(errorMessage); // Propaga o erro para interromper a busca
+        }
+    }
+
+    console.log(`Busca de pedidos finalizada. Total de ${todosOsPedidos.length} pedidos encontrados.`);
+    return todosOsPedidos;
+}
+
+module.exports = { fetchClientes, refreshBlingAccessToken, fetchPedidosVendas };

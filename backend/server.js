@@ -1,27 +1,28 @@
-require('dotenv').config();       // carrega as variáveis do .env
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const app = express();
-const db = require('./db');
-const authRoutes = require('./routes/auth');
 
-// --- middlewares globais ---
+
+const db = require('./db');
+
+
+const authRoutes = require('./routes/auth');
+const clientesRoutes = require('./routes/clientes');
+const produtosRoutes = require('./routes/produtos');
+const pedidosRoutes = require ('./routes/pedidos');
+
+
 app.use(cors());
 app.use(express.json());
+
+
 app.use('/api/auth', authRoutes);
+app.use('/api/clientes', clientesRoutes);
+app.use('/api/produtos', produtosRoutes);
+app.use('/api/pedidos', pedidosRoutes);
 
-// --- rotas da sua API ---
-const loginRoute          = require('./routes/login');
-const produtosRoute       = require('./routes/produtos');
-const clientesRoute       = require('./routes/clientes');
-const pedidosRoute        = require('./routes/pedidos');
-
-app.use('/api/login',     loginRoute);
-app.use('/api/produtos',  produtosRoute);
-app.use('/api/clientes',  clientesRoute);
-app.use('/api/pedidos',   pedidosRoute);
-
-// --- parte crucial: só depois de todas as rotas é que falamos ao Express para ouvir a porta ---
+// --- Inicialização do Servidor ---
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`✅ Servidor rodando na porta ${PORT}`);

@@ -1,44 +1,30 @@
 const express = require('express');
-const fs = require('fs');
 const router = express.Router();
 const { autenticarToken } = require('../middlewares/authMiddleware');
-const caminhoArquivo = 'pedidos.json';
+const { fetchPedidosVendas } = require('../services/bling');
 
-// GET /pedidos - Lista de pedidos
-router.get('/', autenticarToken, (req, res) => {
-    const pedidos = JSON.parse(fs.readFileSync(caminhoArquivo, 'utf-8'));
+router.get('/', autenticarToken, async (req, res) => {
+    console.log(`Rota /api/pedidos acessada por: ${req.usuario.email} (Tipo: ${req.usuario.tipo})`);
+    try {
+        let idVendedorParaFiltrar = null;
+        if (req.usuario.tipo === 'vendedor') {
+            idVendedorParaFiltrar = req.usuario.id_vendedor_bling;
+            if (!idVendedorParaFiltrar) {
+                console.warn(`Vendedor ${req.usuario.email} não possui 'id_vendedor_bling' definido no token. Buscando todos os pedidos como fallback ou considerar erro.`);
+            }
+        }
 
-    if (req.usuario.tipo === 'admin') {
-        return res.json(pedidos);
+        const todosOsPedidos = await fetchPedidosVendas(idVendedorParaFiltrar);
+
+        console.log(`Retornando ${todosOsPedidos.length} pedidos para o usuário ${req.usuario.email}.`);
+        res.json(todosOsPedidos);
+
+    } catch (error) {
+        console.error(`Erro na rota /api/pedidos ao buscar pedidos para ${req.usuario.email}:`, error.message);
+        if (!res.headersSent) {
+            res.status(500).json({ mensagem: `Falha ao buscar pedidos: ${error.message}` });
+        }
     }
-
-    const pedidosDoUsuario = pedidos.filter(
-        (p) => p.vendedor === req.usuario.email
-    );
-    res.json(pedidosDoUsuario); 
-});
-
-// POST /pedidos = Cria novo pedido
-router.post('/', autenticarToken, (req, res) => {
-    const { cliente, produtos } = req.body;
-
-    if (!cliente || !produtos || !Array.isArray(produtos)) {
-        return res.status(400).json({ mensagem: 'Dados inválidos' });
-    }
-
-    const pedidos = JSON.parse(fs.readFileSync(caminhoArquivo, 'utf-8'));
-    const novoPedido = {
-        id: pedidos.length + 1,
-        cliente,
-        produtos,
-        vendedor: req.usuario.email,
-        data: new Date().toISOString().slice(0, 10)
-    };
-
-    pedidos.push(novoPedido);
-    fs.writeFileSync(caminhoArquivo, JSON.stringify(pedidos, null, 2));
-
-    res.status(201).json({ mensagem: 'Pedido registrado com sucesso', pedido: novoPedido });
 });
 
 module.exports = router;
