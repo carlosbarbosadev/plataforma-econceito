@@ -193,10 +193,9 @@ async function fetchPedidosVendas(idVendedorParaFiltrar = null, retryCount = 0) 
                 },
             });
 
-            const pedidosDaPagina = response.data.data; // A API do Bling V3 costuma retornar dados em um campo "data"
+            const pedidosDaPagina = response.data.data;
 
             if (pedidosDaPagina && pedidosDaPagina.length > 0) {
-                // Log para depurar a estrutura do primeiro PEDIDO da página
 
                 todosOsPedidos.push(...pedidosDaPagina);
                 console.log(`Recebidos ${pedidosDaPagina.length} pedidos da página ${pagina}. Total parcial: ${todosOsPedidos.length}`);

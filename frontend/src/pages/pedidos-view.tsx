@@ -1,26 +1,49 @@
 import { useEffect, useState } from 'react';
-import { Table, Spinner, Alert, Form } from 'react-bootstrap'; 
+import { Table, Spinner, Alert, Form, Badge } from 'react-bootstrap';
 // Se configurou i18next
 // import { useTranslation } from 'react-i18next'; 
 
-import api from 'src/services/api'; // Sua instância do axios
+import api from 'src/services/api';
 
-// Defina o tipo para um Pedido baseado no que vimos no JSON do Bling
 type ClienteDoPedido = {
   id: number;
   nome: string;
-  tipoPessoa?: string; // Vimos que isso vem no objeto contato do pedido
+  tipoPessoa?: string; 
   numeroDocumento?: string;
 };
 
 type Pedido = {
   id: number;
-  numero: number | string; // Numero do pedido pode ser string ou numero
-  data: string;           // Data do pedido
-  total: number;          // Valor total do pedido
-  contato: ClienteDoPedido; // Informações do cliente dentro do pedido
-  situacao?: { id: number, valor?: number, nome?: string }; // Situação do pedido (opcional para exibição)
-  // Adicione outros campos do pedido que você queira exibir
+  numero: number | string; 
+  data: string;           
+  total: number;          
+  contato: ClienteDoPedido; 
+  situacao?: { 
+    id: number; 
+    valor?: number; 
+    nome?: string;
+  };
+};
+
+const mapSituacaoPedido = (idSituacao?: number): string => {
+  if (idSituacao === undefined || idSituacao === null) return 'N/A';
+  switch (idSituacao) {
+    case 6: return 'Em Aberto';
+    case 9: return 'Atendido';
+    case 12: return 'Cancelado';
+    // Adicionar aqui se eu descobrir mais IDs
+    default: return `ID ${idSituacao}`;
+  }
+};
+
+const getSituacaoBadgeVariant = (idSituacao?: number) : string => {
+  if (idSituacao === undefined  || idSituacao === null) return 'secondary';
+  switch (idSituacao) {
+    case 6: return 'warning';
+    case 9: return 'success';
+    case 12: return 'danger';
+    default: return 'secondary';
+  }  
 };
 
 export default function PedidosView() {
@@ -30,17 +53,16 @@ export default function PedidosView() {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // Se quiser busca para pedidos também, pode adicionar searchTerm aqui
+  // const [searchTermPedidos, setSearchTermPedidos] = useState(''); // Se for adicionar busca
 
   useEffect(() => {
     setLoading(true);
     setError(null);
-
-    api.get<any>('/api/pedidos') // Chama a rota de pedidos do seu backend
+    
+    api.get<any>('/api/pedidos') 
       .then(res => {
         console.log('DEBUG: Dados recebidos de /api/pedidos:', res.data);
-
-        const responseData = res.data; // O backend deve retornar o array de pedidos
+        const responseData = res.data; 
 
         if (Array.isArray(responseData)) {
           setPedidos(responseData as Pedido[]);
@@ -59,7 +81,7 @@ export default function PedidosView() {
       .finally(() => {
         setLoading(false);
       });
-  }, []); // Roda uma vez ao montar o componente
+  }, []); 
 
   if (loading) {
     return (
@@ -75,21 +97,20 @@ export default function PedidosView() {
     return <Alert variant="danger" className="mt-4">Erro ao carregar pedidos: {error}</Alert>;
   }
 
-  // Textos (podem vir da função t() do i18next)
   const pageTitle = /* t ? t('ordersPage.title') : */ 'Meus Pedidos';
   // const searchPlaceholder = /* t ? t('ordersPage.searchPlaceholder') : */ 'Buscar pedidos...';
-  const headerId = /* t ? t('ordersTable.id') : */ 'ID Pedido';
+  // const headerId = /* t ? t('ordersTable.id') : */ 'ID Pedido'; // Removido
   const headerNumero = /* t ? t('ordersTable.number') : */ 'Número';
   const headerData = /* t ? t('ordersTable.date') : */ 'Data';
   const headerCliente = /* t ? t('ordersTable.client') : */ 'Cliente';
   const headerTotal = /* t ? t('ordersTable.total') : */ 'Total (R$)';
+  const headerSituacao = /* t ? t('ordersTable.status') : */ 'Situação'; // Novo
 
 
   return (
     <div className="mt-4">
       <h2>{pageTitle}</h2>
-      {/* Se quiser adicionar busca para pedidos no futuro:
-      <Form.Group className="mb-3">
+      {/* <Form.Group className="mb-3">
         <Form.Control
           type="text"
           placeholder={searchPlaceholder}
@@ -102,26 +123,36 @@ export default function PedidosView() {
       {pedidos.length === 0 && !loading && (
         <Alert variant="info">Nenhum pedido para exibir no momento.</Alert>
       )}
-
+      
       {pedidos.length > 0 && (
         <Table striped bordered hover responsive className="mt-3">
           <thead>
             <tr>
-              <th>{headerId}</th>
+              {/* <th>{headerId}</th> Removido */}
               <th>{headerNumero}</th>
               <th>{headerData}</th>
-              <th>{headerCliente}</th>
+              <th style={{ width: '100%' }}>{headerCliente}</th>
               <th>{headerTotal}</th>
+              <th>{headerSituacao}</th> {/* Adicionado */}
             </tr>
           </thead>
           <tbody>
             {pedidos.map(pedido => (
-              <tr key={pedido.id}>
-                <td>{pedido.id}</td>
+              <tr key={pedido.id}> {/* Usar pedido.id como key ainda é fundamental */}
+                {/* <td>{pedido.id}</td> Removido */}
                 <td>{pedido.numero}</td>
-                <td>{new Date(pedido.data).toLocaleDateString('pt-BR')}</td> {/* Formata a data */}
+                <td>{new Date(pedido.data).toLocaleDateString('pt-BR')}</td>
                 <td>{pedido.contato.nome}</td>
-                <td>{pedido.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td> {/* Formata como moeda */}
+                <td>{pedido.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
+                  <Badge
+                    bg={getSituacaoBadgeVariant(pedido.situacao?.id)}
+                    pill
+                    style={{ fontSize: '0.85em', padding: '0.5em 0.75em' }}
+                    >
+                      {mapSituacaoPedido(pedido.situacao?.id)}
+                  </Badge>
+                </td>
               </tr>
             ))}
           </tbody>
