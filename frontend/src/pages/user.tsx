@@ -10,7 +10,7 @@ type Cliente = {
   nome: string;
   numeroDocumento?: string;
   telefone?: string;
-  celular?: string;
+  endereco?: { geral?: { municipio?: string; } };
 };
 
 export default function ClientesPage() {
@@ -54,18 +54,18 @@ export default function ClientesPage() {
   }, []); // Array de dependências vazio, roda apenas uma vez quando o componente monta
 
   const filteredClients = data.filter(client => {
-    // Adiciona uma verificação para garantir que 'client' e 'client.nome' existem e são do tipo esperado
     if (!client || typeof client.nome !== 'string') {
         return false; 
     }
     const searchTermLower = searchTerm.toLowerCase();
+    const cidade = client.endereco?.geral?.municipio;
 
     return (
       client.nome.toLowerCase().includes(searchTermLower) ||
       (client.numeroDocumento && typeof client.numeroDocumento === 'string' && client.numeroDocumento.toLowerCase().includes(searchTermLower)) ||
       (client.telefone && typeof client.telefone === 'string' && client.telefone.includes(searchTermLower)) ||
-      (client.celular && typeof client.celular === 'string' && client.celular.includes(searchTermLower)) ||
-      (client.id && client.id.toString().toLowerCase().includes(searchTermLower)) // Garante que id existe e converte para string
+      (client.id && client.id.toString().toLowerCase().includes(searchTermLower)) ||
+      (cidade && typeof cidade === 'string' && cidade.toLowerCase().includes(searchTermLower))
     );
   });
 
@@ -85,12 +85,11 @@ export default function ClientesPage() {
 
   // Textos (podem vir da função t() do i18next se você descomentar e configurar)
   const pageTitle = /* t ? t('clientsPage.title') : */ 'Clientes';
-  const searchPlaceholder = /* t ? t('clientsPage.searchPlaceholder') : */ 'Buscar por nome, ID, documento, telefone...';
-  const headerId = /* t ? t('tableHeaders.id') : */ 'ID';
-  const headerName = /* t ? t('tableHeaders.name') : */ 'Nome';
-  const headerDocument = /* t ? t('tableHeaders.document') : */ 'Documento';
-  const headerPhone = /* t ? t('tableHeaders.phone') : */ 'Telefone';
-  const headerCellphone = /* t ? t('tableHeaders.cellphone') : */ 'Celular';
+  const searchPlaceholder = /* t ? t('clientsPage.searchPlaceholder') : */ 'Buscar por nome, documento, telefone...';
+  const headerNome = /* t ? t('tableHeaders.name') : */ 'Nome';
+  const headerCnpjCpf = /* t ? t('tableHeaders.document') : */ 'CNPJ/CPF';
+  const headerCidade = /* t ? t('tableHeaders.cellphone') : */ 'Cidade';
+  const headerTelefone = /* t ? t('tableHeaders.phone') : */ 'Telefone';
 
   return (
     <div className="mt-4">
@@ -107,32 +106,28 @@ export default function ClientesPage() {
       {data.length === 0 && !loading && !error && (
         <Alert variant="info">Nenhum cliente para exibir no momento.</Alert>
       )}
-
       {filteredClients.length === 0 && data.length > 0 && searchTerm !== '' && (
         <Alert variant="info">{`Nenhum cliente encontrado para o termo "${searchTerm}".`}</Alert>
       )}
-      
       {/* Só mostra a tabela se houver clientes após o filtro OU se não houver filtro e houver dados */}
       {/* Ou, mais simples: só mostra a tabela se houver dados, e o map cuida de não renderizar nada se filteredClients estiver vazio */}
       {data.length > 0 && (
         <Table striped bordered hover responsive className="mt-3">
           <thead>
             <tr>
-              <th>{headerId}</th>
-              <th>{headerName}</th>
-              <th>{headerDocument}</th>
-              <th>{headerPhone}</th>
-              <th>{headerCellphone}</th>
+              <th style={{ width: '70%' }}>{headerNome}</th>
+              <th style={{ width: '20%' }}>{headerCnpjCpf}</th>
+              <th>{headerCidade}</th>
+              <th>{headerTelefone}</th>
             </tr>
           </thead>
           <tbody>
             {filteredClients.map(c => (
               <tr key={c.id}>
-                <td>{c.id}</td>
                 <td>{c.nome}</td>
                 <td>{c.numeroDocumento || '-'}</td>
+                <td>{ '-' }</td>
                 <td>{c.telefone || '-'}</td>
-                <td>{c.celular || '-'}</td>
               </tr>
             ))}
           </tbody>

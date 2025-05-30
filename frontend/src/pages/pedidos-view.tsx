@@ -131,7 +131,7 @@ export default function PedidosView() {
               {/* <th>{headerId}</th> Removido */}
               <th>{headerNumero}</th>
               <th>{headerData}</th>
-              <th style={{ width: '100%' }}>{headerCliente}</th>
+              <th style={{ width: '70%' }}>{headerCliente}</th>
               <th>{headerTotal}</th>
               <th>{headerSituacao}</th> {/* Adicionado */}
             </tr>
