@@ -245,4 +245,132 @@ async function fetchPedidosVendas(idVendedorParaFiltrar = null, retryCount = 0) 
     return todosOsPedidos;
 }
 
-module.exports = { fetchClientes, refreshBlingAccessToken, fetchPedidosVendas };
+async function fetchProdutos(retryCount = 0) {
+    if (retryCount === 0) {
+        currentAccessToken = process.env.BLING_ACCESS_TOKEN;
+        currentRefreshToken = process.env.BLING_REFRESH_TOKEN;
+    }
+
+    if (!currentAccessToken) {
+        console.error('Erro: Access Token do Bling não disponível no início de fetchProdutos.');
+        throw new Error('Erro de configuração: Access Token do Bling não encontrado.');
+    }
+    if (!currentRefreshToken) {
+        console.warn('Aviso: Refresh Token do Bling não disponível no início de fetchProdutos. A renovação automática pode falhar.');
+    }
+
+    const todosOsProdutos = [];
+    let pagina = 1;
+    const limitePorPagina = 100;
+    let primeiroProdutoLogado = false;
+
+    console.log('Iniciando busca de Produtos do Bling');
+
+    while(true) {
+        const url = `https://api.bling.com.br/Api/v3/produtos?pagina=${pagina}&limite=${limitePorPagina}`;
+        try {
+            const response = await axios.get(url, {
+                headers: {
+                    'Authorization': `Bearer ${currentAccessToken}`,
+                    'Accept': 'application/json',
+                },
+            });
+
+            const produtosDaPagina = response.data.data;
+
+            if (produtosDaPagina && produtosDaPagina.length > 0) {
+                if (!primeiroProdutoLogado) {
+                    console.log(`DEBUG: Estrutura COMPLETA do PRIMEIRO PRODUTO encontrado (via console.dir):`)
+                    console.dir(produtosDaPagina[0], { depth: null });
+                    primeiroProdutoLogado = true;
+                }
+                
+                todosOsProdutos.push(...produtosDaPagina);
+
+                if (produtosDaPagina.length < limitePorPagina) {
+                    console.log('Última página de produtos alcançada.');
+                    break;
+                }
+                pagina++;
+                await new Promise(resolve => setTimeout(resolve, 350));
+            } else {
+                console.log(`Nenhum produto novo encontrado na página ${pagina}. Fim da busca`);
+                break;
+            }
+        } catch (error) {
+            if (error.response && error.response.status === 401 && retryCount < 1) {
+                console.warn(`Access Token expirado ou inválido durante busca de produtos na página ${pagina}. Tentando renovar...`);
+                try {
+                    await refreshBlingAccessToken(); 
+                    console.log(`Token renovado. Re-tentando a página ${pagina} de produtos automaticamente.`);
+                    continue; 
+                } catch (refreshError) {
+                    console.error('Falha DEFINITIVA ao renovar o token durante a paginação de produtos:', refreshError.message);
+                    throw refreshError;
+                }
+            }
+
+            let errorMessage = `Erro ao buscar produtos do Bling (Página ${pagina}).`;
+            if (error.response) {
+                const blingErrorData = error.response.data;
+                console.error(`Erro detalhado da API Bling V3 (Produtos - Página ${pagina}, Status ${error.response.status}):`, typeof blingErrorData === 'string' ? blingErrorData : JSON.stringify(blingErrorData, null, 2));
+                errorMessage = `Falha na API Bling (Produtos - Página ${pagina}): ${typeof blingErrorData === 'object' && blingErrorData !== null && (blingErrorData.error?.description || blingErrorData.error?.message) ? (blingErrorData.error.description || blingErrorData.error.message) : `Status ${error.response.status}`}`;
+            } else if (error.request) {
+                console.error(`Erro de rede ou sem resposta da API Bling V3 (Produtos - Página ${pagina}):`, error.message);
+                errorMessage = `Falha de conexão com a API Bling (Produtos - Página ${pagina}).`;
+            } else {
+                console.error(`Erro ao configurar requisição Bling V3 (Produtos - Página ${pagina}):`, error.message);
+                errorMessage = `Erro interno ao processar requisição Bling (Produtos - Página ${pagina}): ${error.message}`;
+            }
+            throw new Error(errorMessage);
+        }
+    }
+
+    console.log(`Busca de produtos finalizada. Total de ${todosOsProdutos.length} produtos encontrados.`);
+    return todosOsProdutos;
+}
+
+async function criarPedidoVenda(dadosDoPedido, retryCount = 0) {
+    if (retryCount === 0) { 
+        currentAccessToken = process.env.BLING_ACCESS_TOKEN;
+        // Não precisamos do refresh_token para esta chamada inicial, mas refreshBlingAccessToken o usa
+    }
+    if (!currentAccessToken) { throw new Error('Access Token do Bling não encontrado.'); }
+
+    const url = `https://api.bling.com.br/Api/v3/pedidos/vendas`;
+    console.log('Tentando criar pedido de venda no Bling com os dados:', JSON.stringify(dadosDoPedido, null, 2));
+
+    try {
+        const response = await axios.post(url, dadosDoPedido, { // Envia o objeto dadosDoPedido diretamente
+            headers: {
+                'Authorization': `Bearer ${currentAccessToken}`,
+                'Content-Type': 'application/json', // Bling API v3 geralmente espera JSON no corpo
+                'Accept': 'application/json',
+            },
+        });
+        console.log('Pedido de venda criado com sucesso no Bling:', response.data);
+        return response.data; // Retorna a resposta do Bling (geralmente o pedido criado)
+    } catch (error) {
+        if (error.response && error.response.status === 401 && retryCount < 1) {
+            console.warn('Access Token expirado ao tentar criar pedido. Tentando renovar...');
+            try {
+                await refreshBlingAccessToken();
+                console.log('Token renovado. Tentando criar o pedido novamente.');
+                return criarPedidoVenda(dadosDoPedido, retryCount + 1); // Tenta novamente com o novo token
+            } catch (refreshError) {
+                console.error('Falha DEFINITIVA ao renovar token ao criar pedido:', refreshError.message);
+                throw refreshError;
+            }
+        }
+        // Log de erro mais detalhado
+        const errorData = error.response?.data;
+        const errorMessage = errorData?.error?.description || 
+                             (Array.isArray(errorData?.errors) && errorData.errors[0]?.message) || // Bling às vezes retorna array de erros
+                             error.message || 
+                             'Erro desconhecido';
+        console.error(`Erro ao criar pedido de venda no Bling (Status: ${error.response?.status}):`, JSON.stringify(errorData, null, 2) || error.message);
+        throw new Error(`Falha ao criar pedido no Bling: ${errorMessage}`);
+    }
+}
+
+module.exports = { fetchClientes, refreshBlingAccessToken, fetchPedidosVendas, fetchProdutos, criarPedidoVenda };

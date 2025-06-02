@@ -12,10 +12,8 @@ const clientesRoutes = require('./routes/clientes');
 const produtosRoutes = require('./routes/produtos');
 const pedidosRoutes = require ('./routes/pedidos');
 
-
 app.use(cors());
 app.use(express.json());
-
 
 app.use('/api/auth', authRoutes);
 app.use('/api/clientes', clientesRoutes);

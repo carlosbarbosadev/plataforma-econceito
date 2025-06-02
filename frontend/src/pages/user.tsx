@@ -85,7 +85,8 @@ export default function ClientesPage() {
 
   // Textos (podem vir da função t() do i18next se você descomentar e configurar)
   const pageTitle = /* t ? t('clientsPage.title') : */ 'Clientes';
-  const searchPlaceholder = /* t ? t('clientsPage.searchPlaceholder') : */ 'Buscar por nome, documento, telefone...';
+  const searchPlaceholder = /* t ? t('clientsPage.searchPlaceholder') : */ 'Pesquisar por código, nome, CPF ou CNPJ';
+  const headerIdCliente = 'Código';
   const headerNome = /* t ? t('tableHeaders.name') : */ 'Nome';
   const headerCnpjCpf = /* t ? t('tableHeaders.document') : */ 'CNPJ/CPF';
   const headerCidade = /* t ? t('tableHeaders.cellphone') : */ 'Cidade';
@@ -115,6 +116,7 @@ export default function ClientesPage() {
         <Table striped bordered hover responsive className="mt-3">
           <thead>
             <tr>
+              <th style= {{ width: '10%' }}>{headerIdCliente}</th>
               <th style={{ width: '70%' }}>{headerNome}</th>
               <th style={{ width: '20%' }}>{headerCnpjCpf}</th>
               <th>{headerCidade}</th>
@@ -124,6 +126,7 @@ export default function ClientesPage() {
           <tbody>
             {filteredClients.map(c => (
               <tr key={c.id}>
+                <td>{c.id}</td>
                 <td>{c.nome}</td>
                 <td>{c.numeroDocumento || '-'}</td>
                 <td>{ '-' }</td>

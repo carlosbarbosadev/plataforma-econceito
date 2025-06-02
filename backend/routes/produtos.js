@@ -1,18 +1,22 @@
 const express = require('express');
 const router = express.Router();
-
 const { autenticarToken } = require('../middlewares/authMiddleware');
+const { fetchProdutos } = require('../services/bling');
 
-const pool = require('../db');
+// Rota para buscar produtos
+router.get( '/', autenticarToken, async (req, res) => {
+  console.log(`Rota /api/produtos acessada por: ${req.usuario.email} (Tipo: ${req.usuario.tipo})`);
+    try {
+      const todosOsProdutos = await fetchProdutos();
 
-// Aqui deve vir função → async (req, res) => { … }
-router.get('/', autenticarToken, async (req, res) => { 
-  try {
-    const { rows } = await pool.query('SELECT * FROM produtos BY id');
-    res.json(rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ mensagem: 'Erro interno' })
+      console.log(`Retornando ${todosOsProdutos.length} produtos para o usuário ${req.usuario.email}.`);
+      res.json(todosOsProdutos);
+
+  } catch (error) {
+    console.error(`Erro na rota /api/produtos ao buscar produtos para ${req.usuario.email}:`, error.message);
+    if (!res.headersSent) {
+        res.status(500).json({ mensagem: `Falha ao buscar produtos: ${error.message}` });
+    }
   }
 });
 
