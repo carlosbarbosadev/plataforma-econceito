@@ -11,7 +11,7 @@ type Produto = {
   estoque?: {
     saldoVirtualTotal?: number;
   };
-  situacao?: string; // 'A' para Ativo, 'I' para Inativo, etc.
+  situacao?: string;
   imagemURL?: string; 
 };
 
@@ -20,28 +20,38 @@ type ItemPedido = {
   nomeProduto: string;
   quantidade: number;
   valorUnitario: number;
-}
+};
 
-export default function Products() {
-  // const { t } = useTranslation(); // Para i18n
+type ClienteParaSelecao = {
+  id: number;
+  nome: string;
+  numeroDocumento?: string;
+  tipoPessoa?: string;
+};
 
+export default function Products() { // Mudança para ProductsPage
   const [produtos, setProdutos] = useState<Produto[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true); // Loading para produtos
+  const [error, setError] = useState<string | null>(null); // Error para produtos
   const [searchTerm, setSearchTerm] = useState('');
+  
   const [itensDoPedidoAtual, setItensDoPedidoAtual] = useState<ItemPedido[]>([]);
   const [productInPopover, setProductInPopover] = useState<Produto | null>(null);
   const [popoverTarget, setPopoverTarget] = useState<EventTarget & HTMLElement | null>(null);
   
+  const [listaDeClientes, setListaDeClientes] = useState<ClienteParaSelecao[]>([]);
+  const [loadingClientes, setLoadingClientes] = useState(true); // Loading específico para clientes
+  const [errorClientes, setErrorClientes] = useState<string | null>(null); // Error específico para clientes
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
+
+  // useEffect para buscar produtos
   useEffect(() => {
     setLoading(true);
     setError(null);
-    
     api.get<any>('/api/produtos')
       .then(res => {
         console.log('PRODUTOS_PAGE: Dados recebidos de /api/produtos:', res.data);
         const responseData = res.data; 
-
         if (Array.isArray(responseData)) {
           setProdutos(responseData as Produto[]);
         } else {
@@ -59,11 +69,35 @@ export default function Products() {
       .finally(() => {
         setLoading(false);
       });
-  }, []); // Roda uma vez ao montar o componente
+  }, []); 
+
+  // useEffect para buscar clientes
+  useEffect(() => {
+    setLoadingClientes(true);
+    setErrorClientes(null);
+    api.get<ClienteParaSelecao[]>('/api/clientes')
+      .then(response => {
+        console.log('PRODUTOS_PAGE: Clientes recebidos para seleção:', response.data);
+        if (Array.isArray(response.data)) {
+          setListaDeClientes(response.data);
+        } else {
+          console.error("PRODUTOS_PAGE ERRO: /api/clientes não retornou um array para o seletor!", response.data);
+          setListaDeClientes([]);
+          setErrorClientes("Erro ao carregar lista de clientes para seleção");
+        }
+      })
+      .catch(err => {
+        console.error("PRODUTOS_PAGE ERRO ao buscar clientes para seleção:", err);
+        setErrorClientes(err.response?.data?.mensagem || err.message || "Falha ao buscar clientes para seleção");
+        setListaDeClientes([]);
+      })
+      .finally(() => setLoadingClientes(false));
+  }, []);
+
   const handleAdicionarAoPedido = (produtoParaAdicionar: Produto) => {
     if (!produtoParaAdicionar.id || produtoParaAdicionar.preco === undefined) {
       console.error("Produto sem ID ou preço para adicionar ao pedido:", produtoParaAdicionar);
-      alert("Não é possível adicionar este produto ao pedido (faltam dados)."); // Feedback para o usuário
+      alert("Não é possível adicionar este produto ao pedido (faltam dados).");
       return;
     }
     
@@ -109,7 +143,13 @@ export default function Products() {
     );
   });
 
-  if (loading) {
+  // Textos (podem vir da função t() do i18next)
+  const pageTitle = 'Produtos';
+  const searchPlaceholder = 'Buscar por nome, código, ID...';
+  const noProductsMsg = 'Nenhum produto para exibir no momento.';
+  const noProductsSearchMsg = (term: string) => `Nenhum produto encontrado para "${term}".`;
+
+  if (loading) { // Loading principal da página (para produtos)
     return (
       <Container className="d-flex justify-content-center align-items-center" style={{ minHeight: 'calc(100vh - 200px)' }}>
         <Spinner animation="border" role="status">
@@ -119,7 +159,7 @@ export default function Products() {
     );
   }
 
-  if (error) {
+  if (error) { // Erro principal da página (para produtos)
     return (
       <Container className="mt-4">
         <Alert variant="danger">Erro ao carregar produtos: {error}</Alert>
@@ -127,26 +167,49 @@ export default function Products() {
     );
   }
 
-  // Textos (podem vir da função t() do i18next)
-  const pageTitle = /* t ? t('productsPage.title', 'Produtos') : */ 'Produtos';
-  const searchPlaceholder = /* t ? t('productsPage.searchPlaceholder', 'Buscar por nome, código, ID...') : */ 'Buscar por nome, código, ID...';
-  const noProductsMsg = /* t ? t('productsPage.noProducts', 'Nenhum produto para exibir no momento.') : */ 'Nenhum produto para exibir no momento.';
-  const noProductsSearchMsg = (term: string) => /* t ? t('productsPage.noProductsForTerm', { term }) : */ `Nenhum produto encontrado para "${term}".`;
-
-
   return (
     <Container fluid className="mt-4">
       <h2>{pageTitle}</h2>
-      <Form.Group className="mb-3 mt-3">
+
+      <Form.Group className="my-3" controlId="selecionarCliente">
+        <Form.Label>Cliente para o pedido:</Form.Label>
+        {loadingClientes && <Spinner animation="border" size="sm" as="span" role="status" aria-hidden="true" className="ms-2"/>}
+        {errorClientes && <Alert variant="danger" className="p-1 py-0 mt-1">{errorClientes}</Alert>}
+        {!loadingClientes && !errorClientes && (
+          <Form.Select
+            value={selectedClientId}
+            onChange={(e) => {
+              setSelectedClientId(e.target.value);
+              console.log('Cliente selecionado ID:', e.target.value);
+            }}
+            disabled={listaDeClientes.length === 0}
+          >
+            <option value="">-- Selecione um Cliente --</option>
+            {listaDeClientes.map(cliente => (
+              <option key={cliente.id} value={cliente.id}>
+                {cliente.nome} ({cliente.numeroDocumento || 'Doc. N/A'})
+              </option>
+            ))}
+          </Form.Select>
+        )}
+        {listaDeClientes.length === 0 && !loadingClientes && !errorClientes && (
+            <Form.Text className="text-muted">Nenhum cliente encontrado para este vendedor.</Form.Text>
+        )}
+      </Form.Group>
+
+      <Form.Group className="mb-3 mt-1">
         <Form.Control
           type="text"
           placeholder={searchPlaceholder}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
+          disabled={!selectedClientId || loading} // Desabilita se não houver cliente ou se produtos estiverem carregando
         />
+         {/* Corrigido a condição para o aviso */}
+        {!selectedClientId && !loading && !error && <Form.Text className="text-info">Selecione um cliente para ver e adicionar produtos ao pedido.</Form.Text>}
       </Form.Group>
 
-      {itensDoPedidoAtual.length > 0 && (
+      {itensDoPedidoAtual.length > 0 && selectedClientId && (
         <Alert variant="success" className="mb-3">
           <h5>Pedido Atual ({itensDoPedidoAtual.reduce((acc, item) => acc + item.quantidade, 0)} itens):</h5>
           <ul>
@@ -156,77 +219,81 @@ export default function Products() {
               </li>
             ))}
           </ul>
-          <p><strong> Total: R$ {itensDoPedidoAtual.reduce((acc, item) => acc + (item.quantidade * item.valorUnitario), 0).toFixed(2)}</strong></p>
-        </Alert>
-      )}
-
-      {filteredProdutos.length === 0 && !loading && (
-        <Alert variant="info">
-          {searchTerm ? noProductsSearchMsg(searchTerm) : noProductsMsg}
+          <p><strong>Total: R$ {itensDoPedidoAtual.reduce((acc, item) => acc + (item.quantidade * item.valorUnitario), 0).toFixed(2)}</strong></p>
+          {/* No futuro, aqui poderia ter um botão "Ver/Finalizar Pedido" */}
         </Alert>
       )}
       
-      <Row xs={1} sm={2} md={3} lg={4} xl={5} className="g-4">
-        {filteredProdutos.map(produto => (
-          <Col key={produto.id}>
-            <Card 
-              className="h-100 shadow-sm"
-              onClick={(e) => handleProductCardClick(e, produto)}
-              style={{ cursor: 'pointer' }}
-            >
-              <Card.Img 
-                variant="top" 
-                src={produto.imagemURL || '/img/placeholder-produto.png'}
-                alt={produto.nome}
-                style={{ 
-                  height: '180px',
-                  objectFit: 'contain',
-                  padding: '0.5rem'
-                }} 
-                onError={(e) => { (e.target as HTMLImageElement).src = '/img/placeholder-produto.png'; }}
-              />
-              <Card.Body className="d-flex flex-column">
-                <Card.Title 
-                  style={{ fontSize: '1rem', fontWeight: 'bold', minHeight: '3rem' }}
-                  title={produto.nome}
+      {/* Lógica para exibir produtos apenas se um cliente estiver selecionado E não houver erro de carregamento de produtos */}
+      {selectedClientId && !error && ( 
+        <>
+          {filteredProdutos.length === 0 && !loading && ( // Se não estiver carregando e não houver produtos filtrados
+            <Alert variant="info" className="mt-3">
+              {searchTerm ? noProductsSearchMsg(searchTerm) : noProductsMsg}
+            </Alert>
+          )}
+          
+          <Row xs={1} sm={2} md={3} lg={4} xl={5} className="g-4 mt-0"> {/* Removido mt-3 daqui se já tem no Form.Group acima */}
+            {filteredProdutos.map(produto => (
+              <Col key={produto.id}>
+                <Card 
+                  className="h-100 shadow-sm"
+                  onClick={(e) => handleProductCardClick(e, produto)}
+                  style={{ cursor: 'pointer' }}
                 >
-                  {produto.nome.length > 50 ? `${produto.nome.substring(0, 47)}...` : produto.nome}
-                </Card.Title>
-                <Card.Text as="div" style={{ fontSize: '0.85rem', color: '#555', flexGrow: 1 }}>
-                  <strong>Código:</strong> {produto.codigo || '-'}<br />
-                  <strong>Preço:</strong> {typeof produto.preco === 'number' 
-                                        ? produto.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) 
-                                        : '-'}<br />
-                  <strong>Estoque:</strong> {produto.estoque?.saldoVirtualTotal ?? '-'}<br />
-                  <strong>Situação:</strong> {produto.situacao === 'A' ? 'Ativo' : (produto.situacao === 'I' ? 'Inativo' : (produto.situacao || '-'))}
-                </Card.Text>
-                {/* Exemplo de Botão (pode adicionar no futuro)
-                <Button variant="primary" size="sm" className="mt-auto">Ver Detalhes</Button> 
-                */}
-              </Card.Body>
-            </Card>
-          </Col>
-        ))}
-      </Row>
+                  <Card.Img 
+                    variant="top" 
+                    src={produto.imagemURL || '/img/placeholder-produto.png'}
+                    alt={produto.nome}
+                    style={{ 
+                      height: '180px',
+                      objectFit: 'contain',
+                      padding: '0.5rem'
+                    }} 
+                    onError={(e) => { (e.target as HTMLImageElement).src = '/img/placeholder-produto.png'; }}
+                  />
+                  <Card.Body className="d-flex flex-column">
+                    <Card.Title 
+                      style={{ fontSize: '1rem', fontWeight: 'bold', minHeight: '3rem' }}
+                      title={produto.nome}
+                    >
+                      {produto.nome.length > 50 ? `${produto.nome.substring(0, 47)}...` : produto.nome}
+                    </Card.Title>
+                    <Card.Text as="div" style={{ fontSize: '0.85rem', color: '#555', flexGrow: 1 }}>
+                      <strong>Código:</strong> {produto.codigo || '-'}<br />
+                      <strong>Preço:</strong> {typeof produto.preco === 'number' 
+                                            ? produto.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) 
+                                            : '-'}<br />
+                      <strong>Estoque:</strong> {produto.estoque?.saldoVirtualTotal ?? '-'}<br />
+                      <strong>Situação:</strong> {produto.situacao === 'A' ? 'Ativo' : (produto.situacao === 'I' ? 'Inativo' : (produto.situacao || '-'))}
+                    </Card.Text>
+                  </Card.Body>
+                </Card>
+              </Col>
+            ))}
+          </Row>
+        </>
+      )}
 
+      {/* Popover (como estava antes, parece correto) */}
       {productInPopover && popoverTarget && (
         <Overlay
           show={!!productInPopover}
           target={popoverTarget}
-          placement="bottom-start"
+          placement="bottom-start" 
           onHide={closePopover}
           rootClose
-          transition={false}
+          // transition={false} 
         >
-          {( overlayProps ) => (
-            <Popover
-              id={`popover-add-${productInPopover.id}`}
-              {...overlayProps}
-              style={{...overlayProps.style, zIndex: 1080}}
+          {( overlayProps ) => ( 
+            <Popover 
+              id={`popover-add-${productInPopover.id}`} 
+              {...overlayProps} 
+              style={{...overlayProps.style, zIndex: 1080}} 
             >
               <Popover.Body>
                 <div className="d-grid">
-                  <Button
+                  <Button 
                     variant="success"
                     size="sm"
                     onClick={() => {
@@ -235,7 +302,7 @@ export default function Products() {
                       } else {
                         handleAdicionarAoPedido(productInPopover);
                       }
-                      closePopover();
+                      closePopover(); 
                     }}
                   >
                     {`Adicionar "${productInPopover.nome.length > 20 ? `${productInPopover.nome.substring(0, 17)}...` : productInPopover.nome}"`}

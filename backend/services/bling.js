@@ -262,7 +262,6 @@ async function fetchProdutos(retryCount = 0) {
     const todosOsProdutos = [];
     let pagina = 1;
     const limitePorPagina = 100;
-    let primeiroProdutoLogado = false;
 
     console.log('Iniciando busca de Produtos do Bling');
 
@@ -279,12 +278,6 @@ async function fetchProdutos(retryCount = 0) {
             const produtosDaPagina = response.data.data;
 
             if (produtosDaPagina && produtosDaPagina.length > 0) {
-                if (!primeiroProdutoLogado) {
-                    console.log(`DEBUG: Estrutura COMPLETA do PRIMEIRO PRODUTO encontrado (via console.dir):`)
-                    console.dir(produtosDaPagina[0], { depth: null });
-                    primeiroProdutoLogado = true;
-                }
-                
                 todosOsProdutos.push(...produtosDaPagina);
 
                 if (produtosDaPagina.length < limitePorPagina) {
