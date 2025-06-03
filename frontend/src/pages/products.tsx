@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Container, Row, Col, Card, Spinner, Alert, Form } from 'react-bootstrap';
-// Se você estiver usando i18next para traduções, descomente e use o hook 't'
-// import { useTranslation } from 'react-i18next';
+import { Container, Row, Col, Card, Spinner, Alert, Form, Button, Popover, Overlay } from 'react-bootstrap';
 
 import api from 'src/services/api';
 
@@ -17,6 +15,13 @@ type Produto = {
   imagemURL?: string; 
 };
 
+type ItemPedido = {
+  idProduto: number;
+  nomeProduto: string;
+  quantidade: number;
+  valorUnitario: number;
+}
+
 export default function Products() {
   // const { t } = useTranslation(); // Para i18n
 
@@ -24,7 +29,10 @@ export default function Products() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-
+  const [itensDoPedidoAtual, setItensDoPedidoAtual] = useState<ItemPedido[]>([]);
+  const [productInPopover, setProductInPopover] = useState<Produto | null>(null);
+  const [popoverTarget, setPopoverTarget] = useState<EventTarget & HTMLElement | null>(null);
+  
   useEffect(() => {
     setLoading(true);
     setError(null);
@@ -52,6 +60,44 @@ export default function Products() {
         setLoading(false);
       });
   }, []); // Roda uma vez ao montar o componente
+  const handleAdicionarAoPedido = (produtoParaAdicionar: Produto) => {
+    if (!produtoParaAdicionar.id || produtoParaAdicionar.preco === undefined) {
+      console.error("Produto sem ID ou preço para adicionar ao pedido:", produtoParaAdicionar);
+      alert("Não é possível adicionar este produto ao pedido (faltam dados)."); // Feedback para o usuário
+      return;
+    }
+    
+    setItensDoPedidoAtual(itensAnteriores => {
+      const itemExistente = itensAnteriores.find(item => item.idProduto === produtoParaAdicionar.id);
+      if (itemExistente) {
+        console.log(`Incrementando quantidade para: ${produtoParaAdicionar.nome}`);
+        return itensAnteriores.map(item =>
+          item.idProduto === produtoParaAdicionar.id ? { ...item, quantidade: item.quantidade + 1 } : item
+        );
+      } else {
+        console.log(`Adicionando ao pedido: ${produtoParaAdicionar.nome}`);
+        return [
+          ...itensAnteriores,
+          {
+            idProduto: produtoParaAdicionar.id,
+            nomeProduto: produtoParaAdicionar.nome,
+            quantidade: 1,
+            valorUnitario: produtoParaAdicionar.preco!
+          }
+        ];
+      }
+    });
+  };
+
+  const handleProductCardClick = (event: React.MouseEvent<HTMLElement>, produto: Produto) => {
+    setProductInPopover(produto);
+    setPopoverTarget(event.currentTarget);
+  };
+
+  const closePopover = () => {
+    setProductInPopover(null);
+    setPopoverTarget(null);
+  };
 
   const filteredProdutos = produtos.filter(produto => {
     if (!produto || typeof produto.nome !== 'string') return false;
@@ -100,6 +146,20 @@ export default function Products() {
         />
       </Form.Group>
 
+      {itensDoPedidoAtual.length > 0 && (
+        <Alert variant="success" className="mb-3">
+          <h5>Pedido Atual ({itensDoPedidoAtual.reduce((acc, item) => acc + item.quantidade, 0)} itens):</h5>
+          <ul>
+            {itensDoPedidoAtual.map(item => (
+              <li key={item.idProduto}>
+                {item.nomeProduto} (Qtd: {item.quantidade}) - R$ {(item.quantidade * item.valorUnitario).toFixed(2)}
+              </li>
+            ))}
+          </ul>
+          <p><strong> Total: R$ {itensDoPedidoAtual.reduce((acc, item) => acc + (item.quantidade * item.valorUnitario), 0).toFixed(2)}</strong></p>
+        </Alert>
+      )}
+
       {filteredProdutos.length === 0 && !loading && (
         <Alert variant="info">
           {searchTerm ? noProductsSearchMsg(searchTerm) : noProductsMsg}
@@ -109,7 +169,11 @@ export default function Products() {
       <Row xs={1} sm={2} md={3} lg={4} xl={5} className="g-4">
         {filteredProdutos.map(produto => (
           <Col key={produto.id}>
-            <Card className="h-100 shadow-sm">
+            <Card 
+              className="h-100 shadow-sm"
+              onClick={(e) => handleProductCardClick(e, produto)}
+              style={{ cursor: 'pointer' }}
+            >
               <Card.Img 
                 variant="top" 
                 src={produto.imagemURL || '/img/placeholder-produto.png'}
@@ -144,6 +208,44 @@ export default function Products() {
           </Col>
         ))}
       </Row>
+
+      {productInPopover && popoverTarget && (
+        <Overlay
+          show={!!productInPopover}
+          target={popoverTarget}
+          placement="bottom-start"
+          onHide={closePopover}
+          rootClose
+          transition={false}
+        >
+          {( overlayProps ) => (
+            <Popover
+              id={`popover-add-${productInPopover.id}`}
+              {...overlayProps}
+              style={{...overlayProps.style, zIndex: 1080}}
+            >
+              <Popover.Body>
+                <div className="d-grid">
+                  <Button
+                    variant="success"
+                    size="sm"
+                    onClick={() => {
+                      if (productInPopover.situacao !== 'A' || (productInPopover.estoque?.saldoVirtualTotal ?? 0) <= 0) {
+                        alert(`Produto "${productInPopover.nome}" não pode ser adicionado (Inativo ou Sem Estoque).`);
+                      } else {
+                        handleAdicionarAoPedido(productInPopover);
+                      }
+                      closePopover();
+                    }}
+                  >
+                    {`Adicionar "${productInPopover.nome.length > 20 ? `${productInPopover.nome.substring(0, 17)}...` : productInPopover.nome}"`}
+                  </Button>  
+                </div>
+              </Popover.Body>  
+            </Popover>
+          )}
+        </Overlay>
+      )}
     </Container>
   );
 }

@@ -129,7 +129,7 @@ export default function ClientesPage() {
                 <td>{c.id}</td>
                 <td>{c.nome}</td>
                 <td>{c.numeroDocumento || '-'}</td>
-                <td>{ '-' }</td>
+                <td>-</td>
                 <td>{c.telefone || '-'}</td>
               </tr>
             ))}
