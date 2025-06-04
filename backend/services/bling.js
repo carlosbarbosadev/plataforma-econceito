@@ -366,4 +366,75 @@ async function criarPedidoVenda(dadosDoPedido, retryCount = 0) {
     }
 }
 
-module.exports = { fetchClientes, refreshBlingAccessToken, fetchPedidosVendas, fetchProdutos, criarPedidoVenda };
+async function fetchFormasPagamento(retryCount = 0) {
+    if (retryCount === 0) {
+        currentAccessToken = process.env.BLING_ACCESS_TOKEN;
+        currentRefreshToken = process.env.BLING_REFRESH_TOKEN;
+    }
+
+    if (!currentAccessToken) {
+        console.error('Erro: Access Token do Bling não disponível para fetchFormasPagamento.');
+        throw new Error('Erro de configuração: Access Token do Bling não encontrado.');
+    }
+
+    if (!currentRefreshToken && retryCount === 0) {
+        console.warn('Aviso: Refresh Token do Bling não disponível para fetchFormasPagamento. A renovação automática pode falhar.');
+    }
+
+    // Endpoint para formas de pagamento na API V3 do bling
+    const url = `https://api.bling.com.br/Api/v3/formas-pagamentos`;
+
+    console.log(`Buscando Formas de Pagamento do Bling com Access Token: ${currentAccessToken ? 'presente' : 'AUSENTE'}`);
+
+    try {
+        const response = await axios.get(url, {
+            headers: {
+                'Authorization': `Bearer ${currentAccessToken}`,
+                'Accept': 'application/json'
+            },
+        });
+
+        const formasPagamento = response.data.data;
+
+        if (formasPagamento && formasPagamento.length > 0) {
+            console.log(`DEBUG: Estrutura COMPLETA da primeira Forma de Pagamento recebida (via console.dir):`);
+            console.dir(formasPagamento[0], { depth: null });
+        } else if (formasPagamento) {
+            console.log('Nenhuma forma de pagamento encontrada ou a lista está vazia.');
+        } else {
+            console.warn('Resposta da API de formas de pagamento não continha um array de dados esperado:', response.data);
+        }
+
+        console.log(`Busca de formas de pagamento finalizada. Total de ${formasPagamento ? formasPagamento.length : 0} formas encontradas.`);
+        return formasPagamento || []; // Retorna o array ou um array vazio se a resposta não for o esperado
+
+    } catch (error) {
+        if (error.response && error.response.status === 401 && retryCount < 1) {
+            console.warn(`Access Token expirado ou inválido durante busca de Formas de Pagamento. Tentando renovar...`);
+            try { 
+                await refreshBlingAccessToken();
+                console.log(`Token renovado. Re-tentando buscar Formas de Pagamento automaticamente.`);
+                return fetchFormasPagamento(retryCount + 1);
+            } catch (refreshError) {
+                console.error('Falha DEFINITIVA ao renovar o token ao buscar Formas de Pagamento:', refreshError.message);
+                throw refreshError;
+            }
+        }
+
+        let errorMessage = `Erro ao buscar Formas de Pagamento do Bling.`;
+        if (error.response) {
+            const blingErrorData = error.response.data;
+            console.error(`Erro detalhado da API Bling V3 (Formas de Pagamento - Status ${error.response.status}):`, typeof blingErrorData === 'string' ? blingErrorData : JSON.stringify(blingErrorData, null, 2));
+            errorMessage = `Falha na API Bling (Formas de Pagamento): ${typeof blingErrorData === 'object' && blingErrorData !== null && (blingErrorData.error?.description || blingErrorData.error?.message) ? (blingErrorData.error.description || blingErrorData.error.message) : `Status ${error.response.status}`}`;
+        } else if (error.request) {
+            console.error(`Erro de rede ou sem resposta da API Bling V3 (Formas de Pagamento):`, error.message);
+            errorMessage = `Falha de conexão com a API Bling (Formas de Pagamento).`;
+        } else {
+            console.error(`Erro ao configurar requisição Bling V3 (Formas de Pagamento):`, error.message);
+            errorMessage = `Erro interno ao processar requisição Bling (Formas de Pagamento): ${error.message}`;
+        }
+        throw new Error(errorMessage);
+    }
+}
+
+module.exports = { fetchClientes, refreshBlingAccessToken, fetchPedidosVendas, fetchProdutos, criarPedidoVenda, fetchFormasPagamento };

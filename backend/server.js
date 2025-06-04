@@ -10,7 +10,8 @@ const db = require('./db');
 const authRoutes = require('./routes/auth');
 const clientesRoutes = require('./routes/clientes');
 const produtosRoutes = require('./routes/produtos');
-const pedidosRoutes = require ('./routes/pedidos');
+const pedidosRoutes = require('./routes/pedidos');
+const utilRoutes = require('./routes/utils');
 
 app.use(cors());
 app.use(express.json());
@@ -19,6 +20,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/clientes', clientesRoutes);
 app.use('/api/produtos', produtosRoutes);
 app.use('/api/pedidos', pedidosRoutes);
+app.use('/api/utils', utilRoutes);
 
 // --- Inicialização do Servidor ---
 const PORT = process.env.PORT || 3001;
