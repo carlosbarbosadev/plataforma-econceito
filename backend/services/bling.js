@@ -437,4 +437,76 @@ async function fetchFormasPagamento(retryCount = 0) {
     }
 }
 
-module.exports = { fetchClientes, refreshBlingAccessToken, fetchPedidosVendas, fetchProdutos, criarPedidoVenda, fetchFormasPagamento };
+async function fetchDetalhesPedidoVenda(idPedido, retryCount = 0 ) {
+    if (retryCount === 0) {
+        currentAccessToken = process.env.BLING_ACCESS_TOKEN;
+        currentRefreshToken = process.env.BLING_REFRESH_TOKEN;
+    }
+
+    if (!currentAccessToken) {
+        console.error('Erro: Access Token do Bling não disponível para fetchDetalhesPedidoVenda.');
+        throw new Error('Erro de configuração: Access Token do Bling não encontrado.');
+    }
+
+    if (!currentRefreshToken && retryCount === 0) {
+        console.warn('Aviso: Refresh Token do Bling não disponível para fetchDetalhesPedidoVenda. A renovação automática pode falhar.');
+    }
+
+    const url = `https://api.bling.com.br/Api/v3/pedidos/vendas/${idPedido}`;
+    
+    console.log(`Buscando detalhes de Pedido de Venda ID: ${idPedido} com Access Token: ${currentAccessToken ? 'presente' : 'AUSENTE'}`);
+    
+    try {
+        const response = await axios.get(url, {
+            headers: {
+                'Authorization': `Bearer ${currentAccessToken}`,
+                'Accept': 'application/json',
+            },
+        });
+
+        const detalhesDoPedido = response.data.data;
+
+        if (detalhesDoPedido && typeof detalhesDoPedido === 'object' && detalhesDoPedido.id) {
+            console.log(`DEBUG: Estrutura COMPLETA do PEDIDO ID ${idPedido} (via console.dir):`);
+            console.dir(detalhesDoPedido, { depth: null });
+        } else {
+            console.warn(`Resposta da API para detalhes do pedido ${idPedido} não continha os dados esperados:`, response.data);
+            throw new Error(`Pedido com ID ${idPedido} não encontrado ou resposta inesperada.`);
+        }
+
+        console.log(`Detalhes do pedido ID ${idPedido} buscados com sucesso.`);
+        return detalhesDoPedido;
+
+    } catch (error) {
+        if (error.response && error.response.status === 401 && retryCount < 1) {
+            console.warn(`Access Token expirado ou inválido ao buscar detalhes do pedido ID ${idPedido}. Tentando renovar...`);
+            try {
+                await refreshBlingAccessToken();
+                console.log(`Token renovado. Re-tentando buscar detalhes do pedido ID ${idPedido} automaticamente.`);
+                return fetchDetalhesPedidoVenda(idPedido, retryCount + 1);
+            } catch (refreshError) {
+                console.error(`Falha DEFINITIVA ao renovar o token ao buscar detalhes do pedido ID ${idPedido}:`, refreshError.message);
+                throw refreshError
+            }
+        } else if (error.response && error.response.status === 404) {
+            console.warn(`Pedido com ID ${idPedido} não encontrado no Bling (404).`);
+            throw new Error(`Pedido com ID ${idPedido} não encontrado.`);
+        }
+
+        let errorMessage = `Erro ao buscar detalhes do pedido ID ${idPedido} do Bling.`;
+        if (error.response) {
+            const blingErrorData = error.response.data;
+            console.error(`Erro detalhado da API Bling V3 (Detalhes Pedido ID ${idPedido} - Status ${error,response.status}):`, typeof blingErrorData === 'sting' ? blingErrorData : JSON.stringfy(blingErrorData, null, 2));
+            errorMessage = `Falha na API Bling (Detalhes Pedido ID ${idPedido}): ${typeof blingErrorData === 'object' && blingErrorData !== null && (blingErrorData.error?.description || blingErrorData.error?.message) ? (blingErrorData.error.description || blingErrorData.error.message) : `Status ${error.response.status}`}`;
+        } else if (error.request) {
+            console.error(`Erro de rede ou sem resposta da API Bling V3 (Detalhes Pedido ID ${idPedido}):`, error.message);
+            errorMessage = `Falha de conexão com a API Bling (Detalhes Pedido ID ${idPedido}).`;
+        } else {
+            console.error(`Erro ao configurar requisição Bling V3 (Detalhes Pedido ID ${idPedido}):`, error.message);
+            errorMessage = `Erro interno ao processar requisição Bling (Detalhes Pedido ID ${idPedido}): ${error.message}`;
+        }
+        throw new Error(errorMessage);
+    }
+}
+
+module.exports = { fetchClientes, refreshBlingAccessToken, fetchPedidosVendas, fetchProdutos, criarPedidoVenda, fetchFormasPagamento, fetchDetalhesPedidoVenda };

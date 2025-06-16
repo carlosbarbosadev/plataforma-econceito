@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { autenticarToken } = require('../middlewares/authMiddleware');
-const { fetchPedidosVendas, criarPedidoVenda } = require('../services/bling');
+const { fetchPedidosVendas, criarPedidoVenda, fetchDetalhesPedidoVenda } = require('../services/bling');
 
 // Rota para: Buscar/Listar pedidos de venda
 router.get('/', autenticarToken, async (req, res) => {
@@ -91,6 +91,40 @@ router.post('/', autenticarToken, async (req, res) => {
         if (!res.headersSent) {
             const status = error.response?.status || 500;
             res.status(status).json({ mensagem: error.message || "Erro desconhecido ao criar pedido." });
+        }
+    }
+});
+
+// NOVA ROTA: Buscar detalhes de um pedido de venda específico
+// GET /api/pedidos/{idPedidoVenda}
+router. get ('/:idPedidoVenda', autenticarToken, async(req, res) => {
+    const { idPedidoVenda } = req.params; // Pega o ID da URL
+    console.log(`Rota GET /api/pedidos/${idPedidoVenda} acessada por: ${req.usuario.email}`);
+
+    if(!idPedidoVenda || isNaN(Number(idPedidoVenda))) {
+        return res.status(400).json({ mensagem: "ID do Pedido inválido ou não fornecido." });
+    }
+
+    try {
+        const detalhesDoPedido = await fetchDetalhesPedidoVenda(idPedidoVenda);
+
+        // Opcional: Lógica de permissão para verificar se o vendedor pode ver este pedido
+        if (req.usuario.tipo === 'vendedor') {
+            if (!detalhesDoPedido.vendedor || Number(detalhesDoPedido.vendedor.id) != Number(req.usuario.id_vendedor_bling)) {
+                console.warn(`Vendedor ${req.usuario.email} tentando acessar pedido ${idPedidoVenda} que não lhe pertence ou não tem vendedor definido.`);
+                return res.status(403).json({ mensagem: "Você não tem permissão para ver os detalhes deste pedido." });
+            }
+        }
+
+        console.log(`Retornando detalhes do pedido ID ${idPedidoVenda} para ${req.usuario.email}.`);
+        res.json(detalhesDoPedido);
+
+    } catch (error) {
+        console.error(`Erro na rota GET /api/pedidos/${idPedidoVenda} para ${req.usuario.email}:`, error.message);
+        if (!res.headersSent) {
+            const status = error.message.includes("não encontrado") ? 404 : (error.response?.status || 500);
+            res.status(status).json({ mensagem: `Falha ao buscar detalhes do pedido: ${error.message}` });
+
         }
     }
 });

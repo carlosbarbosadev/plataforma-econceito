@@ -54,3 +54,18 @@ input[type='number']::-webkit-inner-spin-button {
   margin: 0;
   -webkit-appearance: none;
 }
+.modal-largo {
+  max-width: 90vw !important;
+  margin-top: 74px !important;
+}
+@media (min-width: 2100px) {
+  .modal-largo {
+    max-width: 1400px !important;
+  }
+}
+.modal-backdrop.show {
+  opacity: 0.8 !important
+}
+body.modal-open .desktop-sidebar {
+  z-index: 1040 !important;
+}

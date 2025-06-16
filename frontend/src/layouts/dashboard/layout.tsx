@@ -21,7 +21,7 @@ import { layoutClasses } from '../core/classes';
 import { _account } from '../nav-config-account';
 import { dashboardLayoutVars } from './css-vars';
 import { navData } from '../nav-config-dashboard';
-import { MainSection } from '../core/main-section'; // Searchbar existente no header
+import { MainSection } from '../core/main-section';
 import { _workspaces } from '../nav-config-workspace';
 import { MenuButton } from '../components/menu-button';
 import { HeaderSection } from '../core/header-section';
@@ -121,49 +121,6 @@ export function DashboardLayout({
     </AppBar>
   );
 
-  // Header original abaixo da nova barra de pesquisa
-  const renderHeader = () => {
-    const headerSlotProps: HeaderSectionProps['slotProps'] = {
-      container: {
-        maxWidth: false,
-      },
-    };
-
-    const headerSlots: HeaderSectionProps['slots'] = {
-      topArea: (
-        <Alert severity="info" sx={{ display: 'none', borderRadius: 0 }}>
-          This is an info Alert.
-        </Alert>
-      ),
-      leftArea: (
-        <>
-          <MenuButton
-            onClick={onOpen}
-            sx={{ mr: 1, ml: -1, [theme.breakpoints.up(layoutQuery)]: { display: 'none' } }}
-          />
-          <NavMobile data={navData} open={open} onClose={onClose} workspaces={_workspaces} />
-        </>
-      ),
-      rightArea: (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0, sm: 0.75 } }}>
-          <NotificationsPopover data={_notifications} />
-          <AccountPopover data={_account} />
-        </Box>
-      ),
-    };
-
-    return (
-      <HeaderSection
-        disableElevation
-        layoutQuery={layoutQuery}
-        {...slotProps?.header}
-        slots={{ ...headerSlots, ...slotProps?.header?.slots }}
-        slotProps={merge(headerSlotProps, slotProps?.header?.slotProps ?? {})}
-        sx={slotProps?.header?.sx}
-      />
-    );
-  };
-
   const renderFooter = () => null;
 
   const renderMain = () => <MainSection {...slotProps?.main}>{children}</MainSection>;
@@ -186,7 +143,7 @@ export function DashboardLayout({
         }}
       >
         <LayoutSection
-          headerSection={renderHeader()}
+          headerSection={null}
           sidebarSection={
             <NavDesktop data={navData} layoutQuery={layoutQuery} workspaces={_workspaces} />
           }
