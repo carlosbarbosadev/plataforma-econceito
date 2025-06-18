@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Table, Spinner, Alert, Form, Badge, Modal, Button, Row, Col, ListGroup } from 'react-bootstrap';
-// Se configurou i18next
-// import { useTranslation } from 'react-i18next'; 
 
 import api from 'src/services/api';
 
@@ -114,6 +112,9 @@ export default function PedidosView() {
   const [pedidos, setPedidos] = useState<PedidoDetalhado[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editedPedido, setEditedPedido] = useState<PedidoDetalhado | null>(null);
+  const [editingQuantities, setEditingQuantities] = useState<Record<number, string>>({});
+  const [showUnsaveChangesModal, setShowUnsavedChangesModal] = useState(false);
   // const [searchTermPedidos, setSearchTermPedidos] = useState(''); // Se for adicionar busca
 
   useEffect(() => {
@@ -148,23 +149,17 @@ export default function PedidosView() {
     setErrorDetalhes(null);
     setShowDetalhesModal(true);
 
-    const pedidoDaLista = pedidos.find(p => p.id === pedidoId);
-    if (pedidoDaLista && pedidoDaLista.itens && pedidoDaLista.parcelas) {
-      console.log('Usando detalhes do pedido já carregados na lista.');
-      setSelectedPedidoDetalhes(pedidoDaLista);
-      setLoadingDetalhes(false);
-      return;
-    }
-
     try {
       const response = await api.get<PedidoDetalhado>(`/api/pedidos/${pedidoId}`);
       if (response.data && response.data.id) {
-        setSelectedPedidoDetalhes(response.data);
+        const pedido = response.data;
+        setSelectedPedidoDetalhes(pedido);
+        setEditedPedido(JSON.parse(JSON.stringify(pedido)));
       } else {
         throw new Error('Formato de resposta inválido')
       }
     } catch (err: any) {
-      const errorMessage = err.response?.data?.mensagem|| err.message || `Falha ao buscar detalhes do pedido ${pedidoId}.`;
+      const errorMessage = err.response?.data?.mensagem || err.message || `Falha ao buscar detalhes do pedido ${pedidoId}.`;
       setErrorDetalhes(errorMessage);
     } finally {
       setLoadingDetalhes(false);
@@ -175,7 +170,117 @@ export default function PedidosView() {
     setShowDetalhesModal(false);
     setSelectedPedidoDetalhes(null);
     setErrorDetalhes(null);
+    setEditedPedido(null);
+    setEditingQuantities({});
   };
+
+  const handleAttemptClose = () => {
+    const hasUnsavedChanges = isOrderEditable && JSON.stringify(selectedPedidoDetalhes) !== JSON.stringify(editedPedido);
+
+    if (hasUnsavedChanges) {
+      setShowUnsavedChangesModal(true);
+    } else {
+      handleCloseModal()
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!editedPedido) return;
+
+    const { name, value } = e.target;
+
+    if (name === 'contato.nome') {
+      setEditedPedido({
+        ...editedPedido,
+        contato: {
+          ...editedPedido.contato,
+          nome: value,
+        },
+      });
+    }
+  };
+
+  const startEditingQuantity = (item: ItemDoPedidoDetalhado) => {
+    const formattedValue = item.quantidade.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+
+    setEditingQuantities(prev => ({
+      ...prev,
+      [item.id]: formattedValue,
+    }));
+  };
+
+  const uptadedEditingQuantity = (itemId: number, value: string) => {
+    setEditingQuantities(prev => ({
+      ...prev,
+      [itemId]: value,
+    }));
+  };
+
+  const commitQuantityChange = (itemId: number) => {
+    if (!editedPedido) return;
+  
+    const rawValue = editingQuantities[itemId];
+    if (rawValue === undefined || rawValue.trim()=== "") {
+      const { [itemId]: _, ...rest } = editingQuantities;
+      setEditingQuantities(rest);
+      return;
+    }
+
+    const newQuantity = parseFloat(rawValue.replace(",", ".")) || 0;
+
+    const updatedItens = editedPedido.itens.map(item => {
+      if (item.id === itemId) {
+        return{ ...item, quantidade: newQuantity };
+      }
+      return item;
+    });
+
+    setEditedPedido({
+      ...editedPedido,
+      itens: updatedItens,
+    });
+    
+    const { [itemId]: _, ...rest } = editingQuantities;
+    setEditingQuantities(rest);
+  };
+
+  const handleRemoveItem = (ItemIdToRemove: number) => {
+    if (!editedPedido) return;
+
+    if (window.confirm("Tem certeza que deseja remover este item?")) {
+      const updatedItens = editedPedido.itens.filter(
+        (item) => item.id !== ItemIdToRemove
+      );
+      setEditedPedido({
+        ...editedPedido,
+        itens: updatedItens,
+      });
+    }
+  };
+
+  const handleSaveChanges = async () => {
+    if (!editedPedido) return;
+
+    console.log("Salvando alterações:", editedPedido);
+    setLoadingDetalhes(true);
+
+    try {
+      // await api.put(`/api/pedidos/${editedPedido.id}`, editedPedido);
+
+      alert("Alterações salvas com sucesso! (simulação)");
+
+      setSelectedPedidoDetalhes(editedPedido);
+
+    } catch (err) {
+      console.error("Erro ao salvar alterações:", err)
+      alert("Falha ao salvar as alterações.")
+    } finally {
+      setLoadingDetalhes(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -196,6 +301,7 @@ export default function PedidosView() {
   const headerTotal = 'Total (R$)';
   const headerSituacao = 'Situação';
 
+  const isOrderEditable = selectedPedidoDetalhes?.situacao.id === 6;
 
   return (
     <div className="mt-4">
@@ -249,7 +355,7 @@ export default function PedidosView() {
       )}
 
       {selectedPedidoDetalhes && (
-        <Modal show={showDetalhesModal} onHide={handleCloseModal} dialogClassName="modal-largo" centered>
+        <Modal show={showDetalhesModal} onHide={handleAttemptClose} dialogClassName="modal-largo" centered style={{ fontSize: "0.90rem" }}>
           <Modal.Header closeButton>
             <Modal.Title id="pedido-detalhes-modal-title" style={{ fontWeight: 'bold' }}>
               Pedido de venda - {selectedPedidoDetalhes.numero || selectedPedidoDetalhes.id}
@@ -274,10 +380,12 @@ export default function PedidosView() {
                       <Form.Label style={{ fontSize: '0.8rem' }}>Cliente</Form.Label>
                       <Form.Control
                         type="text"
-                        readOnly
-                        disabled
-                        value={selectedPedidoDetalhes.contato.nome || 'N/A'}
-                        title={selectedPedidoDetalhes.contato.nome || ''}
+                        name="contato.nome"
+                        readOnly={!isOrderEditable}
+                        disabled={!isOrderEditable}
+                        value={editedPedido?.contato.nome || ""}
+                        onChange={handleInputChange}
+                        title={selectedPedidoDetalhes.contato.nome || ""}
                       />
                     </Form.Group>
                   </Col>
@@ -303,73 +411,134 @@ export default function PedidosView() {
                     <ListGroup.Item className="d-none d-md-block border-0 px-0">
                       <Row className="align-items-center g-2">
                         <Col xs="auto">
-                          <div style={{ width: '40px' }}></div>
+                          <div style={{ width: '30px' }} />
                         </Col>
-                      <Col>
-                        <Row className="text-muted" style={{ fontSize: '0.8rem' }}>
-                        <Col md={4}>Descrição</Col>
-                        <Col md={2} style={{ paddingLeft: '0' }}>Código</Col>
-                        <Col md={2} style={{ paddingLeft: '0' }}>Quantidade</Col>
-                        <Col md={2} style={{ paddingLeft: '0' }}>Preço un</Col>
-                        <Col md={2} style={{ paddingLeft: '0' }}>Preço total</Col>
-                      </Row>
-                    </Col>
-                  </Row>
-                </ListGroup.Item>
-
-                {selectedPedidoDetalhes.itens.map((item, index) => (
-                  <ListGroup.Item key={item.id} className="px-0" style={{ border: 0 }}>
-                    <Row className="align-items-center g-2">
-                      <Col xs="auto" className="d-flex align-items-center justify-content-center">
-                      <div
-                        style={{
-                          backgroundColor: '#ced4da',
-                          color: 'white',
-                          fontWeight: 'bold',
-                          width: '30px',
-                          height: '30px',
-                          borderRadius: '0.375rem',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        {index + 1}
-                      </div>  
-                    </Col>
-
-                    <Col>
-                      <div style={{
-                        border: '1px solid #dee2e6',
-                        borderRadius: '0.5rem',
-                        padding: '0.4rem'
-                      }}>
-                        <Row className="align-items-center h-100">
-                          <Col xs={12} md={4} className="pe-3" style={{ borderRight: '1px solid #dee2e6' }}>
-                            <div>{item.descricao}</div>
-                          </Col>
-
-                          <Col xs={6} md={2} className="text-muted px-3" style={{ borderRight: '1px solid #dee2e6' }}>
-                            <span className="d-md-none fw-bold">Código </span>{item.codigo || item.produto.id}
-                          </Col>
-
-                          <Col xs={6} md={2} className="px-3" style={{ borderRight: '1px solid #dee2e6' }}>
-                            <span className="d-md-none fw-bold">Quantidade </span>{item.quantidade.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </Col>
-
-                          <Col xs={6} md={2} className="px-3" style={{ borderRight: '1px solid #dee2e6' }}>
-                            <span className="d-md-none fw-bold">Preço un </span>{item.valor.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
-                          </Col>
-
-                          <Col xs={6} md={2} className="ps-3">
-                            <span className="d-md-none fw-bold">Preço total </span>{(item.quantidade * item.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                          </Col>
+                        <Col>
+                          <Row className="text-muted"
+                          style={{
+                            fontSize: "0.80rem",
+                            paddingLeft: "0.4rem",
+                            paddingRight: "1.6rem"
+                          }}
+                        >
+                          <Col md={3} className="pe-3">Descrição</Col>
+                          <Col md={2} className="px-3">Código</Col>
+                          <Col md={2} className="px-3">Quantidade</Col>
+                          <Col md={2} className="px-3">Preço un</Col>
+                          <Col md={2} className="ps-3">Preço total</Col>
+                          <Col md={1} />
                         </Row>
-                      </div>
-                    </Col>
-                  </Row>
-                </ListGroup.Item>
-              ))}
+                      </Col>
+                    </Row>
+                  </ListGroup.Item>
+
+                {selectedPedidoDetalhes.itens.map((item, index) => {
+                  const editedItem = isOrderEditable ? editedPedido?.itens.find(i => i.id === item.id) : null;
+                  const displayQuantity = editedItem ? editedItem.quantidade : item.quantidade;
+                  const displayTotal = editedItem ? displayQuantity * editedItem.valor : item.quantidade * item.valor;
+
+                  return (
+                    <ListGroup.Item key={item.id} className="px-0" style={{ border: 0 }}>
+                      <Row className="align-items-center g-2">
+                        <Col xs="auto" className="d-flex align-items-center justify-content-center">
+                          <div
+                            style={{
+                              backgroundColor: "#ced4da",
+                              color: "white",
+                              fontWeight: "bold",
+                              width: "30px",
+                              height: "30px",
+                              borderRadius: "0.375rem",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center"
+                            }}
+                          >
+                            {index + 1}
+                          </div>
+                        </Col>
+
+                        <Col>
+                            <div style={{
+                              border: "1px solid #dee2e6",
+                              borderRadius: "0.5rem",
+                              padding: "0.4rem"
+                            }}>
+                              <Row className="align-items-center h-100">
+                                <Col xs={12} md={3} className="pe-3" style={{ borderRight: '1px solid #dee2e6' }}>
+                                  <div>{item.descricao}</div>
+                                </Col>
+
+                                <Col xs={6} md={2} className="px-3" style={{ borderRight: '1px solid #dee2e6' }}>
+                                  <span className="d-md-none fw-bold">Código </span>{item.codigo || item.produto.id}
+                                </Col>
+
+                                <Col xs={6} md={2} className="px-3" style={{ borderRight: '1px solid #dee2e6' }}>
+                                  <span className="d-md-none fw-bold">Quantidade </span>
+                                  {isOrderEditable ? (
+                                    <Form.Control
+                                    type="text"
+                                    size="sm"
+                                    value={editingQuantities[item.id] !== undefined ? editingQuantities[item.id] : displayQuantity.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    onFocus={(e) => {
+                                      if (editedItem) {
+                                        startEditingQuantity(editedItem);
+                                      }
+                                      setTimeout(() => e.target.select(), 0);
+                                    }}
+                                    onChange={(e) => uptadedEditingQuantity(item.id, e.target.value)}
+                                    onBlur={() => commitQuantityChange(item.id)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        commitQuantityChange(item.id);
+                                        e.currentTarget.blur();
+                                      }
+                                    }}
+                                    style={{
+                                      background: "none",
+                                      border: "none",
+                                      boxShadow: "none",
+                                      textAlign: "left",
+                                      width: "100%",
+                                      minWidth: "70px",
+                                      color: "inherit",
+                                      fontSize: "0.90rem"
+                                    }}
+                                  />
+                                ) : (
+                                  displayQuantity.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                  )}
+                                </Col>
+
+                                <Col xs={6} md={2} className="px-3" style={{ borderRight: '1px solid #dee2e6' }}>
+                                  <span className="d-md-none fw-bold">Preço un </span>{item.valor.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
+                                </Col>
+
+                                <Col xs={6} md={2} className="ps-3">
+                                  <span className="d-md-none fw-bold">Preço total </span>
+                                  {displayTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                </Col>
+
+                                <Col xs={12} md={1} className="text-center">
+                                  {isOrderEditable && (
+                                    <Button 
+                                      variant="light"
+                                      size="sm"
+                                      className="border rounded-circle p-1"
+                                      onClick={() => handleRemoveItem(item.id)}
+                                      style={{ width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center"  }}
+                                    >
+                                      <i className="bi bi-trash text-danger" />
+                                    </Button>
+                                  )}
+                                </Col>
+                              </Row>
+                            </div>
+                        </Col>
+                      </Row>
+                    </ListGroup.Item>
+                  )
+                })}
             </ListGroup>
           ) : (
             <p className="text-muted">Nenhum item encontrado para este pedido.</p>
@@ -379,12 +548,76 @@ export default function PedidosView() {
           )}
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={handleCloseModal}>
+          {isOrderEditable ? (
+            <>
+              <Button
+                variant="secondary"
+                onClick={handleAttemptClose}
+                style={{ width: "120px" }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleSaveChanges}
+                style={{ width: "120px" }}
+              >
+                Salvar
+              </Button>
+            </>
+          ) : (
+          <Button
+            variant="secondary"
+            onClick={handleCloseModal}
+            style={{ width: "120px"}}
+          >
             Fechar
           </Button>
+          )}
         </Modal.Footer>
       </Modal>
       )}
+      <Modal show={showUnsaveChangesModal} onHide={() => setShowUnsavedChangesModal(false)} centered>
+        <Modal.Body className="text-center p-4">
+          <h5 className="mb-3">Desaja salvar as alterações?</h5>
+          <p className="text-muted">
+            Suas edições serão perdidas se você não as salvar.
+          </p>
+        </Modal.Body>
+
+        <Modal.Footer className="justify-content-center border-0 gap-2"
+          style={{ backgroundColor: '#e9ecef' }}
+        >
+          <Button
+            variant="primary"
+            style={{ width: '130px' }}
+            onClick={() => {
+              handleSaveChanges();
+              setShowUnsavedChangesModal(false);
+              handleCloseModal();
+            }}
+          >
+            Salvar
+          </Button>
+          <Button
+            variant="light"
+            style={{ width: '130px' }}
+            onClick={() => {
+              handleCloseModal();
+              setShowUnsavedChangesModal(false);
+            }}
+          >
+            Não salvar
+          </Button>
+          <Button
+            variant="light"
+            style={{ width: '130px' }}
+            onClick={() => setShowUnsavedChangesModal(false)}
+          >
+            Cancelar
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 }
