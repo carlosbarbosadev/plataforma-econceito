@@ -197,6 +197,15 @@ export default function PedidosView() {
           nome: value,
         },
       });
+    } else if (name === "desconto") {
+      const novoValorDesconto = parseFloat(value) || 0;
+      setEditedPedido({
+        ...editedPedido,
+        desconto: {
+          unidade: editedPedido.desconto?.unidade || "%",
+          valor: novoValorDesconto,
+        }
+      });
     }
   };
 
@@ -282,6 +291,8 @@ export default function PedidosView() {
     }
   }
 
+
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '200px' }}>
@@ -302,6 +313,19 @@ export default function PedidosView() {
   const headerSituacao = 'Situação';
 
   const isOrderEditable = selectedPedidoDetalhes?.situacao.id === 6;
+
+  const totais = editedPedido ? {
+    numeroDeItens: editedPedido.itens.length,
+    somaDasQuantidades: editedPedido.itens.reduce((acc, item) => acc + item.quantidade, 0),
+    subtotal: editedPedido.itens.reduce((acc, item) => acc + (item.valor * item.quantidade), 0),
+    valorDoDesconto: function() {
+      const descontoPercentual = editedPedido.desconto?.valor || 0;
+      return this.subtotal * (descontoPercentual / 100);
+    },
+    totalDaVenda: function() {
+      return this.subtotal - this.valorDoDesconto();
+    }
+  } : null;
 
   return (
     <div className="mt-4">
@@ -355,7 +379,7 @@ export default function PedidosView() {
       )}
 
       {selectedPedidoDetalhes && (
-        <Modal show={showDetalhesModal} onHide={handleAttemptClose} dialogClassName="modal-largo" centered style={{ fontSize: "0.90rem" }}>
+        <Modal show={showDetalhesModal} onHide={handleAttemptClose} dialogClassName="modal-largo"  centered style={{ fontSize: "0.90rem" }}>
           <Modal.Header closeButton>
             <Modal.Title id="pedido-detalhes-modal-title" style={{ fontWeight: 'bold' }}>
               Pedido de venda - {selectedPedidoDetalhes.numero || selectedPedidoDetalhes.id}
@@ -370,7 +394,7 @@ export default function PedidosView() {
             )}
             {!loadingDetalhes && !errorDetalhes && selectedPedidoDetalhes && (
               <div>
-                <h5 style={{ fontWeight: 'bold', marginBottom: '1rem' }}>
+                <h5 style={{ fontWeight: 'bold'}}>
                   Dados do Pedido
                 </h5>
 
@@ -402,35 +426,10 @@ export default function PedidosView() {
                     </Form.Group>
                   </Col>
                 </Row>
-
-                <hr />
                 
-                <h6 style={{ fontWeight: 'bold' }}>Itens do Pedido</h6>
+                <h6 style={{ fontWeight: 'bold' }} className="mt-5">Itens do Pedido</h6>
                 {selectedPedidoDetalhes.itens && selectedPedidoDetalhes.itens.length > 0 ? (
                   <ListGroup variant="flush" className="mt-2" style={{ gap: '0rem' }}>
-                    <ListGroup.Item className="d-none d-md-block border-0 px-0">
-                      <Row className="align-items-center g-2">
-                        <Col xs="auto">
-                          <div style={{ width: '30px' }} />
-                        </Col>
-                        <Col>
-                          <Row className="text-muted"
-                          style={{
-                            fontSize: "0.80rem",
-                            paddingLeft: "0.4rem",
-                            paddingRight: "1.6rem"
-                          }}
-                        >
-                          <Col md={3} className="pe-3">Descrição</Col>
-                          <Col md={2} className="px-3">Código</Col>
-                          <Col md={2} className="px-3">Quantidade</Col>
-                          <Col md={2} className="px-3">Preço un</Col>
-                          <Col md={2} className="ps-3">Preço total</Col>
-                          <Col md={1} />
-                        </Row>
-                      </Col>
-                    </Row>
-                  </ListGroup.Item>
 
                 {selectedPedidoDetalhes.itens.map((item, index) => {
                   const editedItem = isOrderEditable ? editedPedido?.itens.find(i => i.id === item.id) : null;
@@ -464,8 +463,8 @@ export default function PedidosView() {
                               borderRadius: "0.5rem",
                               padding: "0.4rem"
                             }}>
-                              <Row className="align-items-center h-100">
-                                <Col xs={12} md={3} className="pe-3" style={{ borderRight: '1px solid #dee2e6' }}>
+                              <Row className="align-items-center h-100 d-flex">
+                                <Col className="pe-3 flex-grow-1 border-end">
                                   <div>{item.descricao}</div>
                                 </Col>
 
@@ -518,23 +517,31 @@ export default function PedidosView() {
                                   <span className="d-md-none fw-bold">Preço total </span>
                                   {displayTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                                 </Col>
-
-                                <Col xs={12} md={1} className="text-center">
-                                  {isOrderEditable && (
-                                    <Button 
-                                      variant="light"
-                                      size="sm"
-                                      className="border rounded-circle p-1"
-                                      onClick={() => handleRemoveItem(item.id)}
-                                      style={{ width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center"  }}
-                                    >
-                                      <i className="bi bi-trash text-danger" />
-                                    </Button>
-                                  )}
-                                </Col>
                               </Row>
                             </div>
                         </Col>
+
+                        {/* Ícone de lixeira separado da lista */}
+                        {isOrderEditable && (
+                          <Col xs="auto" className="d-flex align-items-center">
+                            <Button 
+                              variant="outline-danger"
+                              size="sm"
+                              className="rounded-3 p-2"
+                              onClick={() => handleRemoveItem(item.id)}
+                              style={{ 
+                                width: "36px", 
+                                height: "36px", 
+                                display: "flex", 
+                                alignItems: "center", 
+                                justifyContent: "center",
+                                marginLeft: "8px"
+                              }}
+                            >
+                              <i className="bi bi-trash" />
+                            </Button>
+                          </Col>
+                        )}
                       </Row>
                     </ListGroup.Item>
                   )
@@ -543,6 +550,67 @@ export default function PedidosView() {
           ) : (
             <p className="text-muted">Nenhum item encontrado para este pedido.</p>
           )}
+
+          <div className="mt-5">
+            <h5 style={{ fontWeight: "bold" }}>Totais</h5>
+            {totais && (
+              <Row>
+                <Col md={3}>
+                  <Form.Group>
+                    <Form.Label className="small text-muted">Nº de itens</Form.Label>
+                    <Form.Control
+                      type="text"
+                      readOnly
+                      disabled
+                      value={totais.numeroDeItens}
+                      className="text-center"
+                    />
+                  </Form.Group>
+                </Col>
+
+                <Col md={3}>
+                  <Form.Group>
+                    <Form.Label className="small text-muted">Soma das quantidades</Form.Label>
+                    <Form.Control
+                      type="text"
+                      readOnly
+                      disabled
+                      value={totais.somaDasQuantidades.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                      className="text-center"
+                    />
+                  </Form.Group>
+                </Col>
+
+                <Col md={3}>
+                  <Form.Group>
+                    <Form.Label className="small text-muted">Desconto (%)</Form.Label>
+                    <Form.Control
+                      type="number"
+                      name="desconto"
+                      readOnly={!isOrderEditable}
+                      disabled={!isOrderEditable}
+                      value={editedPedido?.desconto?.valor || 0}
+                      onChange={handleInputChange}
+                      className="text-center"
+                    />
+                  </Form.Group>
+                </Col>
+
+                <Col md={3}>
+                  <Form.Group>
+                    <Form.Label className="small text-muted">Total da Venda</Form.Label>
+                    <Form.Control
+                      type="text"
+                      readOnly
+                      disabled
+                      className="text-center fw-bold"
+                      value={totais.totalDaVenda().toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                    /> 
+                  </Form.Group>
+                </Col>
+              </Row>
+            )}
+          </div>
 
             </div>
           )}
