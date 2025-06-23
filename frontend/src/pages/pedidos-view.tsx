@@ -81,7 +81,12 @@ type PedidoDetalhado = {
   taxas?: any;
 };
 
-type Pedido = PedidoDetalhado;
+type ProdutoEncontrado = {
+  id: number;
+  descricao: string;
+  codigo?: string;
+  valor: number;
+};
 
 const mapSituacaoPedido = (idSituacao?: number): string => {
   if (idSituacao === undefined || idSituacao === null) return 'N/A';
@@ -115,8 +120,11 @@ export default function PedidosView() {
   const [editedPedido, setEditedPedido] = useState<PedidoDetalhado | null>(null);
   const [editingQuantities, setEditingQuantities] = useState<Record<number, string>>({});
   const [showUnsaveChangesModal, setShowUnsavedChangesModal] = useState(false);
-  // const [searchTermPedidos, setSearchTermPedidos] = useState(''); // Se for adicionar busca
-
+  const [editingDesconto, setEditingDesconto] = useState<string | null>(null);
+  const [isAddingItem, setIsAddingItem] = useState(false);
+  const [newItemSearchTerm, setNewItemSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState<ProdutoEncontrado[]>([]);
+  const [isLoadingSearch, setIsLoadingSearch] = useState(false);
   useEffect(() => {
     setLoading(true);
     setError(null);
@@ -196,15 +204,6 @@ export default function PedidosView() {
           ...editedPedido.contato,
           nome: value,
         },
-      });
-    } else if (name === "desconto") {
-      const novoValorDesconto = parseFloat(value) || 0;
-      setEditedPedido({
-        ...editedPedido,
-        desconto: {
-          unidade: editedPedido.desconto?.unidade || "%",
-          valor: novoValorDesconto,
-        }
       });
     }
   };
@@ -289,9 +288,42 @@ export default function PedidosView() {
     } finally {
       setLoadingDetalhes(false);
     }
-  }
+  };
 
+  const handleProductSelect = (produto: ProdutoEncontrado) => {
+    console.log("Produto selecionado:", produto);
 
+    setIsAddingItem(false);
+    setNewItemSearchTerm("");
+    setSearchResults([]);
+  };
+
+  useEffect(() => {
+    if (newItemSearchTerm.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsLoadingSearch(true);
+
+    const delayDebounceFn = setTimeout(() => {
+      console.log("Buscando por:", newItemSearchTerm);
+
+      api.get(`/api/produtos?search=${newItemSearchTerm}`)
+        .then(res => {
+          setSearchResults(res.data as ProdutoEncontrado[]);
+        })
+        .catch(err => {
+          console.error("Erro ao buscar produtos:", err);
+          setSearchResults([]);
+        })
+        .finally(() => {
+          setIsLoadingSearch(false);
+        });
+    }, 300);
+    
+    return () => clearTimeout(delayDebounceFn)
+  }, [newItemSearchTerm]);
 
   if (loading) {
     return (
@@ -546,12 +578,123 @@ export default function PedidosView() {
                     </ListGroup.Item>
                   )
                 })}
+
+                {isAddingItem && editedPedido && (
+                  <ListGroup.Item className="px-0">
+                    <Row className="align-items-center g-2">
+                      <Col xs="auto" className="d-flex align-items-center justify-content-center">
+                        <div
+                          style={{
+                            backgroundColor: "#ced4da",
+                            color: "white",
+                            fontWeight: "bold",
+                            width: "30px",
+                            height: "30px",
+                            borderRadius: "0.375rem",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
+                        >
+                          {editedPedido.itens.length + 1}
+                        </div>
+                      </Col>
+
+                      <Col>
+                        <div style={{ border: "1px solid #dee2e6", borderRadius: "0.5rem", padding: "0.4rem" }}>
+                          <Row className="align-items-center h-100 d-flex">
+                            <Col xs={12} md={4} className="pe-3" style={{ borderRight: "1px solid #dee2e6" }}>
+                              <Form.Control
+                                type="text"
+                                placeholder="Pesquise por código ou descrição"
+                                className="border-0 shadow-none"
+                                value={newItemSearchTerm}
+                                onChange={(e) => setNewItemSearchTerm(e.target.value)}
+                                autoFocus
+                              />
+                            </Col>
+                            <Col xs={6} md={2} className="px-3" style={{ borderRight: "1px solid #dee2e6" }}>
+                              ㅤㅤ
+                            </Col>
+                            <Col xs={6} md={2} className="px-3" style={{ borderRight: "1px solid #dee2e6" }}>
+                              ㅤㅤ
+                            </Col>
+                            <Col xs={6} md={2} className="px-3" style={{ borderRight:"1px solid #dee2e6" }}>
+                              R$ 0,00
+                            </Col>
+                            <Col xs={6} md={2} className="ps-3">
+                              R$ 0,00
+                            </Col>
+                          </Row>
+
+                          {isLoadingSearch && (
+                            <div className="text-center p-2"><Spinner animation="border" size="sm" /></div>
+                          )}
+
+                          {searchResults.length > 0 && (
+                            <ListGroup
+                              style={{
+                                position: "absolute",
+                                top: "100%",
+                                left: 0,
+                                right: 0,
+                                zIndex: 10,
+                                maxHeight: "200px",
+                                overflowY: "auto"
+                              }}
+                              className="shadow-sm"
+                            >
+                              {searchResults.map(produto => (
+                                <ListGroup.Item
+                                  key={produto.id}
+                                  action
+                                  onClick={() => handleProductSelect(produto)}
+                                >
+                                  {produto.descricao} <br/>
+                                  <small className="text-muted"> Código: {produto.codigo || "N/A"} | Preço: {(produto.valor || 0).toLocaleString("pt-BR", {style: "currency", currency: "BRL"})}</small>
+                                </ListGroup.Item>
+                              ))}
+                            </ListGroup>
+                          )}
+                        </div>
+                      </Col>
+
+                      <Col xs="auto" className="d-flex align-items-center">
+                        <Button
+                          variant="outline-danger"
+                          size="sm"
+                          className="rounded-3 p-2"
+                          onClick={() => setIsAddingItem(false)}
+                          title="Cancelar adição"
+                          style={{ width: "36px", height: "36px", display: "flex", alignItems: "center", justifyContent: "center", marginLeft: "8px"}}
+                        >
+                          <i className="bi bi-trash" />
+                        </Button>
+                      </Col>
+                    </Row>
+                  </ListGroup.Item>
+                )}
             </ListGroup>
+            
           ) : (
             <p className="text-muted">Nenhum item encontrado para este pedido.</p>
           )}
 
-          <div className="mt-5">
+          {isOrderEditable && !isAddingItem && (
+            <div className="mt-2 d-flex justify-content-end">
+                <Button
+                    variant="link"
+                    size="sm"
+                    className="text-success fw-bold p-0 text-decoration-none"
+                    style={{ color: '#198754' }}
+                    onClick={() => setIsAddingItem(true)}
+                >
+                    Adicionar item
+                </Button>
+            </div>
+          )}
+
+          <div className="mt-4">
             <h5 style={{ fontWeight: "bold" }}>Totais</h5>
             {totais && (
               <Row>
@@ -563,7 +706,6 @@ export default function PedidosView() {
                       readOnly
                       disabled
                       value={totais.numeroDeItens}
-                      className="text-center"
                     />
                   </Form.Group>
                 </Col>
@@ -576,7 +718,6 @@ export default function PedidosView() {
                       readOnly
                       disabled
                       value={totais.somaDasQuantidades.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                      className="text-center"
                     />
                   </Form.Group>
                 </Col>
@@ -585,13 +726,45 @@ export default function PedidosView() {
                   <Form.Group>
                     <Form.Label className="small text-muted">Desconto (%)</Form.Label>
                     <Form.Control
-                      type="number"
-                      name="desconto"
+                      type="text"
                       readOnly={!isOrderEditable}
                       disabled={!isOrderEditable}
-                      value={editedPedido?.desconto?.valor || 0}
-                      onChange={handleInputChange}
-                      className="text-center"
+                      value={
+                        editingDesconto !== null
+                        ? editingDesconto
+                        : (editedPedido?.desconto?.valor || 0)
+                      }
+                      onFocus={(e) => {
+                        if (!isOrderEditable) return;
+                        setEditingDesconto(String(editedPedido?.desconto?.valor || 0));
+                        e.target.select();
+                      }}
+                      onChange={(e) => {
+                        setEditingDesconto(e.target.value);
+                      }}
+                      onBlur={() => {
+                        if (editingDesconto === null) return;
+
+                        const novoValor = parseFloat(editingDesconto.replace(",", ".")) || 0;
+
+                        if (editedPedido) {
+                          setEditedPedido({
+                            ...editedPedido,
+                            desconto: {
+                              ...editedPedido.desconto,
+                              unidade: editedPedido.desconto?.unidade || "%",
+                              valor: novoValor,
+                            }
+                          });
+                        }
+
+                        setEditingDesconto(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          (e.target as HTMLInputElement).blur();
+                        }
+                      }}
                     />
                   </Form.Group>
                 </Col>
@@ -603,7 +776,7 @@ export default function PedidosView() {
                       type="text"
                       readOnly
                       disabled
-                      className="text-center fw-bold"
+                      className="fw-bold"
                       value={totais.totalDaVenda().toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                     /> 
                   </Form.Group>
