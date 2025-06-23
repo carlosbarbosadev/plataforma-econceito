@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { autenticarToken } = require('../middlewares/authMiddleware');
 const { fetchPedidosVendas, criarPedidoVenda, fetchDetalhesPedidoVenda } = require('../services/bling');
+const blingService = require('../services/bling')
 
 // Rota para: Buscar/Listar pedidos de venda
 router.get('/', autenticarToken, async (req, res) => {
@@ -97,7 +98,7 @@ router.post('/', autenticarToken, async (req, res) => {
 
 // NOVA ROTA: Buscar detalhes de um pedido de venda específico
 // GET /api/pedidos/{idPedidoVenda}
-router. get ('/:idPedidoVenda', autenticarToken, async(req, res) => {
+router.get ('/:idPedidoVenda', autenticarToken, async(req, res) => {
     const { idPedidoVenda } = req.params; // Pega o ID da URL
     console.log(`Rota GET /api/pedidos/${idPedidoVenda} acessada por: ${req.usuario.email}`);
 
@@ -126,6 +127,22 @@ router. get ('/:idPedidoVenda', autenticarToken, async(req, res) => {
             res.status(status).json({ mensagem: `Falha ao buscar detalhes do pedido: ${error.message}` });
 
         }
+    }
+});
+
+router.put('/:id', autenticarToken, async (req, res) => {
+    const pedidoId = req.params.id;
+    const pedidoEditadoDoFrontend = req.body;
+
+    console.log(`Backend: Recebida requisição para ATUALIZAR o pedido ID: ${pedidoId}`);
+
+    try {
+        console.log('Dados recebidos do frontend:', pedidoEditadoDoFrontend);
+        res.json({ mensagem: 'Pedido atualizado com sucesso (simulação)!' });
+
+    } catch (error) {
+        console.error(`Erro na rota de atualização do pedido ${pedidoId}:`, error.message);
+        res.status(500).json({ mensagem: error.message });
     }
 });
 

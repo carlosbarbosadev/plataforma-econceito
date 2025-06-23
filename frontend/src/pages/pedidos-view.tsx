@@ -123,32 +123,42 @@ export default function PedidosView() {
   const [editingDesconto, setEditingDesconto] = useState<string | null>(null);
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [newItemSearchTerm, setNewItemSearchTerm] = useState("");
-  const [searchResults, setSearchResults] = useState<ProdutoEncontrado[]>([]);
   const [isLoadingSearch, setIsLoadingSearch] = useState(false);
+  const [catalogoProdutos, setCatalogoProdutos] = useState<ProdutoEncontrado[]>([]);
+
   useEffect(() => {
     setLoading(true);
     setError(null);
-    api.get<any>('/api/pedidos') 
-      .then(res => {
-        console.log('DEBUG: Dados recebidos de /api/pedidos:', res.data);
-        const responseData = res.data; 
-        if (Array.isArray(responseData)) {
-          setPedidos(responseData as PedidoDetalhado[]);
-        } else {
-          console.error('ERRO: /api/pedidos não retornou um array!', responseData);
-          setError('Formato de dados de pedidos inesperado do servidor.');
-          setPedidos([]); 
-        }
-      })
-      .catch(err => {
-        console.error('ERRO ao buscar pedidos:', err);
-        const errorMessage = err.response?.data?.mensagem || err.message || 'Falha ao buscar dados dos pedidos.';
-        setError(errorMessage);
-        setPedidos([]);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+
+    Promise.all([
+      api.get<any>("/api/pedidos"),
+      api.get<any[]>("/api/produtos")
+    ]).then(([pedidosResponse, produtosResponse]) => {
+      if (Array.isArray(pedidosResponse.data)) {
+        setPedidos(pedidosResponse.data as PedidoDetalhado[]);
+      } else {
+        setError("Formato de dados de pedidos inesperado.");
+      }
+
+      if (Array.isArray(produtosResponse.data)) {
+        const produtosFormatados = produtosResponse.data.map(p => ({
+          id: p.id,
+          descricao: p.nome,
+          codigo: p.codigo,
+          valor: parseFloat(p.preco) || 0
+        }));
+        setCatalogoProdutos(produtosFormatados);
+      } else {
+        console.error("Erro: /api/produtos não retornou um array para o catálogo!");
+      }
+
+    }).catch(err => {
+      console.error("ERRO ao buscar dados iniciais:", err);
+      const errorMessage = err.response?.data?.mensagem || err.message || "Falha ao buscar dados.";
+      setError(errorMessage);
+    }). finally(() => {
+      setLoading(false);
+    });
   }, []);
 
   const handleVerDetalhesPedido = async (pedidoId: number) => {
@@ -272,58 +282,57 @@ export default function PedidosView() {
   const handleSaveChanges = async () => {
     if (!editedPedido) return;
 
-    console.log("Salvando alterações:", editedPedido);
+    console.log("Enviando alterações para o backend", editedPedido);
     setLoadingDetalhes(true);
 
     try {
-      // await api.put(`/api/pedidos/${editedPedido.id}`, editedPedido);
+      const response = await api.put(`/api/pedidos/${editedPedido.id}`, editedPedido);
 
-      alert("Alterações salvas com sucesso! (simulação)");
+      console.log('Resposta do backend:', response.data);
+      alert('Alterações salvas com sucesso!');
 
       setSelectedPedidoDetalhes(editedPedido);
+      handleCloseModal();
 
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao salvar alterações:", err)
-      alert("Falha ao salvar as alterações.")
+      const errorMessage = err.response?.data?.mensagem || 'Falha ao salvar alterações.';
+      alert(`Erro: ${errorMessage}`);
     } finally {
       setLoadingDetalhes(false);
     }
   };
 
   const handleProductSelect = (produto: ProdutoEncontrado) => {
-    console.log("Produto selecionado:", produto);
+    if (!editedPedido) return;
+
+    const novoItem: ItemDoPedidoDetalhado = {
+      id: -Date.now(),
+      descricao: produto.descricao,
+      codigo: produto.codigo,
+      valor: produto.valor,
+      quantidade: 1,
+      unidade: 'UN',
+      produto: {
+        id: produto.id
+      },
+    };
+
+    setEditedPedido({
+      ...editedPedido,
+      itens: [...editedPedido.itens, novoItem]
+    });
 
     setIsAddingItem(false);
-    setNewItemSearchTerm("");
-    setSearchResults([]);
+    setNewItemSearchTerm('');
   };
 
-  useEffect(() => {
-    if (newItemSearchTerm.trim().length < 2) {
-      setSearchResults([]);
-      return;
-    }
-
-    setIsLoadingSearch(true);
-
-    const delayDebounceFn = setTimeout(() => {
-      console.log("Buscando por:", newItemSearchTerm);
-
-      api.get(`/api/produtos?search=${newItemSearchTerm}`)
-        .then(res => {
-          setSearchResults(res.data as ProdutoEncontrado[]);
-        })
-        .catch(err => {
-          console.error("Erro ao buscar produtos:", err);
-          setSearchResults([]);
-        })
-        .finally(() => {
-          setIsLoadingSearch(false);
-        });
-    }, 300);
-    
-    return () => clearTimeout(delayDebounceFn)
-  }, [newItemSearchTerm]);
+  const searchResults = newItemSearchTerm.length < 2
+    ? []
+    : catalogoProdutos.filter(p => 
+        p.descricao.toLowerCase().includes(newItemSearchTerm.toLowerCase()) ||
+        (p.codigo && p.codigo.toLowerCase().includes(newItemSearchTerm.toLowerCase()))
+    ).slice(0, 10);
 
   if (loading) {
     return (
@@ -460,10 +469,10 @@ export default function PedidosView() {
                 </Row>
                 
                 <h6 style={{ fontWeight: 'bold' }} className="mt-5">Itens do Pedido</h6>
-                {selectedPedidoDetalhes.itens && selectedPedidoDetalhes.itens.length > 0 ? (
+                {editedPedido?.itens && editedPedido.itens.length > 0 ? (
                   <ListGroup variant="flush" className="mt-2" style={{ gap: '0rem' }}>
 
-                {selectedPedidoDetalhes.itens.map((item, index) => {
+                {editedPedido.itens.map((item, index) => {
                   const editedItem = isOrderEditable ? editedPedido?.itens.find(i => i.id === item.id) : null;
                   const displayQuantity = editedItem ? editedItem.quantidade : item.quantidade;
                   const displayTotal = editedItem ? displayQuantity * editedItem.valor : item.quantidade * item.valor;
