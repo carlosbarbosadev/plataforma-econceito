@@ -127,38 +127,7 @@ export default function PedidosView() {
   const [catalogoProdutos, setCatalogoProdutos] = useState<ProdutoEncontrado[]>([]);
 
   useEffect(() => {
-    setLoading(true);
-    setError(null);
-
-    Promise.all([
-      api.get<any>("/api/pedidos"),
-      api.get<any[]>("/api/produtos")
-    ]).then(([pedidosResponse, produtosResponse]) => {
-      if (Array.isArray(pedidosResponse.data)) {
-        setPedidos(pedidosResponse.data as PedidoDetalhado[]);
-      } else {
-        setError("Formato de dados de pedidos inesperado.");
-      }
-
-      if (Array.isArray(produtosResponse.data)) {
-        const produtosFormatados = produtosResponse.data.map(p => ({
-          id: p.id,
-          descricao: p.nome,
-          codigo: p.codigo,
-          valor: parseFloat(p.preco) || 0
-        }));
-        setCatalogoProdutos(produtosFormatados);
-      } else {
-        console.error("Erro: /api/produtos não retornou um array para o catálogo!");
-      }
-
-    }).catch(err => {
-      console.error("ERRO ao buscar dados iniciais:", err);
-      const errorMessage = err.response?.data?.mensagem || err.message || "Falha ao buscar dados.";
-      setError(errorMessage);
-    }). finally(() => {
-      setLoading(false);
-    });
+    getPedidos();
   }, []);
 
   const handleVerDetalhesPedido = async (pedidoId: number) => {
@@ -282,21 +251,19 @@ export default function PedidosView() {
   const handleSaveChanges = async () => {
     if (!editedPedido) return;
 
-    console.log("Enviando alterações para o backend", editedPedido);
     setLoadingDetalhes(true);
 
     try {
       const response = await api.put(`/api/pedidos/${editedPedido.id}`, editedPedido);
-
       console.log('Resposta do backend:', response.data);
-      alert('Alterações salvas com sucesso!');
+      
+      await getPedidos();
 
-      setSelectedPedidoDetalhes(editedPedido);
-      handleCloseModal();
+      alert("Alterações salvas com sucesso!");
+      handleCloseModal(); 
 
     } catch (err: any) {
-      console.error("Erro ao salvar alterações:", err)
-      const errorMessage = err.response?.data?.mensagem || 'Falha ao salvar alterações.';
+      const errorMessage = err.response?.data?.mensagem || "Falha ao salvar as alterações.";
       alert(`Erro: ${errorMessage}`);
     } finally {
       setLoadingDetalhes(false);
@@ -325,6 +292,26 @@ export default function PedidosView() {
 
     setIsAddingItem(false);
     setNewItemSearchTerm('');
+  };
+
+  const getPedidos = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.get<any>('/api/pedidos');
+      if (Array.isArray(res.data)) {
+        setPedidos(res.data as PedidoDetalhado[]);
+      } else {
+        setError('Formato de dados de pedidos inesperado.');
+        setPedidos([]);
+      }
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.mensagem || err.message || 'Falha ao buscar dados dos pedidos.';
+      setError(errorMessage);
+      setPedidos([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const searchResults = newItemSearchTerm.length < 2
@@ -360,8 +347,7 @@ export default function PedidosView() {
     somaDasQuantidades: editedPedido.itens.reduce((acc, item) => acc + item.quantidade, 0),
     subtotal: editedPedido.itens.reduce((acc, item) => acc + (item.valor * item.quantidade), 0),
     valorDoDesconto: function() {
-      const descontoPercentual = editedPedido.desconto?.valor || 0;
-      return this.subtotal * (descontoPercentual / 100);
+      return editedPedido.desconto?.valor || 0;
     },
     totalDaVenda: function() {
       return this.subtotal - this.valorDoDesconto();
@@ -733,7 +719,7 @@ export default function PedidosView() {
 
                 <Col md={3}>
                   <Form.Group>
-                    <Form.Label className="small text-muted">Desconto (%)</Form.Label>
+                    <Form.Label className="small text-muted">Desconto (R$)</Form.Label>
                     <Form.Control
                       type="text"
                       readOnly={!isOrderEditable}

@@ -3,6 +3,7 @@ const router = express.Router();
 const { autenticarToken } = require('../middlewares/authMiddleware');
 const { fetchPedidosVendas, criarPedidoVenda, fetchDetalhesPedidoVenda } = require('../services/bling');
 const blingService = require('../services/bling')
+const { atualizarPedidoNoBling } = require('../services/bling');
 
 // Rota para: Buscar/Listar pedidos de venda
 router.get('/', autenticarToken, async (req, res) => {
@@ -137,9 +138,8 @@ router.put('/:id', autenticarToken, async (req, res) => {
     console.log(`Backend: Recebida requisição para ATUALIZAR o pedido ID: ${pedidoId}`);
 
     try {
-        console.log('Dados recebidos do frontend:', pedidoEditadoDoFrontend);
-        res.json({ mensagem: 'Pedido atualizado com sucesso (simulação)!' });
-
+        const resultado = await blingService.atualizarPedidoNoBling(pedidoId, pedidoEditadoDoFrontend);
+        res.json(resultado);
     } catch (error) {
         console.error(`Erro na rota de atualização do pedido ${pedidoId}:`, error.message);
         res.status(500).json({ mensagem: error.message });

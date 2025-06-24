@@ -509,4 +509,118 @@ async function fetchDetalhesPedidoVenda(idPedido, retryCount = 0 ) {
     }
 }
 
-module.exports = { fetchClientes, refreshBlingAccessToken, fetchPedidosVendas, fetchProdutos, criarPedidoVenda, fetchFormasPagamento, fetchDetalhesPedidoVenda };
+async function fetchDetalhesContato(contatoId, retryCount = 0) {
+    if (retryCount === 0) {
+        currentAccessToken = process.env.BLING_ACCESS_TOKEN
+    }
+    if (!currentAccessToken) { throw new Error('Access Token do Bling não encontrado.'); }
+
+    const url = `https://api.bling.com.br/Api/v3/contatos/${contatoId}`;
+
+    try {
+        const response = await axios.get(url, {
+            headers: { 'Authorization': `Bearer ${currentAccessToken}` }
+        });
+        return response.data.data;
+    } catch (error) {
+        if (error.response && error.response.status === 401 && retryCount < 1) {
+            console.warn(`Token expirado ao buscar contato${contatoId}. Renovando...`);
+            await refreshBlingAccessToken();
+            return fetchDetalhesContato(contatoId, retryCount + 1);
+        }
+        console.error(`Erro ao buscar detalhes do contato ${contatoId} do Bling:`, error.message);
+        throw new Error(`Falha ao buscar detalhes do contato ${contatoId}.`);
+    }
+}
+
+async function atualizarPedidoNoBling(pedidoId, pedidoEditadoDoFrontend) {
+    console.log(`Iniciando Atualização completa do pedido ${pedidoId} no Bling.`)
+
+    if (!currentAccessToken) {
+        await refreshBlingAccessToken();
+    }
+
+    const pedidoOriginalDoBling = await fetchDetalhesPedidoVenda(pedidoId);
+
+    if (pedidoOriginalDoBling.contato.id === pedidoEditadoDoFrontend.contato.id &&
+        pedidoOriginalDoBling.contato.nome !== pedidoEditadoDoFrontend.contato.nome) {
+
+            const contatoId = pedidoEditadoDoFrontend.contato.id;
+
+            try {
+                const contatoOriginalCompleto = await fetchDetalhesContato(contatoId);
+
+                const payloadContato = {
+                    ...contatoOriginalCompleto,
+                    nome: pedidoEditadoDoFrontend.contato.nome
+                };
+
+            const urlUpdateContato = `https://api.bling.com.br/Api/v3/contatos/${contatoId}`;
+
+                await axios.put(urlUpdateContato, payloadContato, { headers: { 'Authorization': `Bearer ${currentAccessToken}` } });
+                console.log(`Contato ID ${contatoId} atualizado com sucesso no Bling.`);
+
+            } catch (error) {
+                const errorData = error.response?.data;
+                console.error(`Erro detalhado ao tentar ATUALIZAR o CONTATO:`, errorData);
+                if (errorData?.error?.fields) {
+                    console.error("Campos com erro de validação:", errorData.error.fields);
+                }
+                throw new Error(`Falha ao atualizar o nome do contato no Bling.`);
+            }
+        }
+
+    const url = `https://api.bling.com.br/Api/v3/pedidos/vendas/${pedidoId}`;
+
+    const subtotal = pedidoEditadoDoFrontend.itens.reduce((acc, item) => acc + (item.valor * item.quantidade), 0);
+    const valorDoDesconto = pedidoEditadoDoFrontend.desconto?.valor || 0;
+    const totalFinal = subtotal - valorDoDesconto;
+    
+    const itensFormatados = pedidoEditadoDoFrontend.itens.map(item => {
+        const itemParaBling = {
+            produto: { id: item.produto.id },
+            quantidade: item.quantidade,
+            valor: item.valor,
+            codigo: item.codigo,
+            descricao: item.descricao
+        };
+        if (item.id > 0) {
+            itemParaBling.id = item.id;
+        }
+
+        return itemParaBling;
+    });
+
+    const payloadFinal = {
+        ...pedidoEditadoDoFrontend,
+        itens: itensFormatados,
+        total: totalFinal,
+        desconto: {
+            valor: valorDoDesconto,
+            unidade: "REAL"
+        },
+        parcelas: (pedidoEditadoDoFrontend.parcelas && pedidoEditadoDoFrontend.parcelas.length > 0)
+        ? [{ ...pedidoEditadoDoFrontend.parcelas[0], valor: totalFinal }]
+        : []
+    };
+
+    try {
+        const response = await axios.put(url, payloadFinal, {
+            headers: { 'Authorization': `Bearer ${currentAccessToken}` }
+         });
+         console.log('Resposta do Bling ao atualizar pedido:', response.data);
+
+        return {sucesso: true, mensagem: 'Pedido atualizado no Bling com sucesso!'};
+
+    } catch (error) {
+        const errorData = error.response?.data;
+        console.error('Erro ao tentar ATUALIZAR o pedido no Bling:', JSON.stringify(errorData, null, 2) || error.message);
+        const campoErro = errorData?.error?.fields?.[0];
+        if (campoErro) {
+            throw new Error(`Erro de validação do Bling: ${campoErro.msg} (Campo: ${campoErro.element})`);
+        }
+        throw new Error(`Falha ao atualizar o pedido no Bling.`);
+    }
+}
+
+module.exports = { fetchClientes, refreshBlingAccessToken, fetchPedidosVendas, fetchProdutos, criarPedidoVenda, fetchFormasPagamento, fetchDetalhesPedidoVenda, atualizarPedidoNoBling, fetchDetalhesContato };
