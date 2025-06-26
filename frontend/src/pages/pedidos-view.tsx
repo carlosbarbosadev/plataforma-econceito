@@ -1,7 +1,10 @@
+import React from 'react';
 import { useEffect, useState } from 'react';
-import { Table, Spinner, Alert, Form, Badge, Modal, Button, Row, Col, ListGroup } from 'react-bootstrap';
+import { Table, Spinner, Alert, Form, Badge, Modal, Button, Row, Col, ListGroup, Dropdown } from 'react-bootstrap';
 
 import api from 'src/services/api';
+
+import { Iconify } from 'src/components/iconify';
 
 type ClienteDoPedidoDetalhado = {
   id: number;
@@ -91,7 +94,7 @@ type ProdutoEncontrado = {
 const mapSituacaoPedido = (idSituacao?: number): string => {
   if (idSituacao === undefined || idSituacao === null) return 'N/A';
   switch (idSituacao) {
-    case 6: return 'Em Aberto';
+    case 6: return 'Em aberto';
     case 9: return 'Atendido';
     case 12: return 'Cancelado';
     // Adicionar aqui se eu descobrir mais IDs
@@ -99,15 +102,38 @@ const mapSituacaoPedido = (idSituacao?: number): string => {
   }
 };
 
-const getSituacaoBadgeVariant = (idSituacao?: number) : string => {
-  if (idSituacao === undefined  || idSituacao === null) return 'secondary';
+const getSituacaoBadgeStyle = (idSituacao?: number): React.CSSProperties => {
+  const baseStyle: React.CSSProperties = {
+    fontSize: '0.80em',
+    padding: '0.5em 0.75em',
+    color: '#fff' // Cor do texto
+  };
+  
   switch (idSituacao) {
-    case 6: return 'warning';
-    case 9: return 'success';
-    case 12: return 'danger';
-    default: return 'secondary';
-  }  
+    case 6:
+      return { ...baseStyle, backgroundColor: '#ff9800' };
+    case 9:
+      return { ...baseStyle, backgroundColor: '#4CAF50' };
+    case 12:
+      return { ...baseStyle, backgroundColor: '#f44336' };
+    default:
+      return { ...baseStyle, backgroundColor: '#6c757d' };
+  }
 };
+
+const CustomToggle =  React.forwardRef(({ children, onClick}: any, ref: any) => (
+  <a
+    href=""
+    ref={ref}
+    onClick={(e) => {
+      e.preventDefault();
+      onClick(e);
+    }}
+    className="text-secondary"
+  >
+    {children}
+  </a>
+));
 
 export default function PedidosView() {
   const [selectedPedidoDetalhes, setSelectedPedidoDetalhes] = useState<PedidoDetalhado | null>(null);
@@ -125,6 +151,8 @@ export default function PedidosView() {
   const [newItemSearchTerm, setNewItemSearchTerm] = useState("");
   const [isLoadingSearch, setIsLoadingSearch] = useState(false);
   const [catalogoProdutos, setCatalogoProdutos] = useState<ProdutoEncontrado[]>([]);
+  const [catalogoCarregado, setCatalogoCarregado] = useState(false);
+  const [searchTermPedidos, setSearchTermPedidos] = useState('');
 
   useEffect(() => {
     getPedidos();
@@ -159,6 +187,8 @@ export default function PedidosView() {
     setErrorDetalhes(null);
     setEditedPedido(null);
     setEditingQuantities({});
+    setIsAddingItem(false);
+    setNewItemSearchTerm('');
   };
 
   const handleAttemptClose = () => {
@@ -314,6 +344,32 @@ export default function PedidosView() {
     }
   };
 
+  const carregarCatalogo = async () => {
+    if (catalogoCarregado) {
+      return;
+    }
+    console.log("Carregando catálogo de produtos sob demanda...");
+
+    try {
+      const res = await api.get<any[]>('/api/produtos');
+
+      if (Array.isArray(res.data)) {
+        const produtosFormatados = res.data.map(p => ({
+          id: p.id,
+          descricao: p.nome,
+          codigo: p.codigo,
+          valor: parseFloat(p.preco) || 0
+        }));
+        setCatalogoProdutos(produtosFormatados);
+        setCatalogoCarregado(true);
+        console.log("Catálogo de produtos carregado!");
+      }
+    } catch (err) {
+      console.error("Erro ao carregar catálogo de produtos sob demanda", err);
+
+    }
+  };
+
   const searchResults = newItemSearchTerm.length < 2
     ? []
     : catalogoProdutos.filter(p => 
@@ -333,7 +389,7 @@ export default function PedidosView() {
     return <Alert variant="danger" className="mt-4">Erro ao carregar pedidos: {error}</Alert>;
   }
 
-  const pageTitle = 'Meus Pedidos';
+  const pageTitle = 'Pedidos de venda';
   const headerNumero = 'Número';
   const headerData = 'Data';
   const headerCliente = 'Cliente';
@@ -354,50 +410,93 @@ export default function PedidosView() {
     }
   } : null;
 
+  const filteredPedidos = pedidos.filter(pedido => {
+    const searchTermLower = searchTermPedidos.toLowerCase();
+
+    if (!searchTermLower) {
+      return true;
+    }
+
+    const nomeCliente = pedido.contato?.nome || '';
+    const numeroPedido = pedido.numero?.toString() || '';
+    const dataPedido = new Date(pedido.data).toLocaleDateString('pt-BR');
+    
+    return (
+      nomeCliente.toLowerCase().includes(searchTermLower) ||
+      numeroPedido.toLowerCase().includes(searchTermLower) ||
+      dataPedido.includes(searchTermLower)
+    );
+  });
+
   return (
     <div className="mt-4">
-      <h2>{pageTitle}</h2>
-      {/* <Form.Group className="mb-3">
+      <h3 className="fw-bold">{pageTitle}</h3>
+    <Row>
+      <Col md={5}>
+      <Form.Group className="my-3">
         <Form.Control
           type="text"
-          placeholder={searchPlaceholder}
-          // value={searchTermPedidos}
-          // onChange={(e) => setSearchTermPedidos(e.target.value)}
+          placeholder={"Pesquisar por número ou nome"}
+          value={searchTermPedidos}
+          onChange={(e) => setSearchTermPedidos(e.target.value)}
+          className="rounded-3"
         />
       </Form.Group>
-      */}
-
+      </Col>
+    </Row>
       {pedidos.length === 0 && !loading && (
         <Alert variant="info">Nenhum pedido para exibir no momento.</Alert>
       )}
       
       {pedidos.length > 0 && (
-        <Table striped bordered hover responsive className="mt-3">
+        <Table striped hover responsive className="mt-3">
           <thead>
             <tr>
               {/* <th>{headerId}</th> Removido */}
-              <th>{headerNumero}</th>
-              <th>{headerData}</th>
-              <th style={{ width: '70%' }}>{headerCliente}</th>
-              <th>{headerTotal}</th>
-              <th style={{ textAlign: 'center' }}>{headerSituacao}</th>
+              <th className="fw-normal small text-muted" style={{ width: '6%' }}>{headerNumero}</th>
+              <th className="fw-normal small text-muted" style={{ width: '18%' }}>{headerData}</th>
+              <th className="fw-normal small text-muted" style={{ width: '50%' }}>{headerCliente}</th>
+              <th className="fw-normal small text-muted">{headerTotal}</th>
+              <th className="fw-normal small text-muted" style={{ textAlign: 'center', width: '30%' }}>{headerSituacao}</th>
+              <th style={{ width: '5%' }}> </th>
             </tr>
           </thead>
           <tbody>
-            {pedidos.map(pedido => (
+            {filteredPedidos.map(pedido => (
               <tr key={pedido.id} onClick={() => handleVerDetalhesPedido(pedido.id)}style={{ cursor: 'pointer' }}>  
                 {/* <td>{pedido.id}</td> Removido */}
-                <td>{pedido.numero}</td>
-                <td>{new Date(pedido.data).toLocaleDateString('pt-BR')}</td>
-                <td>{pedido.contato.nome}</td>
-                <td>{pedido.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                <td style={{ fontSize: '0.92em' }}>{pedido.numero}</td>
+                <td style={{ fontSize: '0.92em' }}>{new Date(pedido.data).toLocaleDateString('pt-BR')}</td>
+                <td style={{ fontSize: '0.92em' }}>{pedido.contato.nome}</td>
+                <td style={{ fontSize: '0.92em' }}>{pedido.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                 <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
-                  <Badge
-                    bg={getSituacaoBadgeVariant(pedido.situacao?.id)}
-                    pill
-                    style={{ fontSize: '0.85em', padding: '0.5em 0.75em' }}>
-                      {mapSituacaoPedido(pedido.situacao?.id)}
-                  </Badge>
+                  <span
+                    className="badge rounded-pill"
+                    style={getSituacaoBadgeStyle(pedido.situacao?.id)}
+                  >
+                    {mapSituacaoPedido(pedido.situacao?.id)}
+                  </span>
+                </td>
+
+                <td className="text-center align-middle">
+                  <Dropdown onClick={(e) => e.stopPropagation()}>
+                    <Dropdown.Toggle as={CustomToggle} id={`dropdown-custom-${pedido.id}`}>
+                      <Iconify icon="eva:more-vertical-fill" width={20} />
+                    </Dropdown.Toggle>
+
+                    <Dropdown.Menu>
+                      <Dropdown.Item href="#/action-1" onClick={() => console.log(`Ação 1 para pedido ${pedido.id}`)}>
+                        Ação de Exemplo 1
+                      </Dropdown.Item>
+                      <Dropdown.Item href="#/action-2" onClick={() => console.log(`Ação 2 para pedido ${pedido.id}`)}>
+                        Ação de Exemplo 2
+                      </Dropdown.Item>
+                      <Dropdown.Divider />
+                      <Dropdown.Item href="#/action-3" className="text-danger">
+                        Ação Perigosa
+                      </Dropdown.Item>
+                    </Dropdown.Menu>
+                  </Dropdown>
                 </td>
               </tr>
             ))}
@@ -682,7 +781,10 @@ export default function PedidosView() {
                     size="sm"
                     className="text-success fw-bold p-0 text-decoration-none"
                     style={{ color: '#198754' }}
-                    onClick={() => setIsAddingItem(true)}
+                    onClick={async () => {
+                      await carregarCatalogo();
+                      setIsAddingItem(true);
+                    }}
                 >
                     Adicionar item
                 </Button>

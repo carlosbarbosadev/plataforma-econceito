@@ -96,12 +96,12 @@ export function DashboardLayout({
                 </InputAdornment>
               ),
               sx: {
-                borderRadius: theme.shape.borderRadius,
+                borderRadius: '8px',
                 backgroundColor: theme.palette.mode === 'light'
                   ? 'rgba(255, 255, 255, 0.85)'
                   : 'rgba(50, 50, 50, 0.85)',
                   '& .MuiOutlinedInput-notchedOutline': {
-                    borderRadius: theme.shape.borderRadius,
+                    borderRadius: '8px',
                   },
               }
             }}
