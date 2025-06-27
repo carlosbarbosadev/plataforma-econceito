@@ -11,10 +11,14 @@ import Button from '@mui/material/Button';
 import Toolbar from '@mui/material/Toolbar';
 import TextField from '@mui/material/TextField';
 import { useTheme } from '@mui/material/styles';
+import IconButton from '@mui/material/IconButton';
+import LogoutIcon from '@mui/icons-material/Logout';
 import SearchIcon from '@mui/icons-material/Search';
 import InputAdornment from '@mui/material/InputAdornment';
 
 import { _notifications } from 'src/_mock';
+
+import { Iconify } from 'src/components/iconify';
 
 import { NavMobile, NavDesktop } from './nav';
 import { layoutClasses } from '../core/classes';
@@ -110,12 +114,12 @@ export function DashboardLayout({
 
         <Button
           onClick={handleLogout}
+          aria-label="Sair"
           sx={{
-            minWidth: 88,
             color: 'text.primary'
           }}
         >
-          Sair
+          <Iconify icon="solar:logout-outline" width={24} />
         </Button>
       </Toolbar>
     </AppBar>

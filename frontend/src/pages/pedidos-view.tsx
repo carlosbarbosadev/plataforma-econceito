@@ -436,7 +436,7 @@ export default function PedidosView() {
       <Form.Group className="my-3">
         <Form.Control
           type="text"
-          placeholder={"Pesquisar por número ou nome"}
+          placeholder="Pesquisar por número ou nome"
           value={searchTermPedidos}
           onChange={(e) => setSearchTermPedidos(e.target.value)}
           className="rounded-3"

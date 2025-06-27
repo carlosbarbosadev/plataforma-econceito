@@ -1,6 +1,7 @@
 import Box from '@mui/material/Box';
 
 import { Label } from 'src/components/label';
+import { Iconify } from 'src/components/iconify';
 import { SvgColor } from 'src/components/svg-color';
 
 
@@ -19,76 +20,26 @@ export const navData: NavItem[] = [
   {
     title: 'Painel',
     path: '/',
-    icon: (
-      <Box
-        sx={{
-          display: 'inline-block',
-          width: 8,
-          height: 8,
-          borderRadius: '50%',
-          bgcolor: 'text.primary',
-        }}
-      />
-    ),
+    icon: <Iconify icon="solar:widget-linear" />,
   },
   {
     title: 'Clientes',
     path: '/clientes',
-    icon: (
-      <Box
-        sx={{
-          display: 'inline-block',
-          width: 8,
-          height: 8,
-          borderRadius: '50%',
-          bgcolor: 'text.primary',
-        }}
-      />
-    ),
+    icon: <Iconify icon="solar:user-outline" />,
   },
   {
     title: 'Pedidos',
     path: '/pedidos',
-    icon: (
-      <Box
-        sx={{
-          display: 'inline-block',
-          width: 8,
-          height: 8,
-          borderRadius: '50%',
-          bgcolor: 'text.primary',
-        }}
-      />
-    ),
+    icon: <Iconify icon="solar:sticker-square-outline" />,
   },
   {
     title: 'Produtos',
     path: '/produtos',
-    icon: (
-      <Box
-        sx={{
-          display: 'inline-block',
-          width: 8,
-          height: 8,
-          borderRadius: '50%',
-          bgcolor: 'text.primary',
-        }}
-      />
-    ),
+    icon: <Iconify icon="solar:box-minimalistic-linear" />
   },
   {
     title: 'Campanhas',
     path: '/campanhas',
-    icon: (
-      <Box
-        sx={{
-          display: 'inline-block',
-          width: 8,
-          height: 8,
-          borderRadius: '50%',
-          bgcolor: 'text.primary',
-        }}
-      />
-    ),
+    icon: <Iconify icon="solar:volume-loud-outline" />,
   },
 ];

@@ -46,6 +46,7 @@ export function NavDesktop({
     component="nav"
     className="desktop-sidebar"
       sx={{
+        bgcolor: '#272727',
         pt: 2.5,
         px: 2.5,
         top: 0,
@@ -156,17 +157,24 @@ export function NavContent({ data, slots, workspaces, sx }: NavContentProps) {
                         pr: 1.5,
                         borderRadius: 0.75,
                         typography: 'body2',
-                        fontWeight: 'fontWeightMedium',
-                        color: theme.vars.palette.text.secondary,
                         minHeight: 44,
+
+                        fontWeight: isActived ? 'fontWeightSemiBold' : 'fontWeightMedium',
+                        color: isActived ? theme.vars.palette.grey['300'] : theme.vars.palette.common.white,
+
                         ...(isActived && {
                           fontWeight: 'fontWeightSemiBold',
-                          color: theme.vars.palette.primary.main,
-                          bgcolor: varAlpha(theme.vars.palette.primary.mainChannel, 0.08),
+                          bgcolor: theme.vars.palette.common.white,
+                          color: theme.vars.palette.text.primary,
                           '&:hover': {
-                            bgcolor: varAlpha(theme.vars.palette.primary.mainChannel, 0.16),
+                            bgcolor: theme.vars.palette.grey[200],
                           },
                         }),
+                        ...(!isActived && {
+                          '&:hover': {
+                            bgcolor: 'rgba(255, 255, 255, 0.08)',
+                          }
+                        })
                       }),
                     ]}
                   >

@@ -18,12 +18,31 @@ import { AnalyticsConversionRates } from '../analytics-conversion-rates';
 
 // ----------------------------------------------------------------------
 
+function getGreeting() {
+  const currentHour = new Date().getHours();
+
+  if (currentHour >= 6 && currentHour < 12) {
+    return 'Bom dia';
+  }
+  else if (currentHour >= 12 && currentHour < 18) {
+    return 'Boa tarde';
+  }
+  else {
+    return 'Boa noite';
+  }
+}
+
 export function OverviewAnalyticsView() {
   const { t } = useTranslation();
+
+  const saudacao = getGreeting();
+  const userDataString = localStorage.getItem('userData');
+  const nomeDoUsuario = userDataString ? JSON.parse(userDataString).nome : 'Bem-vindo(a)';
+
   return (
     <DashboardContent maxWidth="xl">
       <Typography variant="h4" sx={{ mb: { xs: 3, md: 5 } }}>
-      {t('dashboard.welcomeMessage')}
+      {`${saudacao}, ${nomeDoUsuario}!`}
       </Typography>
 
       <Grid container spacing={3}>
