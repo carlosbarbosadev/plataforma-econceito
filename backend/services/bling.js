@@ -250,76 +250,58 @@ async function fetchProdutos(retryCount = 0) {
         currentAccessToken = process.env.BLING_ACCESS_TOKEN;
         currentRefreshToken = process.env.BLING_REFRESH_TOKEN;
     }
-
-    if (!currentAccessToken) {
-        console.error('Erro: Access Token do Bling não disponível no início de fetchProdutos.');
-        throw new Error('Erro de configuração: Access Token do Bling não encontrado.');
-    }
-    if (!currentRefreshToken) {
-        console.warn('Aviso: Refresh Token do Bling não disponível no início de fetchProdutos. A renovação automática pode falhar.');
-    }
+    if (!currentAccessToken) { throw new Error('Access Token do Bling não encontrado.'); }
 
     const todosOsProdutos = [];
     let pagina = 1;
     const limitePorPagina = 100;
 
-    console.log('Iniciando busca de Produtos do Bling');
+    console.log('Iniciando busca completa de produtos do Bling para o cache...');
 
-    while(true) {
+    while (true) {
         const url = `https://api.bling.com.br/Api/v3/produtos?pagina=${pagina}&limite=${limitePorPagina}`;
         try {
             const response = await axios.get(url, {
                 headers: {
-                    'Authorization': `Bearer ${currentAccessToken}`,
-                    'Accept': 'application/json',
+                    "Authorization": `Bearer ${currentAccessToken}`,
+                    "Accept": "application/json",
                 },
             });
 
             const produtosDaPagina = response.data.data;
 
             if (produtosDaPagina && produtosDaPagina.length > 0) {
-                todosOsProdutos.push(...produtosDaPagina);
+                const produtosTransformados = produtosDaPagina.map(produto => ({
+                    id: produto.id,
+                    nome: produto.nome,
+                    codigo: produto.codigo,
+                    preco: parseFloat(produto.preco) || 0,
+                    estoque: produto.estoque,
+                    situacao: produto.situacao,
+                    imagemURL: produto.imagemURL,
+                }));
+                todosOsProdutos.push(...produtosTransformados);
 
                 if (produtosDaPagina.length < limitePorPagina) {
-                    console.log('Última página de produtos alcançada.');
+                    console.log("Última página de produtos alcançada.");
                     break;
                 }
                 pagina++;
                 await new Promise(resolve => setTimeout(resolve, 350));
             } else {
-                console.log(`Nenhum produto novo encontrado na página ${pagina}. Fim da busca`);
+                console.log(`Nenhum produto novo encontrado na página ${pagina}. Fim da busca.`);
                 break;
             }
         } catch (error) {
             if (error.response && error.response.status === 401 && retryCount < 1) {
-                console.warn(`Access Token expirado ou inválido durante busca de produtos na página ${pagina}. Tentando renovar...`);
-                try {
-                    await refreshBlingAccessToken(); 
-                    console.log(`Token renovado. Re-tentando a página ${pagina} de produtos automaticamente.`);
-                    continue; 
-                } catch (refreshError) {
-                    console.error('Falha DEFINITIVA ao renovar o token durante a paginação de produtos:', refreshError.message);
-                    throw refreshError;
-                }
+                await refreshBlingAccessToken();
+                continue;
             }
-
-            let errorMessage = `Erro ao buscar produtos do Bling (Página ${pagina}).`;
-            if (error.response) {
-                const blingErrorData = error.response.data;
-                console.error(`Erro detalhado da API Bling V3 (Produtos - Página ${pagina}, Status ${error.response.status}):`, typeof blingErrorData === 'string' ? blingErrorData : JSON.stringify(blingErrorData, null, 2));
-                errorMessage = `Falha na API Bling (Produtos - Página ${pagina}): ${typeof blingErrorData === 'object' && blingErrorData !== null && (blingErrorData.error?.description || blingErrorData.error?.message) ? (blingErrorData.error.description || blingErrorData.error.message) : `Status ${error.response.status}`}`;
-            } else if (error.request) {
-                console.error(`Erro de rede ou sem resposta da API Bling V3 (Produtos - Página ${pagina}):`, error.message);
-                errorMessage = `Falha de conexão com a API Bling (Produtos - Página ${pagina}).`;
-            } else {
-                console.error(`Erro ao configurar requisição Bling V3 (Produtos - Página ${pagina}):`, error.message);
-                errorMessage = `Erro interno ao processar requisição Bling (Produtos - Página ${pagina}): ${error.message}`;
-            }
-            throw new Error(errorMessage);
+            console.error("Erro no serviço fetchProdutos:", error.message);
+            throw error;
         }
     }
-
-    console.log(`Busca de produtos finalizada. Total de ${todosOsProdutos.length} produtos encontrados.`);
+    console.log(`Busca de produtos para o cache finalizada. Total de ${todosOsProdutos.length} produtos encontrados.`);
     return todosOsProdutos;
 }
 
@@ -623,4 +605,86 @@ async function atualizarPedidoNoBling(pedidoId, pedidoEditadoDoFrontend) {
     }
 }
 
-module.exports = { fetchClientes, refreshBlingAccessToken, fetchPedidosVendas, fetchProdutos, criarPedidoVenda, fetchFormasPagamento, fetchDetalhesPedidoVenda, atualizarPedidoNoBling, fetchDetalhesContato };
+async function fetchTodosOsContatos({ idVendedor = null, tipoPessoa = null } = {}, retryCount = 0) {
+    let logMessage = "Bling Service: Buscando todos os contatos (clientes)";
+    if (idVendedor) logMessage += ` para o vendedor ID ${idVendedor}`;
+    if (tipoPessoa) logMessage += ` do tipo ${tipoPessoa}`;
+    console.log(logMessage + "...");
+
+    if (retryCount === 0) { currentAccessToken = process.env.BLING_ACCESS_TOKEN; }
+    if (!currentAccessToken) { throw new Error("Access Token do Bling não encontrado."); }
+
+    const url = "https://api.bling.com.br/Api/v3/contatos";
+
+    const params = { limite: 100 };
+    let filtros = [];
+    if (tipoPessoa) {
+        filtros.push(`tipoPessoa[${tipoPessoa}]`);
+    }
+    if (idVendedor) {
+        filtros.push(`idVendedor[${idVendedor}]`);
+    }
+    if (filtros.length > 0) {
+        params.filtros = filtros.join(";");
+    }
+
+    try {
+        const response = await axios.get(url, {
+            headers: { "Authorization": `Bearer ${currentAccessToken}` },
+            params: params,
+        });
+
+        const clientesTransformados = response.data.data.map(contato => ({
+            id: contato.id,
+            nome: contato.nome,
+            numeroDocumento: contato.numeroDocumento,
+            tipoPessoa: contato.tipoPessoa,
+        }));
+
+        return clientesTransformados;
+
+    } catch (erro) {
+        if (error.response && error.response.status === 401 && retryCount < 1) {
+            await refreshBlingAccessToken();
+            return fetchTodosOsContatos({ idVendedor, tipoPessoa }, retryCount + 1);
+        }
+        console.error("Erro ao buscar contatos no Bling:", error.response?.data || error.message);
+        throw new Error("Falha ao buscar contatos no ERP.");
+    }
+}
+
+async function fetchImagemPrincipalProduto(idProduto, retryCount = 0) {
+    if (!idProduto) return null;
+
+    if (retryCount === 0) {
+        currentAccessToken = process.env.BLING_ACCESS_TOKEN;
+    }
+    if (!currentAccessToken) { throw new Error("Access Token do Bling não encontrado."); }
+
+    const url = `https://api.bling.com.br/Api/v3/produtos/${idProduto}/imagens`;
+
+    try {
+        const response = await axios.get(url, {
+            headers: { "Authorization": `Bearer ${currentAccessToken}` }
+        });
+
+        const imagens = response.data.data;
+
+        if (imagens && imagens.length > 0) {
+            const imagemPrincipal = imagens.find(img => img.principal === true) || imagens[0];
+            return imagemPrincipal.url;
+        }
+
+        return null;
+
+    } catch (error) {
+        if (error.response && error.response.status === 401 && retryCount < 1) {
+            await refreshBlingAccessToken();
+            return fetchImagemPrincipalProduto(idProduto, retryCount + 1);
+        }
+        console.error(`Não foi possível buscar imagem para o produto ID ${idProduto}:`, error.message);
+        return null
+    }
+}
+
+module.exports = { fetchClientes: fetchTodosOsContatos, refreshBlingAccessToken, fetchPedidosVendas, fetchProdutos, criarPedidoVenda, fetchFormasPagamento, fetchDetalhesPedidoVenda, atualizarPedidoNoBling, fetchDetalhesContato, fetchImagemPrincipalProduto };

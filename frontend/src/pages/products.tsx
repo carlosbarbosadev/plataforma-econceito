@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Container, Row, Col, Card, Spinner, Alert, Form, Button, Popover, Overlay } from 'react-bootstrap';
+import { Container, Row, Col, Card, Spinner, Alert, Form, Button, Popover, Overlay, Pagination, Stack } from 'react-bootstrap';
 
 import api from 'src/services/api';
 
@@ -41,8 +41,6 @@ export default function ProductsPage() {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [itensDoPedidoAtual, setItensDoPedidoAtual] = useState<ItemPedido[]>([]);
-  const [productInPopover, setProductInPopover] = useState<Produto | null>(null);
-  const [popoverTarget, setPopoverTarget] = useState<(EventTarget & HTMLElement) | null>(null);
   
   const [listaDeClientes, setListaDeClientes] = useState<ClienteParaSelecao[]>([]);
   const [loadingClientes, setLoadingClientes] = useState(true); 
@@ -55,6 +53,10 @@ export default function ProductsPage() {
   const [selectedFormaPagamentoId, setSelectedFormaPagamentoId] = useState<string>('');
   
   const [submittingOrder, setSubmittingOrder] = useState(false);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [submittedSearchTerm, setSubmittedSearchTerm] = useState('');
 
   // Buscar Clientes
   useEffect(() => {
@@ -106,29 +108,36 @@ export default function ProductsPage() {
 
   // Buscar produtos
   useEffect(() => {
-    if (!loadingFormasPagamento && !errorFormasPagamento) {
-      setLoadingProdutos(true);
-      setErrorProdutos(null);
-      api.get<any>('/api/produtos')
-        .then(res => {
-          console.log('PRODUTOS_PAGE: Dados recebidos de /api/produtos:', res.data);
-          const responseData = res.data; 
-          if (Array.isArray(responseData)) {
-            setProdutos(responseData as Produto[]);
+    setLoadingProdutos(true);
+    setErrorProdutos(null);
+
+    const params = {
+      page: currentPage,
+      search: submittedSearchTerm,
+    };
+
+    api.get("/api/produtos", { params })
+      .then(res => {
+        const { data, total } = res.data;
+        if (Array.isArray(data)) {
+          setProdutos(data);
+          const ITEMS_PER_PAGE = 100;
+          if (total) {
+            setTotalPages(Math.ceil(total / ITEMS_PER_PAGE));
           } else {
-            console.error('PRODUTOS_PAGE ERRO: /api/produtos não retornou um array!', responseData);
-            setProdutos([]); 
-            setErrorProdutos('Formato de dados de produtos inesperado.');
+            setTotalPages(data.length < ITEMS_PER_PAGE ? currentPage : currentPage + 1);
           }
-        })
-        .catch(err => { 
-          console.error('PRODUTOS_PAGE ERRO ao buscar produtos:', err);
-          setErrorProdutos(err.response?.data?.mensagem || err.message || 'Falha ao buscar produtos.'); 
-          setProdutos([]);
-        })
-        .finally(() => setLoadingProdutos(false));
-    }
-  }, [loadingFormasPagamento, errorFormasPagamento]);
+        } else {
+          setErrorProdutos("Formato de dados inesperado.")
+        }
+      })
+      .catch(err => {
+        setErrorProdutos(err.response?.data?.mensagem || "Falha ao buscar produtos.");
+      })
+      .finally(() => {
+        setLoadingProdutos(false);
+      });
+  }, [currentPage, submittedSearchTerm]);
 
   const handleAdicionarAoPedido = (produtoParaAdicionar: Produto) => {
     if (!produtoParaAdicionar.id || produtoParaAdicionar.preco === undefined) {
@@ -156,14 +165,10 @@ export default function ProductsPage() {
     });
   };
 
-  const handleProductCardClick = (event: React.MouseEvent<HTMLElement>, produto: Produto) => {
-    setProductInPopover(produto);
-    setPopoverTarget(event.currentTarget);
-  };
-
-  const closePopover = () => {
-    setProductInPopover(null);
-    setPopoverTarget(null);
+  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setCurrentPage(1);
+    setSubmittedSearchTerm(searchTerm);
   };
 
   const handleFinalizarPedido = async () => {
@@ -213,7 +218,6 @@ export default function ProductsPage() {
       setSelectedClientId('');
       setSelectedFormaPagamentoId('');
       setSearchTerm('');
-      setProductInPopover(null);
 
     } catch (apiError: any) {
       console.error('Erro ao finalizar o pedido:', apiError);
@@ -225,18 +229,19 @@ export default function ProductsPage() {
     }
   };
 
-  const filteredProdutos = produtos.filter(produto => {
-    if (!produto || typeof produto.nome !== 'string') return false;
-    const term = searchTerm.toLowerCase();
-    return (
-      produto.nome.toLowerCase().includes(term) ||
-      (produto.codigo && produto.codigo.toLowerCase().includes(term)) ||
-      (produto.id && produto.id.toString().toLowerCase().includes(term))
-    );
-  });
+  const handlePageChange = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
+    window.scrollTo(0, 0);
+  };
 
-  const pageTitle = 'Montar Pedido';
-  const searchPlaceholder = 'Buscar produtos por nome, código, ID...';
+  const handlePredefinedSearch = (term: string) => {
+    setSearchTerm(term);
+    setSubmittedSearchTerm(term);
+    setCurrentPage(1);
+  };
+
+  const pageTitle = 'Produtos';
+  const searchPlaceholder = 'Buscar produtos por nome ou código';
   const noProductsMsg = 'Nenhum produto para exibir no momento.';
   const noProductsSearchMsg = (term: string) => `Nenhum produto encontrado para "${term}".`;
 
@@ -262,16 +267,20 @@ export default function ProductsPage() {
 
   return (
     <Container fluid className="mt-4">
-      <h2>{pageTitle}</h2>
-
-      <Form.Group className="my-3" controlId="selecionarCliente">
-        <Form.Label>1. Cliente para o Pedido:</Form.Label>
+      <h3 className="fw-bold mb-3">{pageTitle}</h3>
+      <p className="fs-5 fw-bold">
+        Criar pedido
+      </p>
+    <Row>
+      <Col md={5}>
+      <Form.Group className="mb-3" controlId="selecionarCliente">
         <Form.Select
+          className="text-muted"
           value={selectedClientId}
           onChange={(e) => setSelectedClientId(e.target.value)}
           disabled={listaDeClientes.length === 0}
         >
-          <option value="">-- Selecione um Cliente --</option>
+          <option value="">Selecione um cliente</option>
           {listaDeClientes.map(cliente => (
             <option key={cliente.id} value={cliente.id}>
               {cliente.nome} ({cliente.numeroDocumento || 'Doc. N/A'})
@@ -282,15 +291,19 @@ export default function ProductsPage() {
             <Form.Text className="text-muted">Nenhum cliente encontrado para este vendedor.</Form.Text>
         )}
       </Form.Group>
+      </Col>
+    </Row>
 
-      <Form.Group className="my-3" controlId="selecionarFormaPagamento">
-        <Form.Label>2. Forma de Pagamento:</Form.Label>
+    <Row>
+      <Col md={5}>
+      <Form.Group controlId="selecionarFormaPagamento">
         <Form.Select
+          className="text-muted"
           value={selectedFormaPagamentoId}
           onChange={(e) => setSelectedFormaPagamentoId(e.target.value)}
           disabled={listaFormasPagamento.length === 0 || !selectedClientId}
         >
-          <option value="">-- Selecione uma Forma de Pagamento --</option>
+          <option value="">Selecione uma forma de pagamento</option>
           {listaFormasPagamento.map(forma => (
             <option key={forma.id} value={forma.id}>
               {forma.descricao}
@@ -301,22 +314,39 @@ export default function ProductsPage() {
           <Form.Text className="text-muted">Nenhuma forma de pagamento carregada.</Form.Text>
         )}
       </Form.Group>
-
-      <Form.Group className="mb-3 mt-1">
-        <Form.Label>3. Adicionar Produtos:</Form.Label>
+      </Col>
+    </Row>
+  <Row>
+    <Col md={5}>
+    <Form onSubmit={handleSearchSubmit}>
+      <Form.Group className="mt-5">
         <Form.Control
           type="text"
           placeholder={searchPlaceholder}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          disabled={!selectedClientId || !selectedFormaPagamentoId || loadingProdutos}
+          disabled={loadingProdutos}
         />
-        {(!selectedClientId || !selectedFormaPagamentoId) && !loadingClientes && !loadingFormasPagamento && 
-          <Form.Text className="text-info">Selecione um cliente e uma forma de pagamento para adicionar produtos.</Form.Text>}
       </Form.Group>
+    </Form>
+    </Col>
+  </Row>
+
+  <Stack direction="horizontal" gap={2} className="mt-4">
+    <Button variant="outline-secondary" size="sm" className="flex-fill" onClick={() => handlePredefinedSearch("Kraft")}>Kraft</Button>
+    <Button variant="outline-secondary" size="sm" className="flex-fill" onClick={() => handlePredefinedSearch("Branca")}>Branca</Button>
+    <Button variant="outline-secondary" size="sm" className="flex-fill" onClick={() => handlePredefinedSearch("Cake Board")}>Cake Board</Button>
+    <Button variant="outline-secondary" size="sm" className="flex-fill" onClick={() => handlePredefinedSearch("Cake Box")}>Cake Box</Button>
+    <Button variant="outline-secondary" size="sm" className="flex-fill" onClick={() => handlePredefinedSearch("Presente")}>Presente</Button>
+    <Button variant="outline-secondary" size="sm" className="flex-fill" onClick={() => handlePredefinedSearch("Oitavada")}>Oitavada</Button>
+    <Button variant="outline-secondary" size="sm" className="flex-fill" onClick={() => handlePredefinedSearch("Sacola")}>Sacola</Button>
+    <Button variant="outline-secondary" size="sm" className="flex-fill" onClick={() => handlePredefinedSearch("Forminha")}>Forminha</Button>
+    <Button variant="outline-secondary" size="sm" className="flex-fill" onClick={() => handlePredefinedSearch("Tag")}>Tag</Button>
+    <Button style={{backgroundColor: '#DC3545', borderColor: '#DC3545', color: '#ffffff'}} size="sm" className="flex-fill" onClick={() => handlePredefinedSearch("")}>Limpar busca</Button>
+  </Stack>
 
       {itensDoPedidoAtual.length > 0 && selectedClientId && selectedFormaPagamentoId && (
-        <Alert variant="success" className="mb-3">
+        <Alert variant="success" className="mb-1 mt-3">
           <h5>Pedido Atual ({itensDoPedidoAtual.reduce((acc, item) => acc + item.quantidade, 0)} itens):</h5>
           <ul>{itensDoPedidoAtual.map(item => <li key={item.idProduto}>{item.nomeProduto} (Qtd: {item.quantidade}) - R$ {(item.quantidade * item.valorUnitario).toFixed(2)}</li>)}</ul>
           <p><strong>Total: R$ {itensDoPedidoAtual.reduce((acc, item) => acc + (item.quantidade * item.valorUnitario), 0).toFixed(2)}</strong></p>
@@ -331,99 +361,85 @@ export default function ProductsPage() {
         </Alert>
       )}
       
-      {selectedClientId && selectedFormaPagamentoId && !errorProdutos && ( 
+      {!errorProdutos && (
         <>
-          {filteredProdutos.length === 0 && !loadingProdutos && (
+          {produtos.length === 0 && !loadingProdutos && (
             <Alert variant="info" className="mt-3">
               {searchTerm ? noProductsSearchMsg(searchTerm) : noProductsMsg}
             </Alert>
           )}
           
-          {filteredProdutos.length > 0 && !loadingProdutos && ( // Só mostra se houver produtos filtrados e não estiver carregando
+          {produtos.length > 0 && !loadingProdutos && ( // Só mostra se houver produtos filtrados e não estiver carregando
             <Row xs={1} sm={2} md={3} lg={4} xl={5} className="g-4 mt-0">
-              {filteredProdutos.map(produto => (
+              {produtos.map(produto => (
                 <Col key={produto.id}>
-                  <Card 
-                    className="h-100 shadow-sm"
-                    onClick={(e) => handleProductCardClick(e, produto)}
-                    style={{ cursor: 'pointer' }}
-                  >
+                  <Card className="h-100 shadow-sm">
                     <Card.Img 
                       variant="top" 
                       src={produto.imagemURL || '/img/placeholder-produto.png'}
                       alt={produto.nome}
-                      style={{ 
-                        height: '180px',
-                        objectFit: 'contain',
-                        padding: '0.5rem'
-                      }} 
+                      style={{ height: '180px', objectFit: 'contain', padding: '0.5rem' }} 
                       onError={(e) => { (e.target as HTMLImageElement).src = '/img/placeholder-produto.png'; }}
                     />
                     <Card.Body className="d-flex flex-column">
                       <Card.Title 
-                        style={{ fontSize: '1rem', fontWeight: 'bold', minHeight: '3rem' }}
+                        style={{ fontSize: '1rem', minHeight: '3rem' }}
                         title={produto.nome}
                       >
                         {produto.nome.length > 50 ? `${produto.nome.substring(0, 47)}...` : produto.nome}
                       </Card.Title>
                       <Card.Text as="div" style={{ fontSize: '0.85rem', color: '#555', flexGrow: 1 }}>
-                        <strong>Código:</strong> {produto.codigo || '-'}<br />
-                        <strong>Preço:</strong> {typeof produto.preco === 'number' 
-                                              ? produto.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) 
-                                              : '-'}<br />
-                        <strong>Estoque:</strong> {produto.estoque?.saldoVirtualTotal ?? '-'}<br />
-                        <strong>Situação:</strong> {produto.situacao === 'A' ? 'Ativo' : (produto.situacao === 'I' ? 'Inativo' : (produto.situacao || '-'))}
+                        Código: {produto.codigo || '-'}<br />
+                        Preço: <strong>{typeof produto.preco === 'number' 
+                          ? produto.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL',}) 
+                          : '-'}</strong><br />
+                        Estoque: 
+                        {(produto.estoque?.saldoVirtualTotal ?? 0) > 0 ? (
+                          <span className="fw-bold"> Disponível</span>
+                        ) : (
+                          <span className="fw-bold"> Indisponível</span>
+                        )}
+                        <br />
                       </Card.Text>
+                      <Button
+                        className="mt-2"
+                        onClick={() => handleAdicionarAoPedido(produto)}
+                        style={{
+                          fontSize: "0.8rem",
+                          padding: "0.2rem 0.75rem",
+                          backgroundColor: "#4CAF50",
+                          borderColor: "#4CAF50"
+                        }}
+                      >
+                        Adicionar ao pedido
+                      </Button>
+                      
                     </Card.Body>
                   </Card>
                 </Col>
               ))}
             </Row>
           )}
+
+          {(!loadingProdutos && (produtos.length > 0 || currentPage > 1)) && (
+            <div className="d-flex justify-content-center mt-4">
+              <Pagination>
+                <Pagination.Prev
+                    onClick={() => setCurrentPage(p => p - 1)}
+                    disabled={currentPage === 1}
+                />
+                <Pagination.Item disabled>{`Página ${currentPage}`}</Pagination.Item>
+                <Pagination.Next
+                    onClick={() => setCurrentPage(p => p + 1)}
+                    disabled={produtos.length < 100}
+                />
+              </Pagination>
+            </div>
+          )}
+
         </>
       )}
       {/* Mensagem se cliente ou forma de pagamento não selecionados e produtos não estão carregando */}
-      {(!selectedClientId || !selectedFormaPagamentoId) && !loadingProdutos && !errorProdutos && !loadingClientes && !loadingFormasPagamento &&
-        <Alert variant="info" className="mt-3">Por favor, selecione um cliente e uma forma de pagamento para visualizar e adicionar produtos.</Alert>
-      }
-
-
-      {productInPopover && popoverTarget && (
-        <Overlay
-          show={!!productInPopover}
-          target={popoverTarget}
-          placement="bottom-start" 
-          onHide={closePopover}
-          rootClose
-        >
-          {( overlayProps ) => ( 
-            <Popover 
-              id={`popover-add-${productInPopover.id}`}
-              {...overlayProps} 
-              style={{...overlayProps.style, zIndex: 1080}}
-            >
-              <Popover.Body>
-                <div className="d-grid">
-                  <Button 
-                    variant="success"
-                    size="sm"
-                    onClick={() => {
-                      if (productInPopover.situacao !== 'A' || (productInPopover.estoque?.saldoVirtualTotal ?? 0) <= 0) {
-                        alert(`Produto "${productInPopover.nome}" não pode ser adicionado (Inativo ou Sem Estoque).`);
-                      } else {
-                        handleAdicionarAoPedido(productInPopover);
-                      }
-                      closePopover(); 
-                    }}
-                  >
-                    {`Adicionar "${productInPopover.nome.length > 20 ? `${productInPopover.nome.substring(0, 17)}...` : productInPopover.nome}"`}
-                  </Button>  
-                </div>
-              </Popover.Body>  
-            </Popover>
-          )}
-        </Overlay>
-      )}
     </Container>
   );
 }
