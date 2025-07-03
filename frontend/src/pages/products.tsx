@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Container, Row, Col, Card, Spinner, Alert, Form, Button, Popover, Overlay, Pagination, Stack } from 'react-bootstrap';
+import { Trash } from 'react-bootstrap-icons';
+import { Container, Row, Col, Spinner, Alert, Form, Button, Pagination, Stack, Table, Badge} from 'react-bootstrap';
 
 import api from 'src/services/api';
 
@@ -229,15 +230,24 @@ export default function ProductsPage() {
     }
   };
 
-  const handlePageChange = (pageNumber: number) => {
-    setCurrentPage(pageNumber);
-    window.scrollTo(0, 0);
-  };
-
   const handlePredefinedSearch = (term: string) => {
     setSearchTerm(term);
     setSubmittedSearchTerm(term);
     setCurrentPage(1);
+  };
+
+  const handleCancelarPedido = () => {
+    console.log("Pedido em montagem cancelado. Limpando estados...");
+    setItensDoPedidoAtual([]);
+    setSelectedClientId('');
+    setSelectedFormaPagamentoId('');
+    setSearchTerm('');
+  };
+
+  const handleRemoverItemDoPedido = (idProdutoParaRemover: number) => {
+    setItensDoPedidoAtual(itensAnteriores =>
+      itensAnteriores.filter(item => item.idProduto !== idProdutoParaRemover)
+    );
   };
 
   const pageTitle = 'Produtos';
@@ -347,17 +357,45 @@ export default function ProductsPage() {
 
       {itensDoPedidoAtual.length > 0 && selectedClientId && selectedFormaPagamentoId && (
         <Alert variant="success" className="mb-1 mt-3">
-          <h5>Pedido Atual ({itensDoPedidoAtual.reduce((acc, item) => acc + item.quantidade, 0)} itens):</h5>
-          <ul>{itensDoPedidoAtual.map(item => <li key={item.idProduto}>{item.nomeProduto} (Qtd: {item.quantidade}) - R$ {(item.quantidade * item.valorUnitario).toFixed(2)}</li>)}</ul>
+          <h5><strong>Pedido Atual ({itensDoPedidoAtual.reduce((acc, item) => acc + item.quantidade, 0)} itens):</strong></h5>
+          <ul className="list-unstyled mb-0">
+            {itensDoPedidoAtual.map(item => (
+              <li
+                key={item.idProduto}
+                className="d-flex align-items-center mb-1 pe-1"
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <strong>{item.quantidade}</strong> {item.nomeProduto} - <strong>{(item.quantidade * item.valorUnitario).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>
+                  <Button
+                    variant="link"
+                    className="p-0 text-danger ms-1"
+                    onClick={() => handleRemoverItemDoPedido(item.idProduto)}
+                    title="Remover item"
+                    style={{ verticalAlign: 'middle' }}
+                  >
+                    <Trash size={18} />
+                  </Button>
+                </span>
+              </li>
+            ))}
+          </ul>
           <p><strong>Total: R$ {itensDoPedidoAtual.reduce((acc, item) => acc + (item.quantidade * item.valorUnitario), 0).toFixed(2)}</strong></p>
-          <Button
-            variant="primary"
-            className="mt-2"
-            onClick={handleFinalizarPedido}
-            disabled={submittingOrder || itensDoPedidoAtual.length === 0 || !selectedClientId || !selectedFormaPagamentoId} 
-          >
-            {submittingOrder ? 'Enviando Pedido...' : 'Finalizar Pedido'}
-          </Button>
+          <div className="d-flex justify-content-end gap-2 mt-3">
+            <Button
+              variant="secondary"
+              onClick={handleCancelarPedido}
+            >
+              Cancelar
+            </Button>
+
+            <Button
+              variant="primary"
+              onClick={handleFinalizarPedido}
+              disabled={submittingOrder || itensDoPedidoAtual.length === 0 || !selectedClientId || !selectedFormaPagamentoId}
+            >
+              {submittingOrder ? "Enviando Pedido..." : "Finalizar pedido"}
+            </Button>
+          </div>
         </Alert>
       )}
       
@@ -369,56 +407,65 @@ export default function ProductsPage() {
             </Alert>
           )}
           
-          {produtos.length > 0 && !loadingProdutos && ( // Só mostra se houver produtos filtrados e não estiver carregando
-            <Row xs={1} sm={2} md={3} lg={4} xl={5} className="g-4 mt-0">
-              {produtos.map(produto => (
-                <Col key={produto.id}>
-                  <Card className="h-100 shadow-sm">
-                    <Card.Img 
-                      variant="top" 
-                      src={produto.imagemURL || '/img/placeholder-produto.png'}
-                      alt={produto.nome}
-                      style={{ height: '180px', objectFit: 'contain', padding: '0.5rem' }} 
-                      onError={(e) => { (e.target as HTMLImageElement).src = '/img/placeholder-produto.png'; }}
-                    />
-                    <Card.Body className="d-flex flex-column">
-                      <Card.Title 
-                        style={{ fontSize: '1rem', minHeight: '3rem' }}
-                        title={produto.nome}
-                      >
-                        {produto.nome.length > 50 ? `${produto.nome.substring(0, 47)}...` : produto.nome}
-                      </Card.Title>
-                      <Card.Text as="div" style={{ fontSize: '0.85rem', color: '#555', flexGrow: 1 }}>
-                        Código: {produto.codigo || '-'}<br />
-                        Preço: <strong>{typeof produto.preco === 'number' 
-                          ? produto.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL',}) 
-                          : '-'}</strong><br />
-                        Estoque: 
-                        {(produto.estoque?.saldoVirtualTotal ?? 0) > 0 ? (
-                          <span className="fw-bold"> Disponível</span>
-                        ) : (
-                          <span className="fw-bold"> Indisponível</span>
-                        )}
-                        <br />
-                      </Card.Text>
+          {produtos.length > 0 && !loadingProdutos && (
+            <Table hover responsive className="mt-4 align-middle">
+              <thead>
+                <tr>
+                  <th className="fw-normal text-muted" style={{ fontSize: "0.8em" }}>Imagem</th>
+                  <th className="fw-normal text-muted" style={{ width: "45%", fontSize: "0.8em" }}>Descrição</th>
+                  <th className="fw-normal text-muted" style={{  width: "15%", fontSize: "0.8em" }}>Código</th>
+                  <th className="fw-normal text-muted" style={{ fontSize: "0.8em" }}>Preço</th>
+                  <th className="fw-normal text-muted" style={{ fontSize: "0.8em" }}>Estoque</th>
+                  <th className="fw-normal text-muted"> </th>
+                </tr>
+              </thead>
+              <tbody>
+                {produtos.map(produto => (
+                  <tr key={produto.id}>
+                    <td>
+                      <img
+                        src={produto.imagemURL || "/img/placeholder-produto.png"}
+                        alt={produto.nome}
+                        style={{ width: "57px", height: "57px", objectFit: "cover", borderRadius: "0.375rem" }}
+                        onError={(e) => { (e.target as HTMLImageElement).src = "/img/placeholder-produto.png"; }}
+                      />
+                    </td>
+
+                    <td style={{ fontSize: '0.9em' }}>{produto.nome}</td>
+                    <td style={{ fontSize: '0.9em' }}>{produto.codigo || '-'}</td>
+                    <td style={{ fontSize: '0.9em' }}>
+                      {typeof produto.preco === "number"
+                        ? produto.preco.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+                        : '-'}
+                    </td>
+
+                    <td style={{ fontSize: '0.9em' }}>
+                      {(produto.estoque?.saldoVirtualTotal ?? 0) > 0 ? (
+                        <Badge bg="success-subtle" text="success-emphasis" pill>Disponível</Badge>
+                      ) : (
+                        <Badge bg="danger-subtle" text="danger-emphasis" pill>Indisponível</Badge>
+                      )}
+                    </td>
+                    
+                    <td className="text-end">
                       <Button
-                        className="mt-2"
+                        variant="success"
+                        size="sm"
                         onClick={() => handleAdicionarAoPedido(produto)}
                         style={{
-                          fontSize: "0.8rem",
-                          padding: "0.2rem 0.75rem",
-                          backgroundColor: "#4CAF50",
-                          borderColor: "#4CAF50"
+                          fontSize: '0.8rem',
+                          padding: '0.2rem 0.75rem',
+                          backgroundColor: '#4CAF50',
+                          borderColor: '#4CAF50',
                         }}
                       >
                         Adicionar ao pedido
                       </Button>
-                      
-                    </Card.Body>
-                  </Card>
-                </Col>
-              ))}
-            </Row>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
           )}
 
           {(!loadingProdutos && (produtos.length > 0 || currentPage > 1)) && (

@@ -652,39 +652,4 @@ async function fetchTodosOsContatos({ idVendedor = null, tipoPessoa = null } = {
         throw new Error("Falha ao buscar contatos no ERP.");
     }
 }
-
-async function fetchImagemPrincipalProduto(idProduto, retryCount = 0) {
-    if (!idProduto) return null;
-
-    if (retryCount === 0) {
-        currentAccessToken = process.env.BLING_ACCESS_TOKEN;
-    }
-    if (!currentAccessToken) { throw new Error("Access Token do Bling não encontrado."); }
-
-    const url = `https://api.bling.com.br/Api/v3/produtos/${idProduto}/imagens`;
-
-    try {
-        const response = await axios.get(url, {
-            headers: { "Authorization": `Bearer ${currentAccessToken}` }
-        });
-
-        const imagens = response.data.data;
-
-        if (imagens && imagens.length > 0) {
-            const imagemPrincipal = imagens.find(img => img.principal === true) || imagens[0];
-            return imagemPrincipal.url;
-        }
-
-        return null;
-
-    } catch (error) {
-        if (error.response && error.response.status === 401 && retryCount < 1) {
-            await refreshBlingAccessToken();
-            return fetchImagemPrincipalProduto(idProduto, retryCount + 1);
-        }
-        console.error(`Não foi possível buscar imagem para o produto ID ${idProduto}:`, error.message);
-        return null
-    }
-}
-
-module.exports = { fetchClientes: fetchTodosOsContatos, refreshBlingAccessToken, fetchPedidosVendas, fetchProdutos, criarPedidoVenda, fetchFormasPagamento, fetchDetalhesPedidoVenda, atualizarPedidoNoBling, fetchDetalhesContato, fetchImagemPrincipalProduto };
+module.exports = { fetchClientes: fetchTodosOsContatos, refreshBlingAccessToken, fetchPedidosVendas, fetchProdutos, criarPedidoVenda, fetchFormasPagamento, fetchDetalhesPedidoVenda, atualizarPedidoNoBling, fetchDetalhesContato };
