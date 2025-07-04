@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Table, Spinner, Alert, Form } from 'react-bootstrap';
+import { Table, Spinner, Alert, Form, Row, Col } from 'react-bootstrap';
 // Se você configurou i18next e quer usar para os textos fixos:
 // import { useTranslation } from 'react-i18next';
 
@@ -94,16 +94,19 @@ export default function ClientesPage() {
 
   return (
     <div className="mt-4">
-      <h2>{pageTitle}</h2>
-      <Form.Group className="mb-3">
-        <Form.Control
-          type="text"
-          placeholder={searchPlaceholder}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </Form.Group>
-
+      <h3 className="fw-bold mb-3">{pageTitle}</h3>
+      <Row>
+        <Col md={5}>
+          <Form.Group className="my-3">
+            <Form.Control
+              type="text"
+              placeholder={searchPlaceholder}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </Form.Group>
+        </Col>
+      </Row>
       {data.length === 0 && !loading && !error && (
         <Alert variant="info">Nenhum cliente para exibir no momento.</Alert>
       )}
@@ -113,14 +116,14 @@ export default function ClientesPage() {
       {/* Só mostra a tabela se houver clientes após o filtro OU se não houver filtro e houver dados */}
       {/* Ou, mais simples: só mostra a tabela se houver dados, e o map cuida de não renderizar nada se filteredClients estiver vazio */}
       {data.length > 0 && (
-        <Table striped bordered hover responsive className="mt-3">
+        <Table striped bordered hover className="mt-3">
           <thead>
             <tr>
-              <th style= {{ width: '10%' }}>{headerIdCliente}</th>
-              <th style={{ width: '70%' }}>{headerNome}</th>
-              <th style={{ width: '20%' }}>{headerCnpjCpf}</th>
-              <th>{headerCidade}</th>
-              <th>{headerTelefone}</th>
+              <th className="text-muted" style={{ width: '10%', fontSize: '0.8em', fontWeight: 'normal' }}>{headerIdCliente}</th>
+              <th className="text-muted" style={{ width: '45%', fontSize: '0.8em', fontWeight: 'normal' }}>{headerNome}</th>
+              <th className="text-muted" style={{ width: '15%', fontSize: '0.8em', fontWeight: 'normal' }}>{headerCnpjCpf}</th>
+              <th className="text-muted" style={{ width: '15%', fontSize: '0.8em', fontWeight: 'normal' }}>{headerCidade}</th>
+              <th className="text-muted" style={{ width: '15%', fontSize: '0.8em', fontWeight: 'normal' }}>{headerTelefone}</th>
             </tr>
           </thead>
           <tbody>

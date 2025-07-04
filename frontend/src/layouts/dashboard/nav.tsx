@@ -12,6 +12,8 @@ import Drawer, { drawerClasses } from '@mui/material/Drawer';
 import { usePathname } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
+import logoDaPlataforma from 'src/assets/stratto-logo.png';
+
 import { Logo } from 'src/components/logo';
 import { Scrollbar } from 'src/components/scrollbar';
 
@@ -46,7 +48,7 @@ export function NavDesktop({
     component="nav"
     className="desktop-sidebar"
       sx={{
-        bgcolor: '#272727',
+        bgcolor: "background.paper",
         pt: 2.5,
         px: 2.5,
         top: 0,
@@ -58,6 +60,7 @@ export function NavDesktop({
         zIndex: 'var(--layout-nav-zIndex)',
         width: 'var(--layout-nav-vertical-width)',
         borderRight: `1px solid ${varAlpha(theme.vars.palette.grey['500Channel'], 0.12)}`,
+        boxShadow: `4px 0px 12px -2px ${varAlpha(theme.vars.palette.grey["600Channel"], 0.12)}`,
         [theme.breakpoints.up(layoutQuery)]: {
           display: 'flex',
         },
@@ -114,11 +117,15 @@ export function NavContent({ data, slots, workspaces, sx }: NavContentProps) {
 
   return (
     <>
-      <Logo />
+    <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', marginTop: '40px', marginLeft: '5px' }}>
+      <img
+        src={logoDaPlataforma}
+        alt="Logo da plataforma"
+        style={{ height: "150px", display: 'block' }}
+      />
+    </div>
 
       {slots?.topArea}
-
-      <WorkspacesPopover data={workspaces} sx={{ my: 2 }} />
 
       <Scrollbar fillContent>
         <Box
@@ -135,7 +142,7 @@ export function NavContent({ data, slots, workspaces, sx }: NavContentProps) {
           <Box
             component="ul"
             sx={{
-              gap: 0.5,
+              gap: 2,
               display: 'flex',
               flexDirection: 'column',
             }}
@@ -158,16 +165,13 @@ export function NavContent({ data, slots, workspaces, sx }: NavContentProps) {
                         borderRadius: 0.75,
                         typography: 'body2',
                         minHeight: 44,
-
                         fontWeight: isActived ? 'fontWeightSemiBold' : 'fontWeightMedium',
-                        color: isActived ? theme.vars.palette.grey['300'] : theme.vars.palette.common.white,
-
+                        // Letras cinza padrão, azul quando ativo
+                        color: isActived ? '#1976d2' : '#b0b0b0',
+                        backgroundColor: isActived ? 'rgba(25, 118, 210, 0.08)' : 'transparent',
                         ...(isActived && {
-                          fontWeight: 'fontWeightSemiBold',
-                          bgcolor: theme.vars.palette.common.white,
-                          color: theme.vars.palette.text.primary,
                           '&:hover': {
-                            bgcolor: theme.vars.palette.grey[200],
+                            bgcolor: 'rgba(25, 118, 210, 0.15)',
                           },
                         }),
                         ...(!isActived && {
@@ -178,8 +182,19 @@ export function NavContent({ data, slots, workspaces, sx }: NavContentProps) {
                       }),
                     ]}
                   >
-                    <Box component="span" sx={{ width: 24, height: 24 }}>
-                      {item.icon}
+                    <Box
+                      component="span"
+                      sx={{
+                        width: 40,
+                        height:40,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: "5px",
+                        bgcolor: item.bgcolor,
+                        color: "#637381",
+                      }}
+                    >
                     </Box>
 
                     <Box component="span" sx={{ flexGrow: 1 }}>
