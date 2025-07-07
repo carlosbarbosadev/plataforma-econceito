@@ -3,6 +3,7 @@ import 'src/global.css';
 import { useEffect } from 'react';
 
 import Fab from '@mui/material/Fab';
+import { CssBaseline } from '@mui/material';
 
 import { usePathname } from 'src/routes/hooks';
 
@@ -21,11 +22,8 @@ export default function App({ children }: AppProps) {
 
   return (
     <ThemeProvider>
-      <div className="container py-4">
-
-        {/* Conteúdo original das suas rotas */}
-        {children}
-      </div>
+      <CssBaseline />
+      {children}
     </ThemeProvider>
   );
 }

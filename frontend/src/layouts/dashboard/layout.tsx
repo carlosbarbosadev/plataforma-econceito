@@ -9,6 +9,7 @@ import Alert from '@mui/material/Alert';
 import AppBar from '@mui/material/AppBar';
 import Button from '@mui/material/Button';
 import Toolbar from '@mui/material/Toolbar';
+import Container from '@mui/material/Container';
 import TextField from '@mui/material/TextField';
 import { useTheme } from '@mui/material/styles';
 import IconButton from '@mui/material/IconButton';
@@ -20,7 +21,6 @@ import { _notifications } from 'src/_mock';
 
 import { Iconify } from 'src/components/iconify';
 
-import { NavMobile, NavDesktop } from './nav';
 import { layoutClasses } from '../core/classes';
 import { _account } from '../nav-config-account';
 import { dashboardLayoutVars } from './css-vars';
@@ -28,8 +28,8 @@ import { navData } from '../nav-config-dashboard';
 import { MainSection } from '../core/main-section';
 import { _workspaces } from '../nav-config-workspace';
 import { MenuButton } from '../components/menu-button';
-import { HeaderSection } from '../core/header-section';
 import { LayoutSection } from '../core/layout-section';
+import { NavMobile, NavDesktop, NavLogout } from './nav';
 import { AccountPopover } from '../components/account-popover';
 import { NotificationsPopover } from '../components/notifications-popover';
 
@@ -111,23 +111,19 @@ export function DashboardLayout({
             }}
           />
         </Box>
-
-        <Button
-          onClick={handleLogout}
-          aria-label="Sair"
-          sx={{
-            color: 'text.primary'
-          }}
-        >
-          <Iconify icon="solar:logout-outline" width={24} />
-        </Button>
       </Toolbar>
     </AppBar>
   );
 
   const renderFooter = () => null;
 
-  const renderMain = () => <MainSection {...slotProps?.main}>{children}</MainSection>;
+  const renderMain = () => (
+    <MainSection {...slotProps?.main}>
+      <Container maxWidth="xl">
+        {children}
+      </Container>
+    </MainSection>
+  );
 
   return (
     <> {/* Fragmento para agrupar a nova AppBar e o LayoutSection */}
@@ -149,7 +145,7 @@ export function DashboardLayout({
         <LayoutSection
           headerSection={null}
           sidebarSection={
-            <NavDesktop data={navData} layoutQuery={layoutQuery} workspaces={_workspaces} />
+            <NavDesktop data={navData} slots={{ bottomArea: <NavLogout onLogout={handleLogout} /> }}layoutQuery={layoutQuery} workspaces={_workspaces} />
           }
           footerSection={renderFooter()}
           cssVars={{ ...dashboardLayoutVars(theme), ...cssVars }}

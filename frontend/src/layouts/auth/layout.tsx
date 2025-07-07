@@ -40,47 +40,9 @@ export function AuthLayout({
   slotProps,
   layoutQuery = 'md',
 }: AuthLayoutProps) {
-  const renderHeader = () => {
-    const headerSlotProps: HeaderSectionProps['slotProps'] = { container: { maxWidth: false } };
 
-    const headerSlots: HeaderSectionProps['slots'] = {
-      topArea: (
-        <Alert severity="info" sx={{ display: 'none', borderRadius: 0 }}>
-          This is an info Alert.
-        </Alert>
-      ),
-      leftArea: (
-        <>
-          {/** @slot Logo */}
-          <Logo />
-        </>
-      ),
-      rightArea: (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.5 } }}>
-          {/** @slot Help link */}
-          <Link href="#" component={RouterLink} color="inherit" sx={{ typography: 'subtitle2' }}>
-            Need help?
-          </Link>
-        </Box>
-      ),
-    };
+const renderHeader = () => null;
 
-    return (
-      <HeaderSection
-        disableElevation
-        layoutQuery={layoutQuery}
-        {...slotProps?.header}
-        slots={{ ...headerSlots, ...slotProps?.header?.slots }}
-        slotProps={merge(headerSlotProps, slotProps?.header?.slotProps ?? {})}
-        sx={[
-          { position: { [layoutQuery]: 'fixed' } },
-          ...(Array.isArray(slotProps?.header?.sx)
-            ? (slotProps?.header?.sx ?? [])
-            : [slotProps?.header?.sx]),
-        ]}
-      />
-    );
-  };
 
   const renderFooter = () => null;
 
@@ -121,6 +83,7 @@ export function AuthLayout({
       cssVars={{ '--layout-auth-content-width': '420px', ...cssVars }}
       sx={[
         (theme) => ({
+          minHeight: '100vh',
           position: 'relative',
           '&::before': backgroundStyles(),
         }),
@@ -134,15 +97,13 @@ export function AuthLayout({
 
 // ----------------------------------------------------------------------
 
-const backgroundStyles = (): CSSObject => ({
-  zIndex: 1,
-  opacity: 0.24,
+const backgroundStyles = (): CSSObject  => ({
+  content: "''",
+  zIndex: -1,
   width: '100%',
   height: '100%',
-  content: "''",
   position: 'absolute',
-  backgroundSize: 'cover',
-  backgroundRepeat: 'no-repeat',
-  backgroundPosition: 'center center',
-  backgroundImage: 'url(/assets/background/overlay.jpg)',
+  left: 0,
+  top: 0,
+  background: 'linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)',
 });

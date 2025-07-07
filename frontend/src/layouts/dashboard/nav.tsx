@@ -14,10 +14,9 @@ import { RouterLink } from 'src/routes/components';
 
 import logoDaPlataforma from 'src/assets/stratto-logo.png';
 
-import { Logo } from 'src/components/logo';
 import { Scrollbar } from 'src/components/scrollbar';
 
-import { WorkspacesPopover } from '../components/workspaces-popover';
+import { logoutItem } from '../nav-config-dashboard';
 
 import type { NavItem } from '../nav-config-dashboard';
 import type { WorkspacesPopoverProps } from '../components/workspaces-popover';
@@ -51,6 +50,7 @@ export function NavDesktop({
         bgcolor: "background.paper",
         pt: 2.5,
         px: 2.5,
+        pb: 5,
         top: 0,
         left: 0,
         height: 1,
@@ -117,7 +117,7 @@ export function NavContent({ data, slots, workspaces, sx }: NavContentProps) {
 
   return (
     <>
-    <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', marginTop: '40px', marginLeft: '5px' }}>
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '40px' }}>
       <img
         src={logoDaPlataforma}
         alt="Logo da plataforma"
@@ -185,16 +185,17 @@ export function NavContent({ data, slots, workspaces, sx }: NavContentProps) {
                     <Box
                       component="span"
                       sx={{
-                        width: 40,
-                        height:40,
+                        width: 45,
+                        height:45,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         borderRadius: "5px",
                         bgcolor: item.bgcolor,
-                        color: "#637381",
+                        color: "white",
                       }}
                     >
+                      {item.icon}
                     </Box>
 
                     <Box component="span" sx={{ flexGrow: 1 }}>
@@ -213,5 +214,57 @@ export function NavContent({ data, slots, workspaces, sx }: NavContentProps) {
       {slots?.bottomArea}
 
     </>
+  );
+}
+
+// ----------------------------------------------------------------------
+
+type NavLogoutProps = {
+  onLogout: () => void;
+};
+
+export function NavLogout({ onLogout }: NavLogoutProps) {
+return (
+  <Box>
+    <ListItem disableGutters disablePadding key ={logoutItem.title}>
+      <ListItemButton
+        disableGutters
+        onClick={onLogout}
+        sx={{
+          pl: 2,
+          py: 1,
+          gap: 2,
+          pr: 1.5,
+          borderRadius: 0.75,
+          typography: 'body2',
+          minHeight: 44,
+          fontWeight: 'fontWeightMedium',
+          color: '#b0b0b0',
+          '&:hover': {
+            bgcolor: 'rgba(255, 255, 255, 0.08)',
+          },
+        }}
+      >
+        <Box
+          component="span"
+          sx={{
+            width: 45,
+            height: 45,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: "5px",
+            bgcolor: logoutItem.bgcolor,
+            color: "white",
+          }}
+        >
+          {logoutItem.icon}
+        </Box>
+        <Box component="span" sx={{ flexGrow: 1 }}>
+          {logoutItem.title}
+        </Box>
+      </ListItemButton>
+    </ListItem>
+  </Box>
   );
 }
