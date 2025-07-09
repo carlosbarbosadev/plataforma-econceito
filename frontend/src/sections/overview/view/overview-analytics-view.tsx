@@ -1,8 +1,12 @@
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Box from '@mui/material/Box';
+import { Paper } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
 
+import api from 'src/services/api';
 import { DashboardContent } from 'src/layouts/dashboard';
 import { _posts, _tasks, _traffic, _timeline } from 'src/_mock';
 
@@ -15,6 +19,7 @@ import { AnalyticsWidgetSummary } from '../analytics-widget-summary';
 import { AnalyticsTrafficBySite } from '../analytics-traffic-by-site';
 import { AnalyticsCurrentSubject } from '../analytics-current-subject';
 import { AnalyticsConversionRates } from '../analytics-conversion-rates';
+
 
 // ----------------------------------------------------------------------
 
@@ -37,21 +42,76 @@ export function OverviewAnalyticsView() {
 
   const saudacao = getGreeting();
   const userDataString = localStorage.getItem('userData');
-  const nomeDoUsuario = userDataString ? JSON.parse(userDataString).nome : 'Bem-vindo(a)';
+  const nomeCompleto = userDataString ? JSON.parse(userDataString).nome : 'Bem-vindo(a)';
+  const primeiroNome = nomeCompleto.split(" ")[0];
+
+  const hoje = new Date()
+  const opcoesDeData = {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  } as const;
+
+  const dataFormatada = new Intl.DateTimeFormat("pt-BR", opcoesDeData).format(hoje);
+  const capitalizar = (str: string) => str.charAt(0).toUpperCase() + str.slice(1);
+  const textoDaData = capitalizar(dataFormatada);
+
+  const [vendasMes, setVendasMes] = useState(0);
+  const [vendasAno, setVendasAno] = useState(0);
+  const [metasMes, setMetasMes] = useState(0);
+  const [pedidosAbertos, setPedidosAbertos] = useState(0);
+
+  useEffect(() => {
+    const carregarMetricas = async () => {
+      try {
+        console.log("Buscando dados do dashboard no backend...");
+
+        const resposta = await api.get("/api/dashboard/metricas");
+
+        const dados = resposta.data;
+
+        setVendasMes(dados.vendasMes);
+        setVendasAno(dados.vendasAno);
+        setPedidosAbertos(dados.pedidosAbertos);
+        setMetasMes(dados.metaMes);
+
+      } catch (error) {
+        console.error("Erro ao buscar métricas do painel:", error);
+      }
+    };
+
+    carregarMetricas();
+  }, []);
 
   return (
     <DashboardContent maxWidth="xl">
-      <Typography variant="h4" sx={{ mb: 5, mt: 5 }}>
-      {`${saudacao}, ${nomeDoUsuario}!`}
-      </Typography>
+      <Paper
+        elevation={4}
+        sx={{
+          p: 3,
+          mt: 5,
+          mb: 5,
+          maxWidth: "500px",
+          borderRadius: "16px",
+          background: 'linear-gradient(135deg, #2453dc 0%, #577CFF 100%)'
+        }}
+      >
+        <Typography variant="h4" sx={{ fontWeight: "bold", color: "white" }}>
+          {`${saudacao}, ${primeiroNome}`}
+        </Typography>
+        <Typography variant="subtitle1" sx={{ mt: 0.5, color: 'white' }}>
+          {textoDaData}
+        </Typography>
+      </Paper>
 
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <AnalyticsWidgetSummary
-            title={t("dashboard2.monthSales")}
-            percent={2.6}
-            total={714000}
-            icon={<img alt="Weekly sales" src="/assets/icons/glass/ic-glass-bag.svg" />}
+            title="Vendas do mês"
+            percent={0}
+            total={vendasMes}
+            icon={<img alt="Vendas do mês" src="/assets/icons/glass/cart.svg" />}
             chart={{
               categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'],
               series: [22, 8, 35, 50, 82, 84, 77, 12],
@@ -61,11 +121,11 @@ export function OverviewAnalyticsView() {
 
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <AnalyticsWidgetSummary
-            title={t("dashboard3.newUsers")}
-            percent={-0.1}
-            total={1352831}
+            title="Vendas do ano"
+            percent={0}
+            total={vendasAno}
             color="secondary"
-            icon={<img alt="New users" src="/assets/icons/glass/ic-glass-users.svg" />}
+            icon={<img alt="Vendas do ano" src="/assets/icons/glass/cart-large.svg" />}
             chart={{
               categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'],
               series: [56, 47, 40, 62, 73, 30, 23, 54],
@@ -75,11 +135,11 @@ export function OverviewAnalyticsView() {
 
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <AnalyticsWidgetSummary
-            title={t("dashboard4.purchaseOrders")}
-            percent={2.8}
-            total={1723315}
+            title="Metas do mês"
+            percent={0}
+            total={metasMes}
             color="warning"
-            icon={<img alt="Purchase orders" src="/assets/icons/glass/ic-glass-buy.svg" />}
+            icon={<img alt="Metas do mês" src="/assets/icons/glass/chart.svg" />}
             chart={{
               categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'],
               series: [40, 70, 50, 28, 70, 75, 7, 64],
@@ -89,11 +149,11 @@ export function OverviewAnalyticsView() {
 
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <AnalyticsWidgetSummary
-            title={t("dashboard5.messages")}
-            percent={3.6}
-            total={234}
+            title="Pedidos em aberto"
+            percent={0}
+            total={pedidosAbertos}
             color="error"
-            icon={<img alt="Messages" src="/assets/icons/glass/ic-glass-message.svg" />}
+            icon={<img alt="Pedidos em aberto" src="/assets/icons/glass/hamburger-menu.svg" />}
             chart={{
               categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'],
               series: [56, 30, 23, 54, 47, 40, 62, 73],

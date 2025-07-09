@@ -43,33 +43,33 @@ async function refreshBlingAccessToken() {
         console.log('Access Token do Bling renovado com sucesso!');
         currentAccessToken = newAccessToken; // Atualiza o token em memória
 
-        if (newRefreshToken && newRefreshToken !== currentRefreshToken) { 
+        if (newRefreshToken && newRefreshToken !== currentRefreshToken) {
             console.log('Novo Refresh Token recebido do Bling.');
             console.log('VALOR DO NOVO REFRESH TOKEN:', newRefreshToken);
             currentRefreshToken = newRefreshToken;
             // ATENÇÃO: Salve este novo 'currentRefreshToken' no seu .env manualmente ou em um DB
             process.env.BLING_REFRESH_TOKEN = currentRefreshToken;
         }
-        
-        process.env.BLING_ACCESS_TOKEN = currentAccessToken; 
+
+        process.env.BLING_ACCESS_TOKEN = currentAccessToken;
         return currentAccessToken;
 
     } catch (error) {
         console.error('Erro CRÍTICO ao tentar renovar o Access Token do Bling:', error.response ? JSON.stringify(error.response.data, null, 2) : error.message);
         // Se o refresh token estiver inválido/expirado, o Bling retornará um erro aqui.
         // Isso exigiria uma re-autenticação manual.
-        currentAccessToken = null; 
+        currentAccessToken = null;
         throw new Error(`Falha CRÍTICA ao renovar token do Bling: ${error.response?.data?.error_description || error.message}. Reautenticação manual pode ser necessária.`);
     }
 }
 
 async function fetchClientes(retryCount = 0) {
     // Garante que os tokens mais recentes do process.env sejam carregados no início
-    if (retryCount === 0) { 
+    if (retryCount === 0) {
         currentAccessToken = process.env.BLING_ACCESS_TOKEN;
         currentRefreshToken = process.env.BLING_REFRESH_TOKEN;
     }
-    
+
     if (!currentAccessToken) {
         console.error('Erro: Access Token do Bling não disponível no início de fetchClientes.');
         throw new Error('Erro de configuração: Access Token do Bling não encontrado.');
@@ -80,7 +80,7 @@ async function fetchClientes(retryCount = 0) {
 
     const todosOsContatos = []; // Vamos armazenar todos os contatos aqui
     let pagina = 1;
-    const limitePorPagina = 100; 
+    const limitePorPagina = 100;
 
     console.log('Iniciando busca de TODOS os contatos do Bling');
 
@@ -88,7 +88,7 @@ async function fetchClientes(retryCount = 0) {
         const url = `https://api.bling.com.br/Api/v3/contatos?pagina=${pagina}&limite=${limitePorPagina}`;
         try {
             console.log(`Buscando contatos - Página: ${pagina} com Access Token: ${currentAccessToken ? 'presente' : 'AUSENTE'}`);
-            
+
             const response = await axios.get(url, {
                 headers: {
                     'Authorization': `Bearer ${currentAccessToken}`,
@@ -109,7 +109,7 @@ async function fetchClientes(retryCount = 0) {
 
                 if (contatosDaPagina.length < limitePorPagina) {
                     console.log('Última página de contatos alcançada.');
-                    break; 
+                    break;
                 }
                 pagina++;
                 await new Promise(resolve => setTimeout(resolve, 350)); // Delay para não exceder o rate limit
@@ -121,9 +121,9 @@ async function fetchClientes(retryCount = 0) {
             if (error.response && error.response.status === 401 && retryCount < 1) {
                 console.warn(`Access Token expirado ou inválido durante busca na página ${pagina}. Tentando renovar...`);
                 try {
-                    await refreshBlingAccessToken(); 
+                    await refreshBlingAccessToken();
                     console.log(`Token renovado. Re-tentando a página ${pagina} automaticamente.`);
-                    continue; 
+                    continue;
                 } catch (refreshError) {
                     console.error('Falha DEFINITIVA ao renovar o token durante a paginação:', refreshError.message);
                     throw refreshError;
@@ -151,11 +151,11 @@ async function fetchClientes(retryCount = 0) {
 }
 
 async function fetchPedidosVendas(idVendedorParaFiltrar = null, retryCount = 0) {
-    if (retryCount === 0) { 
+    if (retryCount === 0) {
         currentAccessToken = process.env.BLING_ACCESS_TOKEN;
         currentRefreshToken = process.env.BLING_REFRESH_TOKEN;
     }
-    
+
     if (!currentAccessToken) {
         console.error('Erro: Access Token do Bling não disponível no início de fetchPedidosVendas.');
         throw new Error('Erro de configuração: Access Token do Bling não encontrado.');
@@ -178,14 +178,14 @@ async function fetchPedidosVendas(idVendedorParaFiltrar = null, retryCount = 0) 
 
     while (true) {
         // Monta a URL com os parâmetros de paginação e o filtro de vendedor (se houver)
-        let url = `${baseUrlForApi}?pagina=${pagina}&limite=${limitePorPagina}`;
+        let url = `${baseUrlForApi}?pagina=${pagina}&limite=${limitePorPagina}&composicao=true`;
         if (idVendedorParaFiltrar) {
             url += `&idVendedor=${idVendedorParaFiltrar}`;
         }
-        
+
         try {
             console.log(`Buscando Pedidos de Venda - URL: ${url} com Access Token: ${currentAccessToken ? 'presente' : 'AUSENTE'}`);
-            
+
             const response = await axios.get(url, {
                 headers: {
                     'Authorization': `Bearer ${currentAccessToken}`,
@@ -202,7 +202,7 @@ async function fetchPedidosVendas(idVendedorParaFiltrar = null, retryCount = 0) 
 
                 if (pedidosDaPagina.length < limitePorPagina) {
                     console.log('Última página de pedidos alcançada (recebidos menos que o limite).');
-                    break; 
+                    break;
                 }
                 pagina++;
                 await new Promise(resolve => setTimeout(resolve, 350)); // Delay para não exceder o rate limit
@@ -214,13 +214,13 @@ async function fetchPedidosVendas(idVendedorParaFiltrar = null, retryCount = 0) 
             if (error.response && error.response.status === 401 && retryCount < 1) {
                 console.warn(`Access Token expirado ou inválido durante busca de pedidos na página ${pagina}. Tentando renovar...`);
                 try {
-                    await refreshBlingAccessToken(); 
+                    await refreshBlingAccessToken();
                     console.log(`Token renovado. Re-tentando a página ${pagina} de pedidos automaticamente.`);
                     continue; // Tenta a mesma página novamente com o novo token
                 } catch (refreshError) {
                     console.error('Falha DEFINITIVA ao renovar o token durante a paginação de pedidos:', refreshError.message);
                     // Propaga o erro do refresh, pois não há mais o que fazer automaticamente.
-                    throw refreshError; 
+                    throw refreshError;
                 }
             }
 
@@ -306,7 +306,7 @@ async function fetchProdutos(retryCount = 0) {
 }
 
 async function criarPedidoVenda(dadosDoPedido, retryCount = 0) {
-    if (retryCount === 0) { 
+    if (retryCount === 0) {
         currentAccessToken = process.env.BLING_ACCESS_TOKEN;
         // Não precisamos do refresh_token para esta chamada inicial, mas refreshBlingAccessToken o usa
     }
@@ -339,10 +339,10 @@ async function criarPedidoVenda(dadosDoPedido, retryCount = 0) {
         }
         // Log de erro mais detalhado
         const errorData = error.response?.data;
-        const errorMessage = errorData?.error?.description || 
-                             (Array.isArray(errorData?.errors) && errorData.errors[0]?.message) || // Bling às vezes retorna array de erros
-                             error.message || 
-                             'Erro desconhecido';
+        const errorMessage = errorData?.error?.description ||
+            (Array.isArray(errorData?.errors) && errorData.errors[0]?.message) || // Bling às vezes retorna array de erros
+            error.message ||
+            'Erro desconhecido';
         console.error(`Erro ao criar pedido de venda no Bling (Status: ${error.response?.status}):`, JSON.stringify(errorData, null, 2) || error.message);
         throw new Error(`Falha ao criar pedido no Bling: ${errorMessage}`);
     }
@@ -393,7 +393,7 @@ async function fetchFormasPagamento(retryCount = 0) {
     } catch (error) {
         if (error.response && error.response.status === 401 && retryCount < 1) {
             console.warn(`Access Token expirado ou inválido durante busca de Formas de Pagamento. Tentando renovar...`);
-            try { 
+            try {
                 await refreshBlingAccessToken();
                 console.log(`Token renovado. Re-tentando buscar Formas de Pagamento automaticamente.`);
                 return fetchFormasPagamento(retryCount + 1);
@@ -419,7 +419,7 @@ async function fetchFormasPagamento(retryCount = 0) {
     }
 }
 
-async function fetchDetalhesPedidoVenda(idPedido, retryCount = 0 ) {
+async function fetchDetalhesPedidoVenda(idPedido, retryCount = 0) {
     if (retryCount === 0) {
         currentAccessToken = process.env.BLING_ACCESS_TOKEN;
         currentRefreshToken = process.env.BLING_REFRESH_TOKEN;
@@ -435,9 +435,9 @@ async function fetchDetalhesPedidoVenda(idPedido, retryCount = 0 ) {
     }
 
     const url = `https://api.bling.com.br/Api/v3/pedidos/vendas/${idPedido}`;
-    
+
     console.log(`Buscando detalhes de Pedido de Venda ID: ${idPedido} com Access Token: ${currentAccessToken ? 'presente' : 'AUSENTE'}`);
-    
+
     try {
         const response = await axios.get(url, {
             headers: {
@@ -478,7 +478,7 @@ async function fetchDetalhesPedidoVenda(idPedido, retryCount = 0 ) {
         let errorMessage = `Erro ao buscar detalhes do pedido ID ${idPedido} do Bling.`;
         if (error.response) {
             const blingErrorData = error.response.data;
-            console.error(`Erro detalhado da API Bling V3 (Detalhes Pedido ID ${idPedido} - Status ${error,response.status}):`, typeof blingErrorData === 'sting' ? blingErrorData : JSON.stringfy(blingErrorData, null, 2));
+            console.error(`Erro detalhado da API Bling V3 (Detalhes Pedido ID ${idPedido} - Status ${error, response.status}):`, typeof blingErrorData === 'sting' ? blingErrorData : JSON.stringfy(blingErrorData, null, 2));
             errorMessage = `Falha na API Bling (Detalhes Pedido ID ${idPedido}): ${typeof blingErrorData === 'object' && blingErrorData !== null && (blingErrorData.error?.description || blingErrorData.error?.message) ? (blingErrorData.error.description || blingErrorData.error.message) : `Status ${error.response.status}`}`;
         } else if (error.request) {
             console.error(`Erro de rede ou sem resposta da API Bling V3 (Detalhes Pedido ID ${idPedido}):`, error.message);
@@ -527,37 +527,37 @@ async function atualizarPedidoNoBling(pedidoId, pedidoEditadoDoFrontend) {
     if (pedidoOriginalDoBling.contato.id === pedidoEditadoDoFrontend.contato.id &&
         pedidoOriginalDoBling.contato.nome !== pedidoEditadoDoFrontend.contato.nome) {
 
-            const contatoId = pedidoEditadoDoFrontend.contato.id;
+        const contatoId = pedidoEditadoDoFrontend.contato.id;
 
-            try {
-                const contatoOriginalCompleto = await fetchDetalhesContato(contatoId);
+        try {
+            const contatoOriginalCompleto = await fetchDetalhesContato(contatoId);
 
-                const payloadContato = {
-                    ...contatoOriginalCompleto,
-                    nome: pedidoEditadoDoFrontend.contato.nome
-                };
+            const payloadContato = {
+                ...contatoOriginalCompleto,
+                nome: pedidoEditadoDoFrontend.contato.nome
+            };
 
             const urlUpdateContato = `https://api.bling.com.br/Api/v3/contatos/${contatoId}`;
 
-                await axios.put(urlUpdateContato, payloadContato, { headers: { 'Authorization': `Bearer ${currentAccessToken}` } });
-                console.log(`Contato ID ${contatoId} atualizado com sucesso no Bling.`);
+            await axios.put(urlUpdateContato, payloadContato, { headers: { 'Authorization': `Bearer ${currentAccessToken}` } });
+            console.log(`Contato ID ${contatoId} atualizado com sucesso no Bling.`);
 
-            } catch (error) {
-                const errorData = error.response?.data;
-                console.error(`Erro detalhado ao tentar ATUALIZAR o CONTATO:`, errorData);
-                if (errorData?.error?.fields) {
-                    console.error("Campos com erro de validação:", errorData.error.fields);
-                }
-                throw new Error(`Falha ao atualizar o nome do contato no Bling.`);
+        } catch (error) {
+            const errorData = error.response?.data;
+            console.error(`Erro detalhado ao tentar ATUALIZAR o CONTATO:`, errorData);
+            if (errorData?.error?.fields) {
+                console.error("Campos com erro de validação:", errorData.error.fields);
             }
+            throw new Error(`Falha ao atualizar o nome do contato no Bling.`);
         }
+    }
 
     const url = `https://api.bling.com.br/Api/v3/pedidos/vendas/${pedidoId}`;
 
     const subtotal = pedidoEditadoDoFrontend.itens.reduce((acc, item) => acc + (item.valor * item.quantidade), 0);
     const valorDoDesconto = pedidoEditadoDoFrontend.desconto?.valor || 0;
     const totalFinal = subtotal - valorDoDesconto;
-    
+
     const itensFormatados = pedidoEditadoDoFrontend.itens.map(item => {
         const itemParaBling = {
             produto: { id: item.produto.id },
@@ -582,17 +582,17 @@ async function atualizarPedidoNoBling(pedidoId, pedidoEditadoDoFrontend) {
             unidade: "REAL"
         },
         parcelas: (pedidoEditadoDoFrontend.parcelas && pedidoEditadoDoFrontend.parcelas.length > 0)
-        ? [{ ...pedidoEditadoDoFrontend.parcelas[0], valor: totalFinal }]
-        : []
+            ? [{ ...pedidoEditadoDoFrontend.parcelas[0], valor: totalFinal }]
+            : []
     };
 
     try {
         const response = await axios.put(url, payloadFinal, {
             headers: { 'Authorization': `Bearer ${currentAccessToken}` }
-         });
-         console.log('Resposta do Bling ao atualizar pedido:', response.data);
+        });
+        console.log('Resposta do Bling ao atualizar pedido:', response.data);
 
-        return {sucesso: true, mensagem: 'Pedido atualizado no Bling com sucesso!'};
+        return { sucesso: true, mensagem: 'Pedido atualizado no Bling com sucesso!' };
 
     } catch (error) {
         const errorData = error.response?.data;

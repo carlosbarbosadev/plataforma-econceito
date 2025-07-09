@@ -12,6 +12,7 @@ const clientesRoutes = require('./routes/clientes');
 const produtosRoutes = require('./routes/produtos');
 const pedidosRoutes = require('./routes/pedidos');
 const utilRoutes = require('./routes/utils');
+const dashboardRoutes = require("./routes/dashboard");
 
 app.use(cors());
 app.use(express.json());
@@ -21,6 +22,7 @@ app.use('/api/clientes', clientesRoutes);
 app.use('/api/produtos', produtosRoutes);
 app.use('/api/pedidos', pedidosRoutes);
 app.use('/api/utils', utilRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // --- Inicialização do Servidor ---
 const PORT = process.env.PORT || 3001;
