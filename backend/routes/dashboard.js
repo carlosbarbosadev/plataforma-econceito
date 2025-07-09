@@ -17,22 +17,6 @@ router.get("/metricas", async (req, res) => {
         const todosOsPedidos = await fetchPedidosVendas(idVendedor);
         console.log(`Rota /metricas: Total de ${todosOsPedidos.length} pedidos recebidos do Bling.`);
 
-        if (todosOsPedidos.length > 0) {
-            console.log("=== DEBUG: Estrutura dos pedidos ===");
-            console.log("Primeito pedido completo:", JSON.stringify(todosOsPedidos[0], null, 2));
-
-            const situacoesUnicas = [...new Set(todosOsPedidos.map(p => p.situacao?.id).filter(id => id))];
-            console.log('IDs de situações encontradas:', situacoesUnicas);
-
-            const estruturasValor = todosOsPedidos.slice(0, 3).map(p => ({
-                id: p.id,
-                valor: p.valor,
-                total: p.total,
-                valorTotal: p.valorTotal
-            }));
-            console.log('Estruturas de valor (primeiros 3 pedidos):', estruturasValor);
-        }
-
         const hoje = new Date();
         const mesAtual = hoje.getMonth();
         const anoAtual = hoje.getFullYear();
@@ -45,8 +29,8 @@ router.get("/metricas", async (req, res) => {
         let pedidosAbertos = 0;
 
         console.log('=== Processando pedidos para cálculo de vendas ===');
-
         for (const pedido of todosOsPedidos) {
+
             let dataPedido;
             try {
                 dataPedido = new Date(pedido.data || pedido.dataVenda || pedido.dataPedido);
@@ -79,12 +63,12 @@ router.get("/metricas", async (req, res) => {
                     valorTotalPedido = parseFloat(pedido.valor);
                 }
 
-                if (valorTotalPedido > 0) {
-                    console.log(`Pedido ${pedido.id} - Status: ${situacaoId}, Valor: R$ ${valorTotalPedido}, Data: ${dataPedido.toLocaleDateString()}`);
+                if (valorTotalPedido === 0) {
+                    console.log(`[AVISO] Pedido ${pedido.id} com status ${situacaoId} tem valor 0 ou não encontrado.`);
                 }
 
                 if (dataPedido.getFullYear() === anoAtual) {
-                    vedasAno += valorTotalPedido;
+                    vendasAno += valorTotalPedido;
                 }
 
                 if (dataPedido.getFullYear() === anoAtual && dataPedido.getMonth() === mesAtual) {
@@ -94,6 +78,12 @@ router.get("/metricas", async (req, res) => {
         }
 
         const metaMes = 150000;
+
+        console.log('=== RESULTADOS FINAIS ===');
+        console.log(`Vendas do mês: R$ ${vendasMes.toFixed(2)}`);
+        console.log(`Vendas do ano: R$ ${vendasAno.toFixed(2)}`);
+        console.log(`Pedidos abertos: ${pedidosAbertos}`);
+        console.log(`Meta do mês: R$ ${metaMes.toFixed(2)}`);
 
         res.json({
             vendasMes: Math.round(vendasMes * 100) / 100,

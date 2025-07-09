@@ -88,11 +88,16 @@ export function AnalyticsWidgetSummary({
       sx={[
         () => ({
           p: 3,
-          boxShadow: 'none',
           position: 'relative',
-          color: `${color}.darker`,
-          backgroundColor: 'common.white',
-          backgroundImage: `linear-gradient(135deg, ${varAlpha(theme.vars.palette[color].lighterChannel, 0.48)}, ${varAlpha(theme.vars.palette[color].lightChannel, 0.48)})`,
+          backgroundColor: varAlpha(theme.vars.palette.primary.mainChannel, 0.08),
+          boxShadow: theme.shadows[2],
+          color: theme.palette.text.primary,
+          transition: theme.transitions.create('box-shadow', {
+            duration: theme.transitions.duration.shorter,
+          }),
+          '&:hover': {
+            boxShadow: theme.shadows[8],
+          },
         }),
         ...(Array.isArray(sx) ? sx : [sx]),
       ]}
@@ -123,20 +128,6 @@ export function AnalyticsWidgetSummary({
           sx={{ width: 84, height: 56 }}
         />
       </Box>
-
-      <SvgColor
-        src="/assets/background/shape-square.svg"
-        sx={{
-          top: 0,
-          left: -20,
-          width: 240,
-          zIndex: -1,
-          height: 240,
-          opacity: 0.24,
-          position: 'absolute',
-          color: `${color}.main`,
-        }}
-      />
     </Card>
   );
 }
