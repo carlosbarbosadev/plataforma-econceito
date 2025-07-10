@@ -8,6 +8,8 @@ import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import { useTheme } from '@mui/material/styles';
 
+import { useCountUp } from "src/routes/hooks/use-count-up"
+
 import { fNumber, fPercent, fShortenNumber } from 'src/utils/format-number';
 
 import { Iconify } from 'src/components/iconify';
@@ -83,13 +85,15 @@ export function AnalyticsWidgetSummary({
     </Box>
   );
 
+  const countUp = useCountUp(total)
+
   return (
     <Card
       sx={[
         () => ({
           p: 3,
           position: 'relative',
-          backgroundColor: varAlpha(theme.vars.palette.primary.mainChannel, 0.08),
+          backgroundColor: "ffffff",
           boxShadow: theme.shadows[2],
           color: theme.palette.text.primary,
           transition: theme.transitions.create('box-shadow', {
@@ -118,11 +122,11 @@ export function AnalyticsWidgetSummary({
         <Box sx={{ flexGrow: 1, minWidth: 112 }}>
           <Box sx={{ mb: 1, typography: 'subtitle2' }}>{title}</Box>
 
-          <Box sx={{ typography: 'h4' }}>{fShortenNumber(total)}</Box>
+          <Box sx={{ typography: 'h4' }}>{fShortenNumber(countUp)}</Box>
         </Box>
 
         <Chart
-          type="line"
+          type='line'
           series={[{ data: chart.series }]}
           options={chartOptions}
           sx={{ width: 84, height: 56 }}

@@ -111,7 +111,7 @@ export function OverviewAnalyticsView() {
             title="Vendas do mês"
             percent={0}
             total={vendasMes}
-            icon={<img alt="Vendas do mês" src="/assets/icons/glass/bag.svg" />}
+            icon={<img alt="Vendas do mês" src="/assets/icons/glass/basket-shopping.svg" />}
             chart={{
               categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'],
               series: [22, 8, 35, 50, 82, 84, 77, 12],
@@ -125,7 +125,7 @@ export function OverviewAnalyticsView() {
             percent={0}
             total={vendasAno}
             color="secondary"
-            icon={<img alt="Vendas do ano" src="/assets/icons/glass/cart-large.svg" />}
+            icon={<img alt="Vendas do ano" src="/assets/icons/glass/cart-check.svg" />}
             chart={{
               categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'],
               series: [56, 47, 40, 62, 73, 30, 23, 54],
@@ -139,7 +139,7 @@ export function OverviewAnalyticsView() {
             percent={0}
             total={metasMes}
             color="warning"
-            icon={<img alt="Metas do mês" src="/assets/icons/glass/check-circle.svg" />}
+            icon={<img alt="Metas do mês" src="/assets/icons/glass/check-double.svg" />}
             chart={{
               categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'],
               series: [40, 70, 50, 28, 70, 75, 7, 64],
@@ -153,7 +153,7 @@ export function OverviewAnalyticsView() {
             percent={0}
             total={pedidosAbertos}
             color="error"
-            icon={<img alt="Pedidos em aberto" src="/assets/icons/glass/clipboard.svg" />}
+            icon={<img alt="Pedidos em aberto" src="/assets/icons/glass/list-check.svg" />}
             chart={{
               categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'],
               series: [56, 30, 23, 54, 47, 40, 62, 73],
