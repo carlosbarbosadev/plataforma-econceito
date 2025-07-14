@@ -10,7 +10,7 @@ import { useTheme } from '@mui/material/styles';
 
 import { useCountUp } from "src/routes/hooks/use-count-up"
 
-import { fNumber, fPercent, fShortenNumber } from 'src/utils/format-number';
+import { fNumber, fPercent } from 'src/utils/format-number';
 
 import { Iconify } from 'src/components/iconify';
 import { SvgColor } from 'src/components/svg-color';
@@ -122,7 +122,7 @@ export function AnalyticsWidgetSummary({
         <Box sx={{ flexGrow: 1, minWidth: 112 }}>
           <Box sx={{ mb: 1, typography: 'subtitle2' }}>{title}</Box>
 
-          <Box sx={{ typography: 'h4' }}>{fShortenNumber(countUp)}</Box>
+          <Box sx={{ typography: 'h4' }}>{fNumber(countUp)}</Box>
         </Box>
 
         <Chart

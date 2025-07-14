@@ -1,100 +1,85 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const { fetchPedidosVendas } = require("../services/bling");
-const { autenticarToken } = require("../middlewares/authMiddleware");
+const db = require('../db');
+const { autenticarToken } = require('../middlewares/authMiddleware');
 
 router.use(autenticarToken);
 
-router.get("/metricas", async (req, res) => {
-    console.log("Rota /metricas: Calculando todos os dados do painel...");
+router.get('/all', async (req, res) => {
+    console.log('Rota /all: Buscando dados do painel a partir do CACHE LOCAL...');
     try {
         const idVendedor = req.usuario.id_vendedor_bling;
 
         if (!idVendedor) {
-            return res.status(403).json({ error: "Usuário não tem um ID de vendedor associado." });
+            return res.status(403).json({ error: 'Usuário não tem um ID de vendedor associado.'});
         }
 
-        const todosOsPedidos = await fetchPedidosVendas(idVendedor);
-        console.log(`Rota /metricas: Total de ${todosOsPedidos.length} pedidos recebidos do Bling.`);
+        const queryMetricas = 'SELECT * FROM vw_dashboard_dados WHERE vendedor_id = $1';
+        const { rows: [metricasDoCache] } = await db.query(queryMetricas, [idVendedor]);
 
-        const hoje = new Date();
-        const mesAtual = hoje.getMonth();
-        const anoAtual = hoje.getFullYear();
+        const metricas = metricasDoCache || {
+            vendas_mes: 0,
+            vendas_ano: 0,
+            pedidos_abertos: 0,
+        };
 
-        const statusVendaConcluida = [9];
-        const idStatusEmAberto = 6;
+        const queryTopProdutos = `
+            SELECT produto_nome AS label, total_vendido AS value
+            FROM cache_produtos_mais_vendidos
+            WHERE vendedor_id = $1
+            ORDER BY total_vendido DESC
+            LIMIT 5;
+        `;
+        const { rows: top5Produtos } = await db.query(queryTopProdutos, [idVendedor]);
 
-        let vendasMes = 0;
-        let vendasAno = 0;
-        let pedidosAbertos = 0;
+        const anoAtual = new Date().getFullYear();
+        const anoAnterior = anoAtual - 1;
 
-        console.log('=== Processando pedidos para cálculo de vendas ===');
-        for (const pedido of todosOsPedidos) {
+        const queryComparativo = `
+            SELECT
+                EXTRACT(MONTH FROM data_pedido) AS mes,
+                SUM(CASE WHEN EXTRACT(YEAR FROM data_pedido) = $1 THEN total ELSE 0 END) AS total_ano_atual,
+                SUM(CASE WHEN EXTRACT(YEAR FROM data_pedido) = $2 THEN total ELSE 0 END) AS total_ano_anterior
+            FROM cache_pedidos
+            WHERE status_id = 9 AND vendedor_id = $3 AND EXTRACT(YEAR FROM data_pedido) IN ($1, $2)
+            GROUP BY EXTRACT(MONTH FROM data_pedido);
+        `;
+        const { rows: dadosComparativo } = await db.query(queryComparativo, [anoAtual, anoAnterior, idVendedor]);
 
-            let dataPedido;
-            try {
-                dataPedido = new Date(pedido.data || pedido.dataVenda || pedido.dataPedido);
-            } catch (error) {
-                console.warn(`Erro ao parsear data do pedido ${pedido.id}:`, error);
-                continue;
-            }
-
-            if (isNaN(dataPedido.getTime())) {
-                console.warn(`Data inválida no pedido ${pedido.id}:`, pedido.data);
-                continue;
-            }
-
-            const situacaoId = pedido.situacao?.id;
-
-            if (situacaoId === idStatusEmAberto) {
-                pedidosAbertos++;
-            }
-
-            if (statusVendaConcluida.includes(situacaoId)) {
-                let valorTotalPedido = 0;
-
-                if (pedido.valor?.total) {
-                    valorTotalPedido = parseFloat(pedido.valor.total);
-                } else if (pedido.total) {
-                    valorTotalPedido = parseFloat(pedido.total);
-                } else if (pedido.valorTotal) {
-                    valorTotalPedido = parseFloat(pedido.valorTotal);
-                } else if (pedido.valor) {
-                    valorTotalPedido = parseFloat(pedido.valor);
-                }
-
-                if (valorTotalPedido === 0) {
-                    console.log(`[AVISO] Pedido ${pedido.id} com status ${situacaoId} tem valor 0 ou não encontrado.`);
-                }
-
-                if (dataPedido.getFullYear() === anoAtual) {
-                    vendasAno += valorTotalPedido;
-                }
-
-                if (dataPedido.getFullYear() === anoAtual && dataPedido.getMonth() === mesAtual) {
-                    vendasMes += valorTotalPedido;
-                }
-            }
+        const vendasAnoAtual = Array(12).fill(0);
+        const vendasAnoAnterior = Array(12).fill(0);
+        for (const row of dadosComparativo) {
+            vendasAnoAtual[row.mes - 1] = parseFloat(row.total_ano_atual) || 0;
+            vendasAnoAnterior[row.mes - 1] = parseFloat(row.total_ano_anterior);
         }
 
-        const metaMes = 150000;
-
-        console.log('=== RESULTADOS FINAIS ===');
-        console.log(`Vendas do mês: R$ ${vendasMes.toFixed(2)}`);
-        console.log(`Vendas do ano: R$ ${vendasAno.toFixed(2)}`);
-        console.log(`Pedidos abertos: ${pedidosAbertos}`);
-        console.log(`Meta do mês: R$ ${metaMes.toFixed(2)}`);
+        console.log('Dados do painel extraídos do cache com sucesso!');
 
         res.json({
-            vendasMes: Math.round(vendasMes * 100) / 100,
-            vendasAno: Math.round(vendasAno * 100) / 100,
-            pedidosAbertos,
-            metaMes,
+            metricas: {
+                vendasMes: Math.round(metricas.vendas_mes * 100) / 100,
+                vendasAno: Math.round(metricas.vendas_ano * 100) / 100,
+                pedidosAbertos: parseInt(metricas.pedidos_abertos, 10),
+                metaMes: 30000,
+            },
+            comparativoAnual: {
+                chart: {
+                    categories: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+                    series: [
+                        { name: `${anoAtual}`, data: vendasAnoAtual },
+                        { name: `${anoAnterior}`, data: vendasAnoAnterior },
+                    ],
+                }
+            },
+            produtosMaisVendidos: {
+                chart: {
+                    series : top5Produtos,
+                },
+            }
         });
-
     } catch (error) {
-        console.error("Erro na rota /metricas:", error.message);
-        res.status(500).json({ error: "Erro ao buscar métricas do painel." });
+        console.error("Erro na rota /all (versão cache):", error.message, error.stack);
+        res.status(500).json({ error: 'Erro ao buscar dados do painel a partir do cache' });
     }
 });
 

@@ -61,28 +61,40 @@ export function OverviewAnalyticsView() {
   const [vendasAno, setVendasAno] = useState(0);
   const [metasMes, setMetasMes] = useState(0);
   const [pedidosAbertos, setPedidosAbertos] = useState(0);
+  const [comparativoAnual, setComparativoAnual] = useState({ categories: [], series: [] });
+  const [produtosMaisVendidos, setProdutosMaisVendidos] = useState({ series: [] });
 
   useEffect(() => {
-    const carregarMetricas = async () => {
+    const carregarDadosDoPainel = async () => {
       try {
-        console.log("Buscando dados do dashboard no backend...");
-
-        const resposta = await api.get("/api/dashboard/metricas");
-
+        console.log("Buscando todos os dados do painel no backend...");
+        const resposta = await api.get("/api/dashboard/all");
         const dados = resposta.data;
 
-        setVendasMes(dados.vendasMes);
-        setVendasAno(dados.vendasAno);
-        setPedidosAbertos(dados.pedidosAbertos);
-        setMetasMes(dados.metaMes);
+        if (dados.metricas) {
+          setVendasMes(dados.metricas.vendasMes);
+          setVendasAno(dados.metricas.vendasAno);
+          setPedidosAbertos(dados.metricas.pedidosAbertos);
+          setMetasMes(dados.metricas.metaMes);
+        }
+
+        if (dados.comparativoAnual && dados.comparativoAnual.chart) {
+          setComparativoAnual(dados.comparativoAnual.chart);
+        }
+
+        if (dados.produtosMaisVendidos && dados.produtosMaisVendidos.chart) {
+          setProdutosMaisVendidos(dados.produtosMaisVendidos.chart);
+        }
 
       } catch (error) {
-        console.error("Erro ao buscar métricas do painel:", error);
+        console.error("Erro ao buscar dados consolidados do painel:", error);
       }
     };
 
-    carregarMetricas();
+    carregarDadosDoPainel();
   }, []);
+
+  console.log('Dados para o gráfico de pizza:', produtosMaisVendidos)
 
   return (
     <DashboardContent maxWidth="xl">
@@ -162,30 +174,34 @@ export function OverviewAnalyticsView() {
         </Grid>
 
         <Grid size={{ xs: 12, md: 6, lg: 4 }}>
-          <AnalyticsCurrentVisits
-            title={t("dashboard6.currentVisits")}
-            chart={{
-              series: [
-                { label: 'América', value: 3500 },
-                { label: 'Ásia', value: 2500 },
-                { label: 'Europa', value: 1500 },
-                { label: 'África', value: 500 },
-              ],
-            }}
-          />
+          {produtosMaisVendidos.series.length > 0 ? (
+            <AnalyticsCurrentVisits
+              title="Produtos mais vendidos"
+              chart={produtosMaisVendidos}
+            />
+          ) : (
+            <Paper
+              sx={{
+                p: 3,
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '16px',
+              }}
+            >
+              <Typography variant="subtitle1" sx={{ color: 'text.secondary' }}>
+                Não há dados de produtos mais vendidos
+              </Typography>
+            </Paper>
+          )}
         </Grid>
 
         <Grid size={{ xs: 12, md: 6, lg: 8 }}>
           <AnalyticsWebsiteVisits
-            title={t("dashboard7.webSiteVisits")}
-            subheader="(+43%) than last year"
-            chart={{
-              categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'],
-              series: [
-                { name: 'Team A', data: [43, 33, 22, 37, 67, 68, 37, 24, 55] },
-                { name: 'Team B', data: [51, 70, 47, 67, 40, 37, 24, 70, 24] },
-              ],
-            }}
+            title="Comparativo anual de vendas"
+            subheader="Vendas mensais do ano atual vs. ano anterior"
+            chart={comparativoAnual}
           />
         </Grid>
 

@@ -5,6 +5,8 @@ import Card from '@mui/material/Card';
 import CardHeader from '@mui/material/CardHeader';
 import { useTheme, alpha as hexAlpha } from '@mui/material/styles';
 
+import { fNumber } from 'src/utils/format-number';
+
 import { Chart, useChart } from 'src/components/chart';
 
 // ----------------------------------------------------------------------
@@ -27,16 +29,43 @@ export function AnalyticsWebsiteVisits({ title, subheader, chart, sx, ...other }
   const theme = useTheme();
 
   const chartColors = chart.colors ?? [
-    hexAlpha(theme.palette.primary.dark, 0.8),
-    hexAlpha(theme.palette.warning.main, 0.8),
+    theme.palette.primary.dark,
+    theme.palette.warning.main,
   ];
 
   const chartOptions = useChart({
     colors: chartColors,
-    stroke: { width: 2, colors: ['transparent'] },
-    xaxis: { categories: chart.categories },
-    legend: { show: true },
-    tooltip: { y: { formatter: (value: number) => `${value} visits` } },
+    plotOptions: {
+      bar: {
+        borderRadius: 4,
+        columnWidth: '60%',
+      },
+    },
+    stroke: {
+      show: false,
+    },
+    legend: {
+      show: true,
+      position: 'top',
+      horizontalAlign: 'right',
+      onItemHover: {
+        highlightDataSeries: true,
+      },
+    },
+    xaxis: {
+      type: 'category',
+      categories: chart.categories,
+    },
+    yaxis: {
+      labels: {
+        formatter: (value) => fNumber(value),
+      },
+    },
+    tooltip: {
+      y: {
+        formatter: (value) => fNumber(value),
+      },
+    },
     ...chart.options,
   });
 
