@@ -24,12 +24,11 @@ app.use('/api/utils', utilRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
 const cron = require('node-cron');
-const { sincronizarDadosDoBling } = require('./services/blingSyncService');
+const { iniciarSincronizacaoGeral } = require('./services/blingSyncService');
 
 cron.schedule('0 */5 * * *', () => {
-    console.log('----------------------------------------------');
     console.log('AGENDADOR: Disparando rotina de sincronização automática...');
-    sincronizarDadosDoBling();
+    iniciarSincronizacaoGeral();
 });
 
 console.log('Agendamento da sincronização ativado. A rotina rodará a cada 5 horas.');

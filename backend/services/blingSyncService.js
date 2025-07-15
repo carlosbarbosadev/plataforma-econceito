@@ -1,6 +1,6 @@
-const axios = require('axios');
 const db = require('../db');
 const { fetchPedidosVendas, refreshBlingAccessToken } = require('./bling');
+const axios = require('axios');
 
 async function atualizarMetricas() {
     console.log('Calculando e atualizando a tabela de métricas (cache_metricas)...');
@@ -83,7 +83,7 @@ async function atualizarProdutosMaisVendidos() {
 
     let ranking = 1;
     for (const produto of produtosDaView) {
-        const inserQuery = `
+        const insertQuery = `
             INSERT INTO cache_produtos_mais_vendidos (
                 vendedor_id, produto_nome, total_vendido, ranking, periodo_inicio, periodo_fim
             ) VALUES ($1, $2, $3, $4, $5, $6);
@@ -101,121 +101,91 @@ async function atualizarProdutosMaisVendidos() {
             umAnoAtras.toISOString().split('T')[0], // Formato YYYY-MM-DD
             hoje.toISOString().split('T')[0], // Formato YYYY-MM-DD
         ];
-        await db.query(inserQuery, params);
+        await db.query(insertQuery, params);
     }
     console.log(`${produtosDaView.length} produto(s) mais vendido(s) atualizado(s).`);
 }
 
-async function sincronizarDadosDoBling() {
-    console.log('==============================');
-    console.log('INICIANDO PROCESSO COMPLETO DE SINCRONIZAÇÃO...');
-    const idVendedor = process.env.ID_VENDEDOR_BLING_TESTE;
+async function sincronizarDadosDeUmVendedor(idVendedor) {
+    console.log(`--- Iniciando sincronização para o vendedor ID: ${idVendedor} ---`);
     const startTime = new Date();
 
-    if (!idVendedor) {
-        console.error('ERRO CRÍTICO: ID_VENDEDOR_BLING_TESTE não definido no arquivo .env');
-        return;
-    }
-
     try {
+        await db.query(`
+            INSERT INTO cache_sync_control (vendedor_id, ultima_sincronizacao, status) VALUES ($1, $2, 'sincronizando')
+            ON CONFLICT (vendedor_id) DO UPDATE SET ultima_sincronizacao = $2, status = 'sincronizando', erro_mensagem = NULL
+        `, [idVendedor, startTime]);
+
         const listaDePedidos = await fetchPedidosVendas(idVendedor);
-
-        if (listaDePedidos.length === 0) {
-            console.log('Nenhum pedido encontrado no Bling para sincronizar.');
-            console.log('Processo de sincronização finalizado.');
-            console.log('==============================');
-            return;
-        }
-
-        console.log(`\nIniciando a fase de salvamento de ${listaDePedidos.length} pedidos e seus itens no banco de dados...`);
+        console.log(`[Vendedor ${idVendedor}] Encontrados ${listaDePedidos.length} pedidos na API.`);
+        
         let pedidosSalvos = 0;
 
-        for (const pedidoInfo of listaDePedidos) {
-            const pedidoDetalhado = await fetchDetalhesPedido(pedidoInfo.id);
-            await new Promise(resolve => setTimeout(resolve, 350));
-            const upsertPedidoQuery = `
-                INSERT INTO cache_pedidos (
-                    id, numero, data_pedido, data_saida, total, total_produtos,
-                    status_id, status_nome, cliente_id, cliente_nome, cliente_documento,
-                    vendedor_id, observacoes
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-                ON CONFLICT (id) DO UPDATE SET
-                    numero = EXCLUDED.numero,
-                    data_pedido = EXCLUDED.data_pedido,
-                    data_saida = EXCLUDED.data_saida,
-                    total = EXCLUDED.total,
-                    total_produtos = EXCLUDED.total_produtos,
-                    status_id = EXCLUDED.status_id,
-                    status_nome = EXCLUDED.status_nome,
-                    cliente_id = EXCLUDED.cliente_id,
-                    cliente_nome = EXCLUDED.cliente_nome,
-                    cliente_documento = EXCLUDED.cliente_documento,
-                    vendedor_id = EXCLUDED.vendedor_id,
-                    observacoes = EXCLUDED.observacoes,
-                    updated_at = CURRENT_TIMESTAMP;
-            `;
+        if (listaDePedidos.length > 0) {
+            for (const pedidoInfo of listaDePedidos) {
+                try {
+                    const pedidoDetalhado = await fetchDetalhesPedido(pedidoInfo.id);
+                    await new Promise(resolve => setTimeout(resolve, 350));
 
-            const params = [
-                pedidoDetalhado.id,
-                pedidoDetalhado.numero,
-                pedidoDetalhado.data,
-                pedidoDetalhado.dataSaida || null,
-                pedidoDetalhado.total,
-                pedidoDetalhado.totalProdutos,
-                pedidoDetalhado.situacao.id,
-                pedidoDetalhado.situacao.valor,
-                pedidoDetalhado.contato.id,
-                pedidoDetalhado.contato.nome,
-                pedidoDetalhado.contato.numeroDocumento || null,
-                pedidoDetalhado.vendedor?.id || null,
-                pedidoDetalhado.observacoes || null,
-            ];
-            await db.query(upsertPedidoQuery, params);
+                    const upsertPedidoQuery = `INSERT INTO cache_pedidos (id, numero, data_pedido, data_saida, total, total_produtos, status_id, status_nome, cliente_id, cliente_nome, cliente_documento, vendedor_id, observacoes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) ON CONFLICT (id) DO UPDATE SET numero = EXCLUDED.numero, data_pedido = EXCLUDED.data_pedido, data_saida = EXCLUDED.data_saida, total = EXCLUDED.total, total_produtos = EXCLUDED.total_produtos, status_id = EXCLUDED.status_id, status_nome = EXCLUDED.status_nome, cliente_id = EXCLUDED.cliente_id, cliente_nome = EXCLUDED.cliente_nome, cliente_documento = EXCLUDED.cliente_documento, vendedor_id = EXCLUDED.vendedor_id, observacoes = EXCLUDED.observacoes, updated_at = CURRENT_TIMESTAMP;`;
+                    const pedidoParams = [pedidoDetalhado.id, pedidoDetalhado.numero, pedidoDetalhado.data, pedidoDetalhado.dataSaida || null, pedidoDetalhado.total, pedidoDetalhado.totalProdutos, pedidoDetalhado.situacao.id, pedidoDetalhado.situacao.valor, pedidoDetalhado.contato.id, pedidoDetalhado.contato.nome, pedidoDetalhado.contato.numeroDocumento || null, pedidoDetalhado.vendedor?.id || null, pedidoDetalhado.observacoes || null];
+                    await db.query(upsertPedidoQuery, pedidoParams);
 
-            const deleteItensQuery = 'DELETE FROM cache_pedido_itens WHERE pedido_id = $1';
-            await db.query(deleteItensQuery, [pedidoDetalhado.id]);
+                    const deleteItensQuery = 'DELETE FROM cache_pedido_itens WHERE pedido_id = $1';
+                    await db.query(deleteItensQuery, [pedidoDetalhado.id]);
 
-            if (pedidoDetalhado && pedidoDetalhado.itens.length > 0) {
-                for (const item of pedidoDetalhado.itens) {
-                    const insertItemQuery = `
-                        INSERT INTO cache_pedido_itens (
-                            pedido_id, produto_id, produto_codigo, produto_nome,
-                            quantidade, valor_unitario, valor_total
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7);
-                    `;
-                    const itemParams = [
-                        pedidoDetalhado.id,
-                        item.produto.id,
-                        item.codigo,
-                        item.descricao,
-                        item.quantidade,
-                        item.valor,
-                        (item.quantidade * item.valor)
-                    ];
-                    await db.query(insertItemQuery, itemParams);
-                }
+                    if (pedidoDetalhado.itens && pedidoDetalhado.itens.length > 0) {
+                        for (const item of pedidoDetalhado.itens) {
+                            const insertItemQuery = `INSERT INTO cache_pedido_itens (pedido_id, produto_id, produto_codigo, produto_nome, quantidade, valor_unitario, valor_total) VALUES ($1, $2, $3, $4, $5, $6, $7);`;
+                            const itemParams = [pedidoDetalhado.id, item.produto.id, item.codigo, item.descricao, item.quantidade, item.valor, (item.quantidade * item.valor)];
+                            await db.query(insertItemQuery, itemParams);
+                        }
+                    }
+
+                    pedidosSalvos++;
+
+                } catch (error) {
+                    console.error(`Erro ao processar o pedido ID ${pedidoInfo.id}. Pulando para o próximo. Erro: ${error.message}`);
             }
+        }    
+    } 
 
-            pedidosSalvos++;
-            if (pedidosSalvos % 20 === 0) {
-                console.log(`... ${pedidosSalvos} de ${listaDePedidos.length} pedidos processados e salvos.`);
-            }
+        const endTime = new Date();
+        const executionTime = Math.round((endTime - startTime) / 1000);
+
+        await db.query(`UPDATE cache_sync_control SET status = 'completo', total_pedidos = $1, tempo_execucao = $2, erro_mensagem = NULL WHERE vendedor_id = $3`, [listaDePedidos.length, executionTime, idVendedor]);
+        console.log(`--- Sincronização para o Vendedor ID ${idVendedor} concluída com sucesso. ---`);
+    } catch (error) {
+        console.error(`Erro grave durante a sincronização do Vendedor ID ${idVendedor}:`, error.message);
+        await db.query(`UPDATE cache_sync_control SET status = 'erro', erro_mensagem = $1 WHERE vendedor_id = $2`, [error.message, idVendedor]);
+    }
+}
+
+async function iniciarSincronizacaoGeral() {
+    console.log('===================================')
+    console.log('INICIANDO ROTINA GERAL DE SINCRONIZAÇÃO PARA TODOS OS VENDEDORES');
+
+    try {
+        const { rows: vendedores } = await db.query(" SELECT id_vendedor_bling FROM usuarios WHERE tipo_usuario = 'vendedor' AND id_vendedor_bling IS NOT NULL ");
+
+        if (vendedores.length === 0) {
+            console.log('Nenhum vendedor encontrado para sincronizar.');
+            return;
+        }
+        console.log(`Encontrados ${vendedores.length} vendedores para sincronizar.`);
+
+        for (const vendedor of vendedores) {
+            await sincronizarDadosDeUmVendedor(vendedor.id_vendedor_bling);
         }
 
-        console.log(`\n✅ Sincronização de ${pedidosSalvos} pedidos e seus itens concluída com sucesso!`);
-
-        await atualizarMetricas();
-        await atualizarProdutosMaisVendidos();
-
     } catch (error) {
-        console.error('Ocorreu um erro grave durante a sincronização:', error.message, error.stack);
+        console.error('ERRO CRÍTICO na rotina de sincronização geral:', error.message);
     }
 
-    console.log('=====================================');
-    console.log('PROCESSO DE SINCRONIZAÇÃO FINALIZADO');
-    console.log('=====================================');
+    console.log('ROTINA GERAL DE SINCRONIZAÇÃO FINALIZADA');
+    console.log('===================================');
 }
 
 module.exports = {
-    sincronizarDadosDoBling,
+    iniciarSincronizacaoGeral,
 };
