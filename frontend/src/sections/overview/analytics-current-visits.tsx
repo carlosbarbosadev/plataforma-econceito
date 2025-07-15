@@ -38,19 +38,18 @@ export function AnalyticsCurrentVisits({ title, subheader, chart, sx, ...other }
   ];
 
   const chartOptions = useChart({
-    chart: { sparkline: { enabled: true } },
     colors: chartColors,
     labels: chart.series.map((item) => item.label),
     stroke: { width: 0 },
     dataLabels: { enabled: true, dropShadow: { enabled: false } },
     tooltip: {
-      y: {
-        formatter: (value: number) => fNumber(value),
-        title: { formatter: (seriesName: string) => `${seriesName}` },
-      },
+        y: {
+          formatter: (value: number) => fNumber(value),
+          title: { formatter: (seriesName: string) => `${seriesName}` },
+        },
     },
     plotOptions: { pie: { donut: { labels: { show: false } } } },
-    ...chart.options,
+    ...chart.options, 
   });
 
   return (

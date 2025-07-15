@@ -30,7 +30,12 @@ router.get('/all', async (req, res) => {
             ORDER BY total_vendido DESC
             LIMIT 5;
         `;
-        const { rows: top5Produtos } = await db.query(queryTopProdutos, [idVendedor]);
+        const { rows: produtosDoDb } = await db.query(queryTopProdutos, [idVendedor]);
+
+        const top5Produtos = produtosDoDb.map(produto => ({
+            ...produto,
+            value: parseFloat(produto.value)
+        }));
 
         const anoAtual = new Date().getFullYear();
         const anoAnterior = anoAtual - 1;
