@@ -1,6 +1,57 @@
 const db = require('../db');
-const { fetchPedidosVendas, refreshBlingAccessToken } = require('./bling');
+const { fetchPedidosVendas, refreshBlingAccessToken, fetchTodosOsContatos, fetchDetalhesContato } = require('./bling');
 const axios = require('axios');
+
+async function sincronizarClientes() {
+    console.log(`[GERAL] Iniciando sincronização de todos os clientes...`);
+    try {
+        const listaDeContatosBasicos = await fetchTodosOsContatos();
+
+        if (listaDeContatosBasicos.length === 0) {
+            console.log('[GERAL] Nenhum cliente encontrado na conta do Bling.');
+            return;
+        }
+
+        console.log(`[GERAL] Total de ${listaDeContatosBasicos.length} clientes encontrados. Buscando detalhes e salvando...`);
+
+        await db.query('TRUNCATE TABLE cache_clientes RESTART IDENTITY');
+        let clientesSalvos = 0;
+
+        for (const contatoBasico of listaDeContatosBasicos) {
+            try {
+                const clienteDetalhado = await fetchDetalhesContato(contatoBasico.id);
+                const idVendedorDoCliente = clienteDetalhado.vendedor?.id || null;
+
+                const insertQuery = `
+                    INSERT INTO cache_clientes (id, nome, tipo_pessoa, documento, email, vendedor_id)
+                    VALUES ($1, $2, $3, $4, $5, $6)
+                    
+                `;
+                const params = [
+                    clienteDetalhado.id,
+                    clienteDetalhado.nome,
+                    clienteDetalhado.tipoPessoa || 'O',
+                    clienteDetalhado.numeroDocumento,
+                    clienteDetalhado.email,
+                    idVendedorDoCliente
+                ];
+                await db.query(insertQuery, params);
+                clientesSalvos++;
+
+                if (clientesSalvos % 20 === 0) {
+                    console.log(`... ${clientesSalvos} de ${listaDeContatosBasicos.length} clientes salvos no cache.`);
+                }
+
+            } catch (error) {
+                console.error(`--> Erro ao processar o cliente ID ${contatoBasico.id}. Pulando. Erro: ${error.message}`);
+            }
+        }
+        console.log(`[GERAL] Sincronizados ${clientesSalvos} de ${listaDeContatosBasicos.length} clientes com sucesso.`);
+
+    } catch (error) {
+        console.error(`[GERAL] Erro grave ao sincronizar clientes:`, error.message);
+    } 
+}
 
 async function atualizarMetricas() {
     console.log('Calculando e atualizando a tabela de métricas (cache_metricas)...');
@@ -162,28 +213,28 @@ async function sincronizarDadosDeUmVendedor(idVendedor) {
 }
 
 async function iniciarSincronizacaoGeral() {
-    console.log('===================================')
-    console.log('INICIANDO ROTINA GERAL DE SINCRONIZAÇÃO PARA TODOS OS VENDEDORES');
-
+    console.log('====================================================');
+    console.log('INICIANDO ROTINA GERAL DE SINCRONIZAÇÃO...');
+    
     try {
-        const { rows: vendedores } = await db.query(" SELECT id_vendedor_bling FROM usuarios WHERE tipo_usuario = 'vendedor' AND id_vendedor_bling IS NOT NULL ");
-
-        if (vendedores.length === 0) {
-            console.log('Nenhum vendedor encontrado para sincronizar.');
-            return;
-        }
+        const { rows: vendedores } = await db.query("SELECT id_vendedor_bling FROM usuarios WHERE tipo_usuario = 'vendedor' AND id_vendedor_bling IS NOT NULL");
         console.log(`Encontrados ${vendedores.length} vendedores para sincronizar.`);
 
         for (const vendedor of vendedores) {
             await sincronizarDadosDeUmVendedor(vendedor.id_vendedor_bling);
         }
 
+        await sincronizarClientes();
+
+        await atualizarMetricas();
+        await atualizarProdutosMaisVendidos();
+
     } catch (error) {
         console.error('ERRO CRÍTICO na rotina de sincronização geral:', error.message);
     }
 
-    console.log('ROTINA GERAL DE SINCRONIZAÇÃO FINALIZADA');
-    console.log('===================================');
+    console.log('ROTINA GERAL DE SINCRONIZAÇÃO FINALIZADA.');
+    console.log('====================================================');
 }
 
 module.exports = {

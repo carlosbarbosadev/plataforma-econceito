@@ -63,93 +63,6 @@ async function refreshBlingAccessToken() {
     }
 }
 
-async function fetchClientes(retryCount = 0) {
-    // Garante que os tokens mais recentes do process.env sejam carregados no início
-    if (retryCount === 0) {
-        currentAccessToken = process.env.BLING_ACCESS_TOKEN;
-        currentRefreshToken = process.env.BLING_REFRESH_TOKEN;
-    }
-
-    if (!currentAccessToken) {
-        console.error('Erro: Access Token do Bling não disponível no início de fetchClientes.');
-        throw new Error('Erro de configuração: Access Token do Bling não encontrado.');
-    }
-    if (!currentRefreshToken) {
-        console.warn('Aviso: Refresh Token do Bling não disponível no início de fetchClientes. A renovação automática pode falhar.');
-    }
-
-    const todosOsContatos = []; // Vamos armazenar todos os contatos aqui
-    let pagina = 1;
-    const limitePorPagina = 100;
-
-    console.log('Iniciando busca de TODOS os contatos do Bling');
-
-    while (true) {
-        const url = `https://api.bling.com.br/Api/v3/contatos?pagina=${pagina}&limite=${limitePorPagina}`;
-        try {
-            console.log(`Buscando contatos - Página: ${pagina} com Access Token: ${currentAccessToken ? 'presente' : 'AUSENTE'}`);
-
-            const response = await axios.get(url, {
-                headers: {
-                    'Authorization': `Bearer ${currentAccessToken}`,
-                    'Accept': 'application/json',
-                },
-            });
-
-            const contatosDaPagina = response.data.data;
-
-            // Log para depurar a estrutura do primeiro contato da página (opcional, pode remover depois)
-            // if (contatosDaPagina && contatosDaPagina.length > 0) {
-            //     console.log('DEBUG: Estrutura do primeiro contato da página atual:', JSON.stringify(contatosDaPagina[0], null, 2));
-            // }
-
-            if (contatosDaPagina && contatosDaPagina.length > 0) {
-                todosOsContatos.push(...contatosDaPagina); // Adiciona TODOS os contatos da página
-                console.log(`Recebidos ${contatosDaPagina.length} contatos da página ${pagina}. Total parcial: ${todosOsContatos.length}`);
-
-                if (contatosDaPagina.length < limitePorPagina) {
-                    console.log('Última página de contatos alcançada.');
-                    break;
-                }
-                pagina++;
-                await new Promise(resolve => setTimeout(resolve, 350)); // Delay para não exceder o rate limit
-            } else {
-                console.log(`Nenhum contato novo encontrado na página ${pagina}. Fim da busca.`);
-                break;
-            }
-        } catch (error) {
-            if (error.response && error.response.status === 401 && retryCount < 1) {
-                console.warn(`Access Token expirado ou inválido durante busca na página ${pagina}. Tentando renovar...`);
-                try {
-                    await refreshBlingAccessToken();
-                    console.log(`Token renovado. Re-tentando a página ${pagina} automaticamente.`);
-                    continue;
-                } catch (refreshError) {
-                    console.error('Falha DEFINITIVA ao renovar o token durante a paginação:', refreshError.message);
-                    throw refreshError;
-                }
-            }
-
-            let errorMessage = `Erro ao buscar dados do Bling (Página ${pagina}).`;
-            if (error.response) {
-                const blingErrorData = error.response.data;
-                console.error(`Erro detalhado da API Bling V3 (Página ${pagina}, Status ${error.response.status}):`, JSON.stringify(blingErrorData, null, 2));
-                errorMessage = `Falha na API Bling (Página ${pagina}): ${blingErrorData?.error?.description || blingErrorData?.error?.message || `Status ${error.response.status}`}`;
-            } else if (error.request) {
-                console.error(`Erro de rede ou sem resposta da API Bling V3 (Página ${pagina}):`, error.message);
-                errorMessage = `Falha de conexão com a API Bling (Página ${pagina}).`;
-            } else {
-                console.error(`Erro ao configurar requisição Bling V3 (Página ${pagina}):`, error.message);
-                errorMessage = `Erro interno ao processar requisição Bling (Página ${pagina}): ${error.message}`;
-            }
-            throw new Error(errorMessage);
-        }
-    }
-
-    console.log(`Busca finalizada. Total de ${todosOsContatos.length} contatos encontrados`);
-    return todosOsContatos; // Retorna TODOS os contatos buscados
-}
-
 async function fetchPedidosVendas(idVendedorParaFiltrar = null, retryCount = 0) {
     if (retryCount === 0) {
         currentAccessToken = process.env.BLING_ACCESS_TOKEN;
@@ -478,7 +391,7 @@ async function fetchDetalhesPedidoVenda(idPedido, retryCount = 0) {
         let errorMessage = `Erro ao buscar detalhes do pedido ID ${idPedido} do Bling.`;
         if (error.response) {
             const blingErrorData = error.response.data;
-            console.error(`Erro detalhado da API Bling V3 (Detalhes Pedido ID ${idPedido} - Status ${error, response.status}):`, typeof blingErrorData === 'sting' ? blingErrorData : JSON.stringfy(blingErrorData, null, 2));
+            console.error(`Erro detalhado da API Bling V3 (Detalhes Pedido ID ${idPedido} - Status ${error.response.status}):`, typeof blingErrorData === 'string' ? blingErrorData : JSON.stringify(blingErrorData, null, 2));
             errorMessage = `Falha na API Bling (Detalhes Pedido ID ${idPedido}): ${typeof blingErrorData === 'object' && blingErrorData !== null && (blingErrorData.error?.description || blingErrorData.error?.message) ? (blingErrorData.error.description || blingErrorData.error.message) : `Status ${error.response.status}`}`;
         } else if (error.request) {
             console.error(`Erro de rede ou sem resposta da API Bling V3 (Detalhes Pedido ID ${idPedido}):`, error.message);
@@ -605,51 +518,77 @@ async function atualizarPedidoNoBling(pedidoId, pedidoEditadoDoFrontend) {
     }
 }
 
-async function fetchTodosOsContatos({ idVendedor = null, tipoPessoa = null } = {}, retryCount = 0) {
-    let logMessage = "Bling Service: Buscando todos os contatos (clientes)";
-    if (idVendedor) logMessage += ` para o vendedor ID ${idVendedor}`;
-    if (tipoPessoa) logMessage += ` do tipo ${tipoPessoa}`;
-    console.log(logMessage + "...");
+async function fetchTodosOsContatos(retryCount = 0) {
+    console.log('Bling Service: Buscando TODOS os contatos (clientes) da conta...');
 
     if (retryCount === 0) { currentAccessToken = process.env.BLING_ACCESS_TOKEN; }
     if (!currentAccessToken) { throw new Error("Access Token do Bling não encontrado."); }
 
-    const url = "https://api.bling.com.br/Api/v3/contatos";
+    const todosOsContatos = [];
+    let pagina = 1;
+    const limitePorPagina = 100;
 
-    const params = { limite: 100 };
-    let filtros = [];
-    if (tipoPessoa) {
-        filtros.push(`tipoPessoa[${tipoPessoa}]`);
+    while (true) {
+        const url = `https://api.bling.com.br/Api/v3/contatos?pagina=${pagina}&limite=${limitePorPagina}`;
+    
+        try {
+            console.log(`Buscando contatos - Página: ${pagina}`);
+            const response = await axios.get(url, {
+                headers: { 'Authorization': `Bearer ${currentAccessToken}` },
+            });
+
+            const contatosDaPagina = response.data.data;
+
+            if (contatosDaPagina && contatosDaPagina.length > 0) {
+                const clientesTransformados = contatosDaPagina.map(contato => ({
+                    id: contato.id,
+                    nome: contato.nome,
+                    numeroDocumento: contato.numeroDocumento,
+                    tipoPessoa: contato.tipoPessoa,
+                    email: contato.email,
+                    vendedor: contato.vendedor
+                }));
+                todosOsContatos.push(...clientesTransformados);
+            }
+
+            if (!contatosDaPagina || contatosDaPagina.length < limitePorPagina) {
+                console.log('Última página de contatos alcançada.');
+                break;
+            }
+
+            pagina++;
+            await new Promise(resolve => setTimeout(resolve, 350));
+
+        } catch (erro) {
+            if (erro.response && erro.response.status === 401 && retryCount < 1) {
+                console.warn('Token expirado ao buscar contatos, Renovando...');
+                await refreshBlingAccessToken();
+                continue;
+            }
+            console.error(`Erro ao buscar contatos na página ${pagina}:`, erro.response?.data || erro.message);
+            throw new Error("Falha ao buscar contatos no ERP.");
+        }
     }
-    if (idVendedor) {
-        filtros.push(`idVendedor[${idVendedor}]`);
-    }
-    if (filtros.length > 0) {
-        params.filtros = filtros.join(";");
-    }
+    console.log(`Busca de contatos finalizada. Total de ${todosOsContatos.length} contatos.`);
+    return todosOsContatos;
+}
+
+
+async function criarClienteBling(dadosCliente) {
+    console.log('Enviando dados para criar novo cliente no Bling:', dadosCliente);
+    const accessToken = process.env.BLING_ACCESS_TOKEN;
+    const url = 'https://api.bling.com.br/Api/v3/contatos';
 
     try {
-        const response = await axios.get(url, {
-            headers: { "Authorization": `Bearer ${currentAccessToken}` },
-            params: params,
+        const response = await axios.post(url, dadosCliente, {
+            headers: { 'Authorization': `Bearer ${accessToken}` }
         });
-
-        const clientesTransformados = response.data.data.map(contato => ({
-            id: contato.id,
-            nome: contato.nome,
-            numeroDocumento: contato.numeroDocumento,
-            tipoPessoa: contato.tipoPessoa,
-        }));
-
-        return clientesTransformados;
-
-    } catch (erro) {
-        if (error.response && error.response.status === 401 && retryCount < 1) {
-            await refreshBlingAccessToken();
-            return fetchTodosOsContatos({ idVendedor, tipoPessoa }, retryCount + 1);
-        }
-        console.error("Erro ao buscar contatos no Bling:", error.response?.data || error.message);
-        throw new Error("Falha ao buscar contatos no ERP.");
+        console.log('Cliente criado no Bling com sucesso!');
+        return response.data;
+    } catch (error) {
+        console.error('Erro ao criar cliente no Bling:', JSON.stringify(error.response?.data, null, 2) || error.message);
+        throw new Error(error.response?.data?.error?.description || 'Falha ao criar cliente no Bling.');
     }
 }
-module.exports = { fetchClientes: fetchTodosOsContatos, refreshBlingAccessToken, fetchPedidosVendas, fetchProdutos, criarPedidoVenda, fetchFormasPagamento, fetchDetalhesPedidoVenda, atualizarPedidoNoBling, fetchDetalhesContato };
+
+module.exports = { fetchTodosOsContatos, refreshBlingAccessToken, fetchPedidosVendas, fetchProdutos, criarPedidoVenda, fetchFormasPagamento, fetchDetalhesPedidoVenda, atualizarPedidoNoBling, fetchDetalhesContato, criarClienteBling, };
