@@ -521,7 +521,7 @@ export default function PedidosView() {
             {!loadingDetalhes && !errorDetalhes && selectedPedidoDetalhes && (
               <div>
                 <h5 style={{ fontWeight: 'bold'}}>
-                  Dados do Pedido
+                  Dados do cliente
                 </h5>
 
                 <Row className="mb-3">

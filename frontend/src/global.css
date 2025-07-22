@@ -83,3 +83,24 @@ body.modal-open .desktop-sidebar {
         max-width: 1700px;
     }
 }
+.modal-alta-prioridade {
+  z-index: 1060 !important; 
+}
+.modal-com-bordas-destacadas .modal-header {
+  background: linear-gradient(135deg, #2453dc 0%, #577CFF 100%) !important;
+  color: white;
+  border-bottom: none;
+}
+.modal-com-bordas-destacadas .modal-header .btn-close {
+  opacity: 1;
+}
+.form-pequeno .form-control,
+.form-pequeno .form-select {
+  font-size: 0.9rem;
+}
+.form-pequeno .form-control:focus,
+.form-pequeno .form-select:focus {
+  border-color: #2453dc !important;
+  box-shadow: 0 0 0.2rem rgba(36, 83, 220, 0.25) !important;
+  outline: 0 !important;
+}
