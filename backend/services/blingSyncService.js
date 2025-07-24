@@ -1,6 +1,10 @@
 const db = require('../db');
 const { fetchPedidosVendas, refreshBlingAccessToken, fetchTodosOsContatos, fetchDetalhesContato } = require('./bling');
 const axios = require('axios');
+const { fetchProdutos } = require('./bling');
+
+const UMA_HORA_EM_MS = 60 * 60 * 1000;
+
 
 async function sincronizarClientes() {
     console.log(`[GERAL] Iniciando sincronização de todos os clientes...`);
@@ -237,6 +241,24 @@ async function iniciarSincronizacaoGeral() {
     console.log('====================================================');
 }
 
+async function sincronizarProdutos() {
+    console.log(`[GERAL] Iniciando sincronização de produtos...`);
+    try {
+        await fetchProdutos();
+        console.log(`[GERAL] Cache de produtos atualizado com sucesso.`);
+    } catch (error) {
+        console.error(`[GERAL] Falha ao sincronizar produtos:`, error.message);
+    }
+}
+
+function iniciarSincronizacaoAgendada() {
+    console.log('Agendamento da sincronização de PRODUTOS ativado. A rotina rodará a cada 1 hora.');
+    
+    sincronizarProdutos();
+    setInterval(sincronizarProdutos, UMA_HORA_EM_MS);
+}
+
 module.exports = {
     iniciarSincronizacaoGeral,
+    iniciarSincronizacaoAgendada
 };

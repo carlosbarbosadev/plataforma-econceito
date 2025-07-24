@@ -1,7 +1,8 @@
 require('dotenv').config();
 const axios = require('axios');
+const db = require('../db');
 
-// Variáveis para armazenar os tokens em memória
+// Variáveis de tokens 
 let currentAccessToken = process.env.BLING_ACCESS_TOKEN;
 let currentRefreshToken = process.env.BLING_REFRESH_TOKEN;
 
@@ -172,9 +173,14 @@ async function fetchProdutos(retryCount = 0) {
     console.log('Iniciando busca completa de produtos do Bling para o cache...');
 
     while (true) {
-        const url = `https://api.bling.com.br/Api/v3/produtos?pagina=${pagina}&limite=${limitePorPagina}`;
+        const url = `https://api.bling.com.br/Api/v3/produtos`;
         try {
             const response = await axios.get(url, {
+                params: {
+                    pagina: pagina,
+                    limite: limitePorPagina,
+                    estoque: 'S'
+                },
                 headers: {
                     "Authorization": `Bearer ${currentAccessToken}`,
                     "Accept": "application/json",
@@ -182,6 +188,11 @@ async function fetchProdutos(retryCount = 0) {
             });
 
             const produtosDaPagina = response.data.data;
+
+            if (pagina === 1 && produtosDaPagina && produtosDaPagina.length > 0) {
+                console.log('--- ESTRUTURA DO PRIMEIRO PRODUTO DO BLING (v3) ---');
+                console.log(JSON.stringify(produtosDaPagina[0], null, 2));
+            }
 
             if (produtosDaPagina && produtosDaPagina.length > 0) {
                 const produtosTransformados = produtosDaPagina.map(produto => ({
@@ -214,7 +225,44 @@ async function fetchProdutos(retryCount = 0) {
             throw error;
         }
     }
-    console.log(`Busca de produtos para o cache finalizada. Total de ${todosOsProdutos.length} produtos encontrados.`);
+
+    console.log(`Iniciando gravação de ${todosOsProdutos.length} produtos no banco de dados...`)
+
+    for (const produto of todosOsProdutos) {
+        const query = `
+            INSERT INTO cache_produtos (id, nome, codigo, preco, estoque_saldo_virtual, situacao, imagem_url, dados_completos_json, atualizado_em)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+            ON CONFLICT (id) DO UPDATE SET
+                nome = EXCLUDED.nome,
+                codigo = EXCLUDED.codigo,
+                preco = EXCLUDED.preco,
+                estoque_saldo_virtual = EXCLUDED.estoque_saldo_virtual,
+                situacao = EXCLUDED.situacao,
+                imagem_url = EXCLUDED.imagem_url,
+                dados_completos_json = EXCLUDED.dados_completos_json,
+                atualizado_em = NOW()
+        `;
+        const estoque = produto.estoque || {};
+        const values = [
+            produto.id,
+            produto.nome,
+            produto.codigo,
+            parseFloat(produto.preco) || 0,
+            estoque.saldoVirtualTotal || 0,
+            produto.situacao,
+            produto.imagemURL,
+            produto
+        ];
+
+        try {
+            await db.query(query, values);
+        } catch (dbError) {
+            console.error(`Erro ao salvar o produto ID ${produto.id} no banco:`, dbError);
+        }
+    }
+
+    console.log('Cache de produtos salvo no banco de dados com sucesso!');
+
     return todosOsProdutos;
 }
 
@@ -292,8 +340,6 @@ async function fetchFormasPagamento(retryCount = 0) {
         const formasPagamento = response.data.data;
 
         if (formasPagamento && formasPagamento.length > 0) {
-            console.log(`DEBUG: Estrutura COMPLETA da primeira Forma de Pagamento recebida (via console.dir):`);
-            console.dir(formasPagamento[0], { depth: null });
         } else if (formasPagamento) {
             console.log('Nenhuma forma de pagamento encontrada ou a lista está vazia.');
         } else {
@@ -362,8 +408,6 @@ async function fetchDetalhesPedidoVenda(idPedido, retryCount = 0) {
         const detalhesDoPedido = response.data.data;
 
         if (detalhesDoPedido && typeof detalhesDoPedido === 'object' && detalhesDoPedido.id) {
-            console.log(`DEBUG: Estrutura COMPLETA do PEDIDO ID ${idPedido} (via console.dir):`);
-            console.dir(detalhesDoPedido, { depth: null });
         } else {
             console.warn(`Resposta da API para detalhes do pedido ${idPedido} não continha os dados esperados:`, response.data);
             throw new Error(`Pedido com ID ${idPedido} não encontrado ou resposta inesperada.`);

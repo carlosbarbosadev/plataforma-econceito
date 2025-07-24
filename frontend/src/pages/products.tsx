@@ -276,8 +276,12 @@ export default function ProductsPage() {
   }
 
   return (
-    <Container fluid className="mt-4">
-      <h3 className="fw-bold mb-3">{pageTitle}</h3>
+    <Container fluid className="mt-4 mb-4">
+      <div className="mt-5 mb-4" style={{ background: 'linear-gradient(135deg, #2453dc 0%, #577CFF 100%)', color: '#fff', padding: '25px', borderRadius: '16px', maxWidth: '250px', display: 'flex', justifyContent: 'center' }}>
+        <h3 className="fw-bold mb-0" style={{ color: '#fff', marginBottom: '0' }}>
+          {pageTitle}
+        </h3>
+      </div>
       <p className="fs-5 fw-bold">
         Criar pedido
       </p>
@@ -441,9 +445,21 @@ export default function ProductsPage() {
 
                     <td style={{ fontSize: '0.9em' }}>
                       {(produto.estoque?.saldoVirtualTotal ?? 0) > 0 ? (
-                        <Badge bg="success-subtle" text="success-emphasis" pill>Disponível</Badge>
+                        <Badge
+                          bg="success-subtle"
+                          text="success-emphasis"
+                          pill
+                          >
+                            Disponível
+                          </Badge>
                       ) : (
-                        <Badge bg="danger-subtle" text="danger-emphasis" pill>Indisponível</Badge>
+                        <Badge
+                          bg="danger-subtle"
+                          text="danger-emphasis"
+                          pill
+                        >
+                          Indisponível
+                        </Badge>
                       )}
                     </td>
                     
