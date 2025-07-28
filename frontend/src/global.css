@@ -104,3 +104,50 @@ body.modal-open .desktop-sidebar {
   box-shadow: 0 0 0.2rem rgba(36, 83, 220, 0.25) !important;
   outline: 0 !important;
 }
+
+/* Página de produtos */
+.pedido-atual-painel {
+  background-color: #ffffff;
+  color: #474644;
+  border-color: #45a049
+}
+.pedido-atual-painel h5 strong {
+  color: #4CAF50 !important;
+}
+.pedido-atual-painel span strong,
+.pedido-atual-painel p strong {
+  font-size: 15px;
+  color: #474644 !important;
+}
+.pedido-atual-painel .text-muted {
+  color: #4CAF50 !important;
+}
+.input-foco-azul:focus {
+  border-color: #2453dc !important;
+  box-shadow: 0 0 0.2rem rgba(36, 83, 220, 0.25) !important;
+  outline: 0 !important;
+}
+.input-foco-verde:focus {
+  border-color: #4CAF50 !important;
+  box-shadow: 0 0 0.2rem rgba(76, 175, 80, 0.25) !important;
+  outline: 0 !important;
+}
+.select-padrao__control--is-focused {
+  border-color: #2453dc !important;
+  box-shadow: 0 0 0.2rem rgba(36, 83, 220, 0.25) !important;
+}
+.rodape-busca-fixo {
+  position: fixed;
+  bottom: 20px; /* Damos um espaço da parte de baixo da tela */
+  left: 50%;    /* Posiciona o início do elemento no meio da tela */
+  transform: translateX(-50%); /* Move o elemento de volta 50% da sua PRÓPRIA largura, centralizando-o perfeitamente */
+  width: 80%; /* Define que a largura do rodapé será 80% da tela */
+  max-width: 900px; /* Define uma largura máxima para telas muito grandes */
+  
+  z-index: 1020;
+  background-color: #c1c5c7;
+  padding: 1rem;
+  border: 1px solid #c1c5c7;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1); /* Sombra mais destacada para o efeito flutuante */
+  border-radius: 16px; /* Bordas arredondadas em todos os cantos */
+}

@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import Select from 'react-select';
 import { Trash } from 'react-bootstrap-icons';
+import { useEffect, useState, useMemo } from 'react';
 import { Container, Row, Col, Spinner, Alert, Form, Button, Pagination, Stack, Table, Badge} from 'react-bootstrap';
 
 import api from 'src/services/api';
@@ -19,7 +20,8 @@ type Produto = {
 type ItemPedido = {
   idProduto: number;
   nomeProduto: string;
-  quantidade: number;
+  codigoProduto?: string;
+  quantidade: number | string;
   valorUnitario: number;
 };
 
@@ -58,6 +60,7 @@ export default function ProductsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [submittedSearchTerm, setSubmittedSearchTerm] = useState('');
+  const [quantidadesParaAdicionar, setQuantidadesParaAdicionar] = useState<Record<string, number | string>>({});
 
   // Buscar Clientes
   useEffect(() => {
@@ -140,17 +143,81 @@ export default function ProductsPage() {
       });
   }, [currentPage, submittedSearchTerm]);
 
-  const handleAdicionarAoPedido = (produtoParaAdicionar: Produto) => {
-    if (!produtoParaAdicionar.id || produtoParaAdicionar.preco === undefined) {
-      console.error("Produto sem ID ou preço para adicionar ao pedido:", produtoParaAdicionar);
-      alert("Não é possível adicionar este produto ao pedido (faltam dados).");
+  const optionsClientes = useMemo(() => 
+    listaDeClientes.map(cliente => ({
+      value: cliente.id.toString(),
+      label: cliente.nome
+    })), 
+    [listaDeClientes]);
+
+  const optionsFormasPagamento = useMemo(() =>
+    listaFormasPagamento.map(forma => ({
+      value: forma.id.toString(),
+      label: forma.descricao
+    })),
+    [listaFormasPagamento])
+
+  const handleClienteSelectChange = (selectedOptions: any) => {
+    setSelectedClientId(selectedOptions ? selectedOptions.value : '');
+  };
+
+  const handleFormaPagamentoSelectChange = (selectedOptions: any) => {
+    setSelectedFormaPagamentoId(selectedOptions ? selectedOptions.value : '');
+  };
+
+  const handleTabelaQuantidadeChange = (idProduto: number, quantidade: string) => {
+    setQuantidadesParaAdicionar(prevState => ({
+      ...prevState,
+      [idProduto]: quantidade
+    }));
+  };
+
+  const handleTabelaQuantidadeBlur = (idProduto: number, quantidade: string) => {
+    if (quantidade === '') {
+      setQuantidadesParaAdicionar(prevState => {
+        const newState = { ...prevState};
+        delete newState[idProduto];
+        return newState;
+      });
       return;
     }
+    const quantidadeFinal = Math.max(1, parseInt(quantidade, 10) || 1);
+    setQuantidadesParaAdicionar(prevState => ({
+      ...prevState,
+      [idProduto]: quantidadeFinal
+    }));
+  };
+
+  const handleQuantidadeChange = (idProduto: number, quantidade: string) => {
+    const novaQuantidade = Math.max(0, parseInt(quantidade, 10) || 0);
+
+    setQuantidadesParaAdicionar(prevState => ({
+      ...prevState,
+      [idProduto]: novaQuantidade
+    }));
+  };
+
+  const handleAdicionarAoPedido = (produtoParaAdicionar: Produto) => {
+    if (!produtoParaAdicionar.id || produtoParaAdicionar.preco === undefined) {
+      alert('Não é possivel adicionar este produto ao pedido (faltam dados).');
+      return;
+    }
+
+    const quantidadeInput = quantidadesParaAdicionar[produtoParaAdicionar.id] || 1;
+    const quantidade = Number(quantidadeInput);
+
+    if (quantidade <= 0) {
+      alert('Por favor, informe uma quantidade maior que zero.');
+      return;
+    }
+
     setItensDoPedidoAtual(itensAnteriores => {
       const itemExistente = itensAnteriores.find(item => item.idProduto === produtoParaAdicionar.id);
       if (itemExistente) {
         return itensAnteriores.map(item =>
-          item.idProduto === produtoParaAdicionar.id ? { ...item, quantidade: item.quantidade + 1 } : item
+          item.idProduto === produtoParaAdicionar.id
+            ? { ...item, quantidade: Number(item.quantidade) + quantidade }
+            : item
         );
       } else {
         return [
@@ -158,11 +225,18 @@ export default function ProductsPage() {
           {
             idProduto: produtoParaAdicionar.id,
             nomeProduto: produtoParaAdicionar.nome,
-            quantidade: 1,
+            codigoProduto: produtoParaAdicionar.codigo,
+            quantidade: quantidade,
             valorUnitario: produtoParaAdicionar.preco!
           }
         ];
       }
+    });
+
+    setQuantidadesParaAdicionar(prevState => {
+      const newState = { ...prevState };
+      delete newState[produtoParaAdicionar.id];
+      return newState;
     });
   };
 
@@ -189,7 +263,7 @@ export default function ProductsPage() {
     setSubmittingOrder(true);
     // setError(null);
 
-    const valorTotalDoPedido = itensDoPedidoAtual.reduce((acc, item) => acc + (item.quantidade * item.valorUnitario), 0);
+    const valorTotalDoPedido = itensDoPedidoAtual.reduce((acc, item) => acc + (Number(item.quantidade) * item.valorUnitario), 0);
 
     const payloadPedido = {
       idClienteBling: Number(selectedClientId),
@@ -197,7 +271,7 @@ export default function ProductsPage() {
         const produtoOriginal = produtos.find(p => p.id === item.idProduto);
         return {
           idProdutoBling: item.idProduto,
-          quantidade: item.quantidade,
+          quantidade: Number(item.quantidade),
           valorUnitario: item.valorUnitario,
           codigo: produtoOriginal?.codigo || undefined,
           descricao: produtoOriginal?.nome || item.nomeProduto,
@@ -250,6 +324,24 @@ export default function ProductsPage() {
     );
   };
 
+  const handleAtualizarQuantidade = (idProduto: number, novaQuantidade: string) => {
+    setItensDoPedidoAtual(itensAnteriores => 
+      itensAnteriores.map(item =>
+        item.idProduto === idProduto ? { ...item, quantidade: novaQuantidade } : item
+      )
+    )
+  };
+
+  const handleQuantidadeBlur = (idProduto: number, quantidadeAtual: number | string) => {
+    const quantidadeFinal = Math.max(1, parseInt(String(quantidadeAtual), 10) || 1);
+
+    setItensDoPedidoAtual(itensAnteriores =>
+      itensAnteriores.map(item =>
+        item.idProduto === idProduto ? { ...item, quantidade: quantidadeFinal } : item
+      )
+    );
+  };
+
   const pageTitle = 'Produtos';
   const searchPlaceholder = 'Buscar produtos por nome ou código';
   const noProductsMsg = 'Nenhum produto para exibir no momento.';
@@ -288,19 +380,16 @@ export default function ProductsPage() {
     <Row>
       <Col md={5}>
       <Form.Group className="mb-3" controlId="selecionarCliente">
-        <Form.Select
-          className="text-muted"
-          value={selectedClientId}
-          onChange={(e) => setSelectedClientId(e.target.value)}
-          disabled={listaDeClientes.length === 0}
-        >
-          <option value="">Selecione um cliente</option>
-          {listaDeClientes.map(cliente => (
-            <option key={cliente.id} value={cliente.id}>
-              {cliente.nome} ({cliente.numeroDocumento || 'Doc. N/A'})
-            </option>
-          ))}
-        </Form.Select>
+        <Select
+          options={optionsClientes}
+          value={optionsClientes.find(option => option.value === selectedClientId)}
+          onChange={handleClienteSelectChange}
+          placeholder="Selecione ou digite para buscar um cliente"
+          isLoading={loadingClientes}
+          isClearable
+          noOptionsMessage={() => "Nenhum cliente encontrado."}
+          classNamePrefix="select-padrao"
+        />
         {listaDeClientes.length === 0 && !loadingClientes && !errorClientes && (
             <Form.Text className="text-muted">Nenhum cliente encontrado para este vendedor.</Form.Text>
         )}
@@ -311,42 +400,23 @@ export default function ProductsPage() {
     <Row>
       <Col md={5}>
       <Form.Group controlId="selecionarFormaPagamento">
-        <Form.Select
-          className="text-muted"
-          value={selectedFormaPagamentoId}
-          onChange={(e) => setSelectedFormaPagamentoId(e.target.value)}
-          disabled={listaFormasPagamento.length === 0 || !selectedClientId}
-        >
-          <option value="">Selecione uma forma de pagamento</option>
-          {listaFormasPagamento.map(forma => (
-            <option key={forma.id} value={forma.id}>
-              {forma.descricao}
-            </option>
-          ))}
-        </Form.Select>  
-        {listaFormasPagamento.length === 0 && !loadingFormasPagamento && !errorFormasPagamento && (
-          <Form.Text className="text-muted">Nenhuma forma de pagamento carregada.</Form.Text>
-        )}
+        <Select
+          options={optionsFormasPagamento}
+          value={optionsFormasPagamento.find(option => option.value === selectedFormaPagamentoId)}
+          onChange={handleFormaPagamentoSelectChange}
+          placeholder="Selecione uma forma de pagamento"
+          isLoading={loadingFormasPagamento}
+          isClearable
+          isSearchable={false}
+          noOptionsMessage={() => "Nenhuma forma de pagamento encontrada."}
+          classNamePrefix="select-padrao"
+          isDisabled={!selectedClientId}
+        />
       </Form.Group>
       </Col>
     </Row>
-  <Row>
-    <Col md={5}>
-    <Form onSubmit={handleSearchSubmit}>
-      <Form.Group className="mt-5">
-        <Form.Control
-          type="text"
-          placeholder={searchPlaceholder}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          disabled={loadingProdutos}
-        />
-      </Form.Group>
-    </Form>
-    </Col>
-  </Row>
 
-  <Stack direction="horizontal" gap={2} className="mt-4">
+  <Stack direction="horizontal" gap={2} className="mt-5 mb-5">
     <Button variant="outline-secondary" size="sm" className="flex-fill" onClick={() => handlePredefinedSearch("Kraft")}>Kraft</Button>
     <Button variant="outline-secondary" size="sm" className="flex-fill" onClick={() => handlePredefinedSearch("Branca")}>Branca</Button>
     <Button variant="outline-secondary" size="sm" className="flex-fill" onClick={() => handlePredefinedSearch("Cake Board")}>Cake Board</Button>
@@ -360,30 +430,46 @@ export default function ProductsPage() {
   </Stack>
 
       {itensDoPedidoAtual.length > 0 && selectedClientId && selectedFormaPagamentoId && (
-        <Alert variant="success" className="mb-1 mt-3">
-          <h5><strong>Pedido Atual ({itensDoPedidoAtual.reduce((acc, item) => acc + item.quantidade, 0)} itens):</strong></h5>
+        <Alert variant="light" className="mb-4 mt-4 pedido-atual-painel">
+          <h5><strong>Pedido atual ({itensDoPedidoAtual.length} itens)</strong></h5>
           <ul className="list-unstyled mb-0">
             {itensDoPedidoAtual.map(item => (
               <li
                 key={item.idProduto}
                 className="d-flex align-items-center mb-1 pe-1"
               >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <strong>{item.quantidade}</strong> {item.nomeProduto} - <strong>{(item.quantidade * item.valorUnitario).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>
-                  <Button
-                    variant="link"
-                    className="p-0 text-danger ms-1"
-                    onClick={() => handleRemoverItemDoPedido(item.idProduto)}
-                    title="Remover item"
-                    style={{ verticalAlign: 'middle' }}
-                  >
-                    <Trash size={18} />
-                  </Button>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5tem', width: '100%' }}>
+                  <Form.Control
+                    type="number"
+                    className="input-foco-verde"
+                    value={item.quantidade}
+                    onChange={(e) => handleAtualizarQuantidade(item.idProduto, e.target.value)}
+
+                    onBlur={(e) => handleQuantidadeBlur(item.idProduto, e.target.value)}
+                    style={{ width: '65px', textAlign: 'center' }}
+                    min={1}
+                    size='sm'
+                  />
+
+                  <div className="d-flex flex-column ms-2">
+                    <span>
+                      {item.nomeProduto} - <strong>{(Number(item.quantidade) * item.valorUnitario).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>
+                      <Button
+                        variant="link"
+                        className="p-0 text-danger ms-2"
+                        onClick={() => handleRemoverItemDoPedido(item.idProduto)}
+                        title="Remover item"
+                      >
+                        <Trash size={16} />
+                      </Button>
+                    </span>
+                    <small className="text-muted">Código: {item.codigoProduto || '--' }</small>
+                  </div>
                 </span>
               </li>
             ))}
           </ul>
-          <p><strong>Total: R$ {itensDoPedidoAtual.reduce((acc, item) => acc + (item.quantidade * item.valorUnitario), 0).toFixed(2)}</strong></p>
+          <p><strong>Total: R$ {itensDoPedidoAtual.reduce((acc, item) => acc + (Number(item.quantidade) * item.valorUnitario), 0).toFixed(2)}</strong></p>
           <div className="d-flex justify-content-end gap-2 mt-3">
             <Button
               variant="secondary"
@@ -412,14 +498,15 @@ export default function ProductsPage() {
           )}
           
           {produtos.length > 0 && !loadingProdutos && (
-            <Table hover responsive className="mt-4 align-middle">
+            <Table hover responsive className=" align-middle">
               <thead>
                 <tr>
                   <th className="fw-normal text-muted" style={{ fontSize: "0.8em" }}>Imagem</th>
-                  <th className="fw-normal text-muted" style={{ width: "45%", fontSize: "0.8em" }}>Descrição</th>
-                  <th className="fw-normal text-muted" style={{  width: "15%", fontSize: "0.8em" }}>Código</th>
-                  <th className="fw-normal text-muted" style={{ fontSize: "0.8em" }}>Preço</th>
-                  <th className="fw-normal text-muted" style={{ fontSize: "0.8em" }}>Estoque</th>
+                  <th className="fw-normal text-muted" style={{ width: "35%", fontSize: "0.8em" }}>Descrição</th>
+                  <th className="fw-normal text-muted" style={{  width: "11%", fontSize: "0.8em" }}>Código</th>
+                  <th className="fw-normal text-muted" style={{ width: "11%", fontSize: "0.8em" }}>Preço</th>
+                  <th className="fw-normal text-muted" style={{ width: "15%", fontSize: "0.8em" }}>Estoque</th>
+                  <th className="fw-normal text-muted" style={{ width: "5%", fontSize: "0.8em" }}>Quantidade</th>
                   <th className="fw-normal text-muted"> </th>
                 </tr>
               </thead>
@@ -462,6 +549,20 @@ export default function ProductsPage() {
                         </Badge>
                       )}
                     </td>
+
+                    <td>
+                      <Form.Control
+                        type="number"
+                        size="sm"
+                        className="input-foco-verde"
+                        style={{ width: '65px', textAlign: 'center' }}
+                        placeholder="1"
+                        value={quantidadesParaAdicionar[produto.id] || ''}
+                        onChange={(e) => handleTabelaQuantidadeChange(produto.id, e.target.value)}
+                        onBlur={(e) => handleTabelaQuantidadeBlur(produto.id, e.target.value)}
+                        min={1}
+                      />
+                    </td>
                     
                     <td className="text-end">
                       <Button
@@ -484,8 +585,29 @@ export default function ProductsPage() {
             </Table>
           )}
 
+          <div className="rodape-busca-fixo">
+            <Container>
+              <Row className="justify-content-center">
+                <Col md={8}>
+                  <Form onSubmit={handleSearchSubmit}>
+                  <Form.Group className="mb-0">
+                    <Form.Control
+                      className="input-foco-azul"
+                      type="text"
+                      placeholder='Buscar produtos por nome ou código'
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      disabled={loadingProdutos}
+                    />
+                  </Form.Group>
+                  </Form>
+                </Col>
+              </Row>
+            </Container>
+          </div>
+
           {(!loadingProdutos && (produtos.length > 0 || currentPage > 1)) && (
-            <div className="d-flex justify-content-center mt-4">
+            <div className="d-flex justify-content-end mt-4">
               <Pagination>
                 <Pagination.Prev
                     onClick={() => setCurrentPage(p => p - 1)}

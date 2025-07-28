@@ -7,9 +7,15 @@ router.get('/', autenticarToken, async (req, res) => {
   try {
     const termoDeBusca = req.query.search || '';
     const page = parseInt(req.query.page) || 1;
-    console.log(`Rota /api/produtos (lendo do DB) acessada. Página: ${page}, Busca: "${termoDeBusca}"`);
+    console.log(`Rota /api/produtos (DB) acessada. Página: ${page}, Busca: "${termoDeBusca}"`);
 
-    const { rows } = await db.query('SELECT * FROM cache_produtos ORDER BY nome ASC')
+    const { rows } = await db.query(`
+      SELECT * FROM cache_produtos
+      WHERE estoque_saldo_virtual > 0
+        AND codigo IS NOT NULL
+        AND codigo <> ''
+      ORDER BY nome ASC
+    `);
 
     const produtosFormatados = rows.map(p => ({
       ...p,
@@ -25,7 +31,7 @@ router.get('/', autenticarToken, async (req, res) => {
     let produtosFiltrados = todosOsProdutosDoCache;
     if (termoDeBusca.trim().length >= 2) {
       const termoLower = termoDeBusca.toLowerCase();
-      produtosFiltrados = todosOsProdutosDoCache.filter(produto =>
+      produtosFiltrados = todosOsProdutosDoCache.filter(produto => 
         (produto.nome && produto.nome.toLowerCase().includes(termoLower)) ||
         (produto.codigo && produto.codigo.toLowerCase().includes(termoLower))
       );
