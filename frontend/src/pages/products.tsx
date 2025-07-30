@@ -368,7 +368,7 @@ export default function ProductsPage() {
   }
 
   return (
-    <Container fluid className="mt-4 mb-4">
+    <Container fluid className="mb-4">
       <div className="mt-5 mb-4" style={{ background: 'linear-gradient(135deg, #2453dc 0%, #577CFF 100%)', color: '#fff', padding: '25px', borderRadius: '16px', maxWidth: '250px', display: 'flex', justifyContent: 'center' }}>
         <h3 className="fw-bold mb-0" style={{ color: '#fff', marginBottom: '0' }}>
           {pageTitle}
@@ -592,6 +592,7 @@ export default function ProductsPage() {
                   <Form onSubmit={handleSearchSubmit}>
                   <Form.Group className="mb-0">
                     <Form.Control
+                      style={{ borderRadius: '4px' }}
                       className="input-foco-azul"
                       type="text"
                       placeholder='Buscar produtos por nome ou código'

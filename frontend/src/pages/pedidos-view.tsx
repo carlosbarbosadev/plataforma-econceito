@@ -453,11 +453,11 @@ export default function PedidosView() {
           <thead>
             <tr>
               {/* <th>{headerId}</th> Removido */}
-              <th className="fw-normal small text-muted" style={{ width: '6%' }}>{headerNumero}</th>
-              <th className="fw-normal small text-muted" style={{ width: '18%' }}>{headerData}</th>
-              <th className="fw-normal small text-muted" style={{ width: '50%' }}>{headerCliente}</th>
-              <th className="fw-normal small text-muted">{headerTotal}</th>
-              <th className="fw-normal small text-muted" style={{ textAlign: 'center', width: '30%' }}>{headerSituacao}</th>
+              <th className="fw-normal small text-muted" style={{ width: '6%', fontSize: "0.8em" }}>{headerNumero}</th>
+              <th className="fw-normal small text-muted" style={{ width: '18%', fontSize: "0.8em" }}>{headerData}</th>
+              <th className="fw-normal small text-muted" style={{ width: '50%', fontSize: "0.8em" }}>{headerCliente}</th>
+              <th className="fw-normal small text-muted" style={{ fontSize: "0.8em" }}>{headerTotal}</th>
+              <th className="fw-normal small text-muted" style={{ textAlign: 'center', width: '30%', fontSize: "0.8em" }}>{headerSituacao}</th>
               <th style={{ width: '5%' }}> </th>
             </tr>
           </thead>
@@ -465,10 +465,10 @@ export default function PedidosView() {
             {filteredPedidos.map(pedido => (
               <tr key={pedido.id} onClick={() => handleVerDetalhesPedido(pedido.id)}style={{ cursor: 'pointer' }}>  
                 {/* <td>{pedido.id}</td> Removido */}
-                <td style={{ fontSize: '0.92em' }}>{pedido.numero}</td>
-                <td style={{ fontSize: '0.92em' }}>{new Date(pedido.data).toLocaleDateString('pt-BR')}</td>
-                <td style={{ fontSize: '0.92em' }}>{pedido.contato.nome}</td>
-                <td style={{ fontSize: '0.92em' }}>{pedido.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                <td style={{ fontSize: '0.9em' }}>{pedido.numero}</td>
+                <td style={{ fontSize: '0.9em' }}>{new Date(pedido.data).toLocaleDateString('pt-BR')}</td>
+                <td style={{ fontSize: '0.9em' }}>{pedido.contato.nome}</td>
+                <td style={{ fontSize: '0.9em' }}>{pedido.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                 <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
                   <span
                     className="badge rounded-pill"

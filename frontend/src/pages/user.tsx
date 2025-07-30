@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Table, Spinner, Alert, Form, Row, Col, Button, Modal } from "react-bootstrap";
+import { Table, Spinner, Alert, Form, Row, Col, Button, Modal, Container } from "react-bootstrap";
 
 import api from "src/services/api";
 
@@ -8,7 +8,11 @@ type Cliente = {
   nome: string;
   numeroDocumento?: string;
   telefone?: string;
-  endereco?: { municipio?: string; };
+  endereco?: {
+    geral?: {
+      municipio?: string;
+    }
+  };
 };
 
 const TIPOS_DE_CONTATO = [
@@ -64,6 +68,7 @@ export default function ClientesPage() {
     setError(null);
     api.get<any>('/api/clientes')
       .then(res => {
+        console.log("DADOS DOS CLIENTES RECEBIDOS DO BACKEND:", res.data);
         const responseData = res.data;
         if (Array.isArray(responseData)) {
           setData(responseData as Cliente[]);
@@ -176,7 +181,7 @@ export default function ClientesPage() {
       return false;
     }
     const searchTermLower = searchTerm.toLowerCase();
-    const cidade = client.endereco?.municipio;
+    const cidade = client.endereco?.geral?.municipio;
 
     return (
       client.nome.toLowerCase().includes(searchTermLower) ||
@@ -210,21 +215,19 @@ export default function ClientesPage() {
   const headerTelefone = 'Telefone';
 
   return (
-    <div className="mt-4">
-      <Row className="align-items-center mb-3">
-        <Col>
-          <h3 className="fw-bold mb-0">{pageTitle}</h3>
-        </Col>
-        <Col className="d-flex justify-content-end">
-          <Button variant="primary" onClick={handleShowCreateModal}>
-            Criar cliente
-          </Button>
-        </Col>
-      </Row>
-      <Row>
+    <Container className="mb-4">
+    <div>
+      <div className="mt-5 mb-4" style={{ background: 'linear-gradient(135deg, #2453dc 0%, #577CFF 100%)', color: '#fff', padding: '25px', borderRadius: '16px', maxWidth: '250px', display: 'flex', justifyContent: 'center' }}>
+        <h3 className="fw-bold mb-0" style={{ color: '#fff', marginBottom: '0' }}>
+          {pageTitle}
+        </h3>
+      </div>
+      <Row className="mb-5">
         <Col md={5}>
-          <Form.Group className="my-3">
+          <Form.Group>
             <Form.Control
+              className="input-foco-azul"
+              style={{ borderRadius: '4px' }}
               type="text"
               placeholder={searchPlaceholder}
               value={searchTerm}
@@ -232,6 +235,19 @@ export default function ClientesPage() {
             />
           </Form.Group>
         </Col>
+      <Col className="d-flex justify-content-end">
+        <Button
+          variant="primary"
+          onClick={handleShowCreateModal}
+          style={{
+            borderRadius: '4px',
+            backgroundColor: '#4CAF50',
+            borderColor: '#4CAF50',
+          }}
+        >
+          Criar cliente
+        </Button>
+      </Col>
       </Row>
 
       {data.length === 0 && !loading && !error && (
@@ -241,7 +257,7 @@ export default function ClientesPage() {
         <Alert variant="info">{`Nenhum cliente encontrado para o termo "${searchTerm}".`}</Alert>
       )}
       {data.length > 0 && (
-        <Table striped bordered hover className="mt-3">
+        <Table striped hover>
           <thead>
             <tr>
               <th className="text-muted" style={{ width: '10%', fontSize: '0.8em', fontWeight: 'normal' }}>{headerIdCliente}</th>
@@ -254,11 +270,11 @@ export default function ClientesPage() {
           <tbody>
             {filteredClients.map(c => (
               <tr key={c.id}>
-                <td>{c.id}</td>
-                <td>{c.nome}</td>
-                <td>{c.numeroDocumento || '-'}</td>
-                <td>{c.endereco?.municipio || '-'}</td>
-                <td>{c.telefone || '-'}</td>
+                <td style={{ fontSize: '0.9em' }}>{c.id}</td>
+                <td style={{ fontSize: '0.9em' }}>{c.nome}</td>
+                <td style={{ fontSize: '0.9em' }}>{c.numeroDocumento || '-'}</td>
+                <td style={{ fontSize: '0.9em' }}>{c.endereco?.geral?.municipio || '-'}</td>
+                <td style={{ fontSize: '0.9em' }}>{c.telefone || '-'}</td>
               </tr>
             ))}
           </tbody>
@@ -380,5 +396,6 @@ export default function ClientesPage() {
         </Modal.Footer>
       </Modal>
     </div>
+    </Container>
   );
 }

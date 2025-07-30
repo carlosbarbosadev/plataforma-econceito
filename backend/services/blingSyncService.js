@@ -24,20 +24,38 @@ async function sincronizarClientes() {
         for (const contatoBasico of listaDeContatosBasicos) {
             try {
                 const clienteDetalhado = await fetchDetalhesContato(contatoBasico.id);
-                const idVendedorDoCliente = clienteDetalhado.vendedor?.id || null;
 
                 const insertQuery = `
-                    INSERT INTO cache_clientes (id, nome, tipo_pessoa, documento, email, vendedor_id)
-                    VALUES ($1, $2, $3, $4, $5, $6)
-                    
+                    INSERT INTO cache_clientes (
+                        id, nome, fantasia, tipo_pessoa, documento, ie_rg,
+                        endereco, numero, bairro, cidade, uf, cep,
+                        fone, email, vendedor_id
+                    )
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+                    ON CONFLICT (id) DO UPDATE SET
+                        nome = EXCLUDED.nome, fantasia = EXCLUDED.fantasia, tipo_pessoa = EXCLUDED.tipo_pessoa,
+                        documento = EXCLUDED.documento, ie_rg = EXCLUDED.ie_rg, endereco = EXCLUDED.endereco,
+                        numero = EXCLUDED.numero, bairro = EXCLUDED.bairro, cidade = EXCLUDED.cidade,
+                        uf = EXCLUDED.uf, cep = EXCLUDED.cep, fone = EXCLUDED.fone, email = EXCLUDED.email,
+                        vendedor_id = EXCLUDED.vendedor_id, updated_at = NOW()
                 `;
+
                 const params = [
                     clienteDetalhado.id,
                     clienteDetalhado.nome,
-                    clienteDetalhado.tipoPessoa || 'O',
-                    clienteDetalhado.numeroDocumento,
-                    clienteDetalhado.email,
-                    idVendedorDoCliente
+                    clienteDetalhado.fantasia || null,
+                    clienteDetalhado.tipo,
+                    clienteDetalhado.numeroDocumento || null,
+                    clienteDetalhado.ie || clienteDetalhado.rg || null,
+                    clienteDetalhado.endereco?.geral?.endereco || null,
+                    clienteDetalhado.endereco?.geral?.numero || null,
+                    clienteDetalhado.endereco?.geral?.bairro || null,
+                    clienteDetalhado.endereco?.geral?.municipio || null,
+                    clienteDetalhado.endereco?.geral?.uf || null,
+                    clienteDetalhado.endereco?.geral?.cep || null,
+                    clienteDetalhado.telefone || clienteDetalhado.celular || null,
+                    clienteDetalhado.email || null,
+                    clienteDetalhado.vendedor?.id || null
                 ];
                 await db.query(insertQuery, params);
                 clientesSalvos++;

@@ -23,10 +23,21 @@ router.get('/', autenticarToken, async (req, res) => {
             queryParams.push(idVendedorBling, `%${searchTerm}%`);
         }
 
-        const { rows: clientes } = await db.query(queryText, queryParams);
+        const { rows: clientesDoBanco } = await db.query(queryText, queryParams);
 
-        console.log(`Retornando ${clientes.length} clientes do cache.`);
-        res.json(clientes);
+        const clientesFormatados = clientesDoBanco.map(cliente => ({
+            ...cliente,
+            numeroDocumento: cliente.documento,
+            telefone: cliente.fone,
+            endereco: {
+                geral: {
+                    municipio: cliente.cidade
+                }
+            }
+        }));
+
+        console.log(`Retornando ${clientesFormatados.length} clientes do cache.`);
+        res.json(clientesFormatados);
 
     } catch (error) {
         console.error("Falha crítica na rota GET /api/clientes (CACHE):", error.message);
@@ -58,11 +69,11 @@ router.post('/', autenticarToken, async (req, res) => {
         const clienteDetalhado = await fetchDetalhesContato(novoId);
 
         const queryInsertCache = `
-            INSERT INTO cache_clientes (id, nome, tipo_pessoa, documento, email, vendedor_id)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO cache_clientes (id, nome, tipo_pessoa, documento, email, vendedor_id, telefone, cidade)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             ON CONFLICT (id) DO UPDATE SET
                 nome = EXCLUDED.nome, tipo_pessoa = EXCLUDED.tipo_pessoa, documento = EXCLUDED.documento,
-                email = EXCLUDED.email, vendedor_id = EXCLUDED.vendedor_id, updated_at = NOW()
+                email = EXCLUDED.email, vendedor_id = EXCLUDED.vendedor_id, telefone = EXCLUDED.telefone, cidade = EXCLUDED.cidade, updated_at = NOW()
         `;
         const params = [
             clienteDetalhado.id,
@@ -70,7 +81,9 @@ router.post('/', autenticarToken, async (req, res) => {
             clienteDetalhado.tipo,
             clienteDetalhado.numeroDocumento,
             clienteDetalhado.email,
-            clienteDetalhado.vendedor?.id || idVendedorBling
+            clienteDetalhado.vendedor?.id || idVendedorBling,
+            clienteDetalhado.telefone || null,
+            clienteDetalhado.endereco?.geral?.municipio || null
         ];
         await db.query(queryInsertCache, params);
         console.log(`Cache local atualizado com o novo cliente ID: ${clienteDetalhado.id}`);
