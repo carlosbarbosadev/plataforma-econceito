@@ -15,6 +15,7 @@ type Produto = {
   };
   situacao?: string;
   imagemURL?: string;
+  imagem_url?: string;
 };
 
 type ItemPedido = {
@@ -511,11 +512,14 @@ export default function ProductsPage() {
                 </tr>
               </thead>
               <tbody>
-                {produtos.map(produto => (
+                {produtos.map(produto => {
+                  console.log('Dados do produto sendo renderizado:', produto);
+
+                  return (
                   <tr key={produto.id}>
                     <td>
                       <img
-                        src={produto.imagemURL || "/img/placeholder-produto.png"}
+                        src={produto.imagemURL || produto.imagem_url || "/img/placeholder-produto.png"}
                         alt={produto.nome}
                         style={{ width: "57px", height: "57px", objectFit: "cover", borderRadius: "0.375rem" }}
                         onError={(e) => { (e.target as HTMLImageElement).src = "/img/placeholder-produto.png"; }}
@@ -580,7 +584,8 @@ export default function ProductsPage() {
                       </Button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </Table>
           )}

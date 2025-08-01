@@ -1,5 +1,5 @@
 const db = require('../db');
-const { fetchPedidosVendas, refreshBlingAccessToken, fetchTodosOsContatos, fetchDetalhesContato } = require('./bling');
+const { fetchPedidosVendas, refreshBlingAccessToken, fetchTodosOsContatos, fetchDetalhesContato, fetchDetalhesPedidoVenda } = require('./bling');
 const axios = require('axios');
 const { fetchProdutos } = require('./bling');
 
@@ -24,6 +24,8 @@ async function sincronizarClientes() {
         for (const contatoBasico of listaDeContatosBasicos) {
             try {
                 const clienteDetalhado = await fetchDetalhesContato(contatoBasico.id);
+
+                await new Promise(resolve => setTimeout(resolve, 350));
 
                 const insertQuery = `
                     INSERT INTO cache_clientes (
@@ -118,30 +120,6 @@ async function atualizarMetricas() {
     console.log(`Métricas para ${dadosDaView.length} vendedor(es) atualizadas.`);
 }
 
-async function fetchDetalhesPedido(pedidoId) {
-    const accessToken = process.env.BLING_ACCESS_TOKEN;
-    const url = `https://api.bling.com.br/Api/v3/pedidos/vendas/${pedidoId}`;
-
-    try {
-        const response = await axios.get(url, {
-            headers: { 'Authorization': `Bearer ${accessToken}` },
-        });
-        return response.data.data;    
-    } catch (error) {
-        if (error.response && error.response.status === 401) {
-            console.warn(`Token expirado ao buscar detalhes do pedido ${pedidoId}. Tentando renovar...`);
-            await refreshBlingAccessToken();
-            const newAccessToken = process.env.BLING_ACCESS_TOKEN;
-            const response = await axios.get(url, {
-                headers: { 'Authorization': `Bearer ${newAccessToken}` },
-            });
-            return response.data.data;
-        }
-        console.error(`Erro ao buscar detalhes do pedido ${pedidoId}:`, error.message);
-        throw error;
-    }
-}
-
 async function atualizarProdutosMaisVendidos() {
     console.log('Calculando e atualizando a tabela de produtos mais vendidos...');
 
@@ -197,7 +175,7 @@ async function sincronizarDadosDeUmVendedor(idVendedor) {
         if (listaDePedidos.length > 0) {
             for (const pedidoInfo of listaDePedidos) {
                 try {
-                    const pedidoDetalhado = await fetchDetalhesPedido(pedidoInfo.id);
+                    const pedidoDetalhado = await fetchDetalhesPedidoVenda(pedidoInfo.id);
                     await new Promise(resolve => setTimeout(resolve, 350));
 
                     const upsertPedidoQuery = `INSERT INTO cache_pedidos (id, numero, data_pedido, data_saida, total, total_produtos, status_id, status_nome, cliente_id, cliente_nome, cliente_documento, vendedor_id, observacoes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) ON CONFLICT (id) DO UPDATE SET numero = EXCLUDED.numero, data_pedido = EXCLUDED.data_pedido, data_saida = EXCLUDED.data_saida, total = EXCLUDED.total, total_produtos = EXCLUDED.total_produtos, status_id = EXCLUDED.status_id, status_nome = EXCLUDED.status_nome, cliente_id = EXCLUDED.cliente_id, cliente_nome = EXCLUDED.cliente_nome, cliente_documento = EXCLUDED.cliente_documento, vendedor_id = EXCLUDED.vendedor_id, observacoes = EXCLUDED.observacoes, updated_at = CURRENT_TIMESTAMP;`;
@@ -262,10 +240,51 @@ async function iniciarSincronizacaoGeral() {
 async function sincronizarProdutos() {
     console.log(`[GERAL] Iniciando sincronização de produtos...`);
     try {
-        await fetchProdutos();
-        console.log(`[GERAL] Cache de produtos atualizado com sucesso.`);
+        const produtosDaApi = await fetchProdutos();
+
+        if (!produtosDaApi || produtosDaApi.length === 0) {
+            console.log('[GERAL] Nenhum produto encontrado na API do Bling para sincronizar.');
+            return;
+        }
+
+        console.log(`[GERAL] ${produtosDaApi.length} produtos recebidos da API. Salvando no banco de dados...`);
+
+        let produtosSalvos = 0;
+        for (const produto of produtosDaApi) {
+            const upsertQuery = `
+                INSERT INTO cache_produtos (
+                    id, nome, codigo, preco, estoque_saldo_virtual, situacao, imagem_url, dados_completos_json, atualizado_em
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+                ON CONFLICT (id) DO UPDATE SET
+                    nome = EXCLUDED.nome,
+                    codigo = EXCLUDED.codigo,
+                    preco = EXCLUDED.preco,
+                    estoque_saldo_virtual = EXCLUDED.estoque_saldo_virtual,
+                    situacao = EXCLUDED.situacao,
+                    imagem_url = EXCLUDED.imagem_url,
+                    dados_completos_json = EXCLUDED.dados_completos_json,
+                    atualizado_em = NOW();
+            `;
+
+            const params = [
+                produto.id,
+                produto.nome,
+                produto.codigo,
+                produto.preco,
+                produto.estoque?.saldoVirtualTotal || 0,
+                produto.situacao,
+                produto.imagemURL,
+                produto,
+            ];
+
+            await db.query(upsertQuery, params);
+            produtosSalvos++;
+        }
+
+        console.log(`[GERAL] Cache de ${produtosSalvos} produtos atualizado com sucesso.`);
+
     } catch (error) {
-        console.error(`[GERAL] Falha ao sincronizar produtos:`, error.message);
+        console.error(`[GERAL] Falha CRÍTICA ao sincronizar produtos:`, error.message);
     }
 }
 

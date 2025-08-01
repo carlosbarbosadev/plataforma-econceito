@@ -7,52 +7,46 @@ router.get('/', autenticarToken, async (req, res) => {
   try {
     const termoDeBusca = req.query.search || '';
     const page = parseInt(req.query.page) || 1;
-    console.log(`Rota /api/produtos (DB) acessada. Página: ${page}, Busca: "${termoDeBusca}"`);
+    const limit = 100;
+    const offset = (page - 1) * limit;
 
-    const { rows } = await db.query(`
+    const queryParams = [];
+    let paramIndex = 1;
+
+    let whereClause = `WHERE CAST(estoque_saldo_virtual AS NUMERIC) > 0 AND codigo IS NOT NULL AND codigo <> ''`;
+    
+    if (termoDeBusca.trim().length >= 2) {
+      whereClause += ` AND (nome ILIKE $${paramIndex} OR codigo ILIKE $${paramIndex})`;
+      queryParams.push(`%${termoDeBusca}%`);
+      paramIndex++;
+    }
+
+    const totalQuery = `SELECT COUNT(*) FROM cache_produtos ${whereClause}`;
+    const totalResult = await db.query(totalQuery, queryParams);
+    const totalDeItens = parseInt(totalResult.rows[0].count, 10);
+
+    queryParams.push(limit, offset);
+    const produtosQuery = `
       SELECT * FROM cache_produtos
-      WHERE estoque_saldo_virtual > 0
-        AND codigo IS NOT NULL
-        AND codigo <> ''
+      ${whereClause}
       ORDER BY nome ASC
-    `);
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+      `;
+    const { rows: produtosDaPagina } = await db.query(produtosQuery, queryParams);
 
-    const produtosFormatados = rows.map(p => ({
+    const produtosFormatados = produtosDaPagina.map(p => ({
       ...p,
       preco: parseFloat(p.preco) || 0,
-      estoque: {
-        saldoVirtualTotal: p.estoque_saldo_virtual
-      },
+      estoque: { saldoVirtualTotal: p.estoque_saldo_virtual },
       imagemURL: p.imagem_url
     }));
 
-    const todosOsProdutosDoCache = produtosFormatados;
-
-    let produtosFiltrados = todosOsProdutosDoCache;
-    if (termoDeBusca.trim().length >= 2) {
-      const termoLower = termoDeBusca.toLowerCase();
-      produtosFiltrados = todosOsProdutosDoCache.filter(produto => 
-        (produto.nome && produto.nome.toLowerCase().includes(termoLower)) ||
-        (produto.codigo && produto.codigo.toLowerCase().includes(termoLower))
-      );
-    }
-
-    const limit = 100;
-    const totalDeItens = produtosFiltrados.length;
-
-    const startIndex = (page - 1) * limit;
-    const endIndex = page * limit;
-    const produtosDaPagina = produtosFiltrados.slice(startIndex, endIndex);
-
-    console.log(`Retornando ${produtosDaPagina.length} produtos da página ${page} (do DB). Total filtrado: ${totalDeItens}`);
-
-    res.json({ data: produtosDaPagina, total: totalDeItens });
+    console.log(`Retornando ${produtosFormatados.length} de ${totalDeItens} produtos para a página ${page}.`);
+    res.json({ data: produtosFormatados, total: totalDeItens });
 
   } catch (error) {
     console.error(`Erro na rota /api/produtos:`, error.message);
-    if (!res.headersSent) {
-      res.status(500).json({ mensagem: `Falha ao buscar produtos: ${error.message}` });
-    }
+    res.status(500).json({ mensagem: `Falha ao buscar produtos: ${error.message}` });
   }
 });
 
