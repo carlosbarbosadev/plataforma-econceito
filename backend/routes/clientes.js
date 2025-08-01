@@ -69,11 +69,11 @@ router.post('/', autenticarToken, async (req, res) => {
         const clienteDetalhado = await fetchDetalhesContato(novoId);
 
         const queryInsertCache = `
-            INSERT INTO cache_clientes (id, nome, tipo_pessoa, documento, email, vendedor_id, telefone, cidade)
+            INSERT INTO cache_clientes (id, nome, tipo_pessoa, documento, email, vendedor_id, fone, cidade)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             ON CONFLICT (id) DO UPDATE SET
                 nome = EXCLUDED.nome, tipo_pessoa = EXCLUDED.tipo_pessoa, documento = EXCLUDED.documento,
-                email = EXCLUDED.email, vendedor_id = EXCLUDED.vendedor_id, telefone = EXCLUDED.telefone, cidade = EXCLUDED.cidade, updated_at = NOW()
+                email = EXCLUDED.email, vendedor_id = EXCLUDED.vendedor_id, fone = EXCLUDED.fone, cidade = EXCLUDED.cidade, updated_at = NOW()
         `;
         const params = [
             clienteDetalhado.id,
@@ -82,7 +82,7 @@ router.post('/', autenticarToken, async (req, res) => {
             clienteDetalhado.numeroDocumento,
             clienteDetalhado.email,
             clienteDetalhado.vendedor?.id || idVendedorBling,
-            clienteDetalhado.telefone || null,
+            clienteDetalhado.telefone || clienteDetalhado.celular || null,
             clienteDetalhado.endereco?.geral?.municipio || null
         ];
         await db.query(queryInsertCache, params);
