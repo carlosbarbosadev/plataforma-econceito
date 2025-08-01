@@ -97,7 +97,7 @@ export function OverviewAnalyticsView() {
   console.log('Dados para o gráfico de pizza:', produtosMaisVendidos)
 
   return (
-    <DashboardContent maxWidth="xl">
+    <DashboardContent maxWidth="xl" sx={{ px: 5 }}>
       <Paper
         elevation={4}
         sx={{

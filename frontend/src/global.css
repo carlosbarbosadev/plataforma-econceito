@@ -136,6 +136,13 @@ body.modal-open .desktop-sidebar {
   border-color: #2453dc !important;
   box-shadow: 0 0 0.2rem rgba(36, 83, 220, 0.25) !important;
 }
+.select-padrao__control {
+  /* A classe .rounded-3 do Bootstrap corresponde a um border-radius de 0.5rem */
+  border-radius: 0.5rem !important;
+
+  /* Opcional: ajusta a altura para ficar mais alinhado com outros inputs do Bootstrap */
+  min-height: 38px;
+}
 .rodape-busca-fixo {
   position: fixed;
   bottom: 20px; /* Damos um espaço da parte de baixo da tela */

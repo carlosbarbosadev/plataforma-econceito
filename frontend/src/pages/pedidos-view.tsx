@@ -1,6 +1,6 @@
 import React from 'react';
 import { useEffect, useState } from 'react';
-import { Table, Spinner, Alert, Form, Badge, Modal, Button, Row, Col, ListGroup, Dropdown } from 'react-bootstrap';
+import { Table, Spinner, Alert, Form, Badge, Modal, Button, Row, Col, ListGroup, Dropdown, Container } from 'react-bootstrap';
 
 import api from 'src/services/api';
 
@@ -429,11 +429,15 @@ export default function PedidosView() {
   });
 
   return (
-    <div className="mt-4">
-      <h3 className="fw-bold">{pageTitle}</h3>
+    <Container className="mt-4">
+      <div className="mt-5 mb-5" style={{ background: 'linear-gradient(135deg, #2453dc 0%, #577CFF 100%)', color: '#fff', padding: '25px', borderRadius: '16px', maxWidth: '300px', display: 'flex', justifyContent: 'center' }}>
+        <h3 className="fw-bold mb-0" style={{ color: '#fff' }}>
+          {pageTitle}
+        </h3>
+      </div>
     <Row>
       <Col md={5}>
-      <Form.Group className="my-3">
+      <Form.Group className="mb-4">
         <Form.Control
           type="text"
           placeholder="Pesquisar por número ou nome"
@@ -449,7 +453,7 @@ export default function PedidosView() {
       )}
       
       {pedidos.length > 0 && (
-        <Table striped hover responsive className="mt-3">
+        <Table striped hover responsive>
           <thead>
             <tr>
               {/* <th>{headerId}</th> Removido */}
@@ -956,6 +960,6 @@ export default function PedidosView() {
           </Button>
         </Modal.Footer>
       </Modal>
-    </div>
+    </Container>
   );
 }

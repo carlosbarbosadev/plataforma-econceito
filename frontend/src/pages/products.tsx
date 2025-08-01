@@ -598,7 +598,7 @@ export default function ProductsPage() {
                   <Form.Group className="mb-0">
                     <Form.Control
                       style={{ borderRadius: '4px' }}
-                      className="input-foco-azul"
+                      className="input-foco-azul rounded-3"
                       type="text"
                       placeholder='Buscar produtos por nome ou código'
                       value={searchTerm}

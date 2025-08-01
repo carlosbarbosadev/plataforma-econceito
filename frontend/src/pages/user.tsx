@@ -217,17 +217,16 @@ export default function ClientesPage() {
   return (
     <Container className="mb-4">
     <div>
-      <div className="mt-5 mb-4" style={{ background: 'linear-gradient(135deg, #2453dc 0%, #577CFF 100%)', color: '#fff', padding: '25px', borderRadius: '16px', maxWidth: '250px', display: 'flex', justifyContent: 'center' }}>
-        <h3 className="fw-bold mb-0" style={{ color: '#fff', marginBottom: '0' }}>
+      <div className="mt-5 mb-5" style={{ background: 'linear-gradient(135deg, #2453dc 0%, #577CFF 100%)', color: '#fff', padding: '25px', borderRadius: '16px', maxWidth: '250px', display: 'flex', justifyContent: 'center' }}>
+        <h3 className="fw-bold mb-0" style={{ color: '#fff' }}>
           {pageTitle}
         </h3>
       </div>
-      <Row className="mb-5">
+      <Row className="mb-4">
         <Col md={5}>
           <Form.Group>
             <Form.Control
-              className="input-foco-azul"
-              style={{ borderRadius: '4px' }}
+              className="input-foco-azul rounded-3"
               type="text"
               placeholder={searchPlaceholder}
               value={searchTerm}
@@ -244,8 +243,9 @@ export default function ClientesPage() {
             backgroundColor: '#4CAF50',
             borderColor: '#4CAF50',
           }}
+          className="rounded-3"
         >
-          Criar cliente
+          Cadastrar cliente
         </Button>
       </Col>
       </Row>
