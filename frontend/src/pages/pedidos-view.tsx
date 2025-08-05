@@ -91,6 +91,15 @@ type ProdutoEncontrado = {
   valor: number;
 };
 
+type PedidoResumido = {
+  id: number;
+  numero: string;
+  data_pedido: string;
+  cliente_nome: string;
+  total: number;
+  status_id: number;
+};
+
 const mapSituacaoPedido = (idSituacao?: number): string => {
   if (idSituacao === undefined || idSituacao === null) return 'N/A';
   switch (idSituacao) {
@@ -140,7 +149,7 @@ export default function PedidosView() {
   const [showDetalhesModal, setShowDetalhesModal] = useState(false);
   const [loadingDetalhes, setLoadingDetalhes] = useState(false);
   const [errorDetalhes, setErrorDetalhes] = useState<string | null>(null);
-  const [pedidos, setPedidos] = useState<PedidoDetalhado[]>([]);
+  const [pedidos, setPedidos] = useState<PedidoResumido[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editedPedido, setEditedPedido] = useState<PedidoDetalhado | null>(null);
@@ -152,11 +161,14 @@ export default function PedidosView() {
   const [isLoadingSearch, setIsLoadingSearch] = useState(false);
   const [catalogoProdutos, setCatalogoProdutos] = useState<ProdutoEncontrado[]>([]);
   const [catalogoCarregado, setCatalogoCarregado] = useState(false);
-  const [searchTermPedidos, setSearchTermPedidos] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [submittedSearch, setSubmittedSearch] = useState(''); 
 
   useEffect(() => {
-    getPedidos();
-  }, []);
+      getPedidos(currentPage, submittedSearch);
+  }, [currentPage, submittedSearch]);
 
   const handleVerDetalhesPedido = async (pedidoId: number) => {
     console.log(`Buscando detalhes para o pedido ID: ${pedidoId}`);
@@ -278,6 +290,14 @@ export default function PedidosView() {
     }
   };
 
+  const handleSearchSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      if (currentPage !== 1) {
+          setCurrentPage(1);
+      }
+      setSubmittedSearch(searchTerm);
+  };
+
   const handleSaveChanges = async () => {
     if (!editedPedido) return;
 
@@ -324,24 +344,29 @@ export default function PedidosView() {
     setNewItemSearchTerm('');
   };
 
-  const getPedidos = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await api.get<any>('/api/pedidos');
-      if (Array.isArray(res.data)) {
-        setPedidos(res.data as PedidoDetalhado[]);
-      } else {
-        setError('Formato de dados de pedidos inesperado.');
-        setPedidos([]);
+  const getPedidos = async (page = 1, search = submittedSearch) => {
+      setLoading(true);
+      setError(null);
+      try {
+          const params = { page, search };
+          const res = await api.get('/api/pedidos', { params });
+        
+          const { data, total, limit } = res.data;
+
+          if (Array.isArray(data)) {
+              setPedidos(data);
+              setTotalPages(Math.ceil(total / limit));
+              setCurrentPage(page);
+          } else {
+              throw new Error('Formato de dados de pedidos inesperado.');
+          }
+
+      } catch (err: any) {
+          setError(err.response?.data?.mensagem || 'Falha ao buscar pedidos.');
+          setPedidos([]);
+      } finally {
+          setLoading(false);
       }
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.mensagem || err.message || 'Falha ao buscar dados dos pedidos.';
-      setError(errorMessage);
-      setPedidos([]);
-    } finally {
-      setLoading(false);
-    }
   };
 
   const carregarCatalogo = async () => {
@@ -410,24 +435,6 @@ export default function PedidosView() {
     }
   } : null;
 
-  const filteredPedidos = pedidos.filter(pedido => {
-    const searchTermLower = searchTermPedidos.toLowerCase();
-
-    if (!searchTermLower) {
-      return true;
-    }
-
-    const nomeCliente = pedido.contato?.nome || '';
-    const numeroPedido = pedido.numero?.toString() || '';
-    const dataPedido = new Date(pedido.data).toLocaleDateString('pt-BR');
-    
-    return (
-      nomeCliente.toLowerCase().includes(searchTermLower) ||
-      numeroPedido.toLowerCase().includes(searchTermLower) ||
-      dataPedido.includes(searchTermLower)
-    );
-  });
-
   return (
     <Container className="mt-4">
       <div className="mt-5 mb-5" style={{ background: 'linear-gradient(135deg, #2453dc 0%, #577CFF 100%)', color: '#fff', padding: '25px', borderRadius: '16px', maxWidth: '300px', display: 'flex', justifyContent: 'center' }}>
@@ -435,19 +442,21 @@ export default function PedidosView() {
           {pageTitle}
         </h3>
       </div>
+    <Form onSubmit={handleSearchSubmit}>  
     <Row>
       <Col md={5}>
       <Form.Group className="mb-4">
         <Form.Control
           type="text"
           placeholder="Pesquisar por número ou nome"
-          value={searchTermPedidos}
-          onChange={(e) => setSearchTermPedidos(e.target.value)}
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
           className="rounded-3"
         />
       </Form.Group>
       </Col>
     </Row>
+    </Form>
       {pedidos.length === 0 && !loading && (
         <Alert variant="info">Nenhum pedido para exibir no momento.</Alert>
       )}
@@ -460,25 +469,24 @@ export default function PedidosView() {
               <th className="fw-normal small text-muted" style={{ width: '6%', fontSize: "0.8em" }}>{headerNumero}</th>
               <th className="fw-normal small text-muted" style={{ width: '18%', fontSize: "0.8em" }}>{headerData}</th>
               <th className="fw-normal small text-muted" style={{ width: '50%', fontSize: "0.8em" }}>{headerCliente}</th>
-              <th className="fw-normal small text-muted" style={{ fontSize: "0.8em" }}>{headerTotal}</th>
+              <th className="fw-normal small text-muted" style={{ width: '5%',fontSize: "0.8em" }}>{headerTotal}</th>
               <th className="fw-normal small text-muted" style={{ textAlign: 'center', width: '30%', fontSize: "0.8em" }}>{headerSituacao}</th>
               <th style={{ width: '5%' }}> </th>
             </tr>
           </thead>
           <tbody>
-            {filteredPedidos.map(pedido => (
-              <tr key={pedido.id} onClick={() => handleVerDetalhesPedido(pedido.id)}style={{ cursor: 'pointer' }}>  
-                {/* <td>{pedido.id}</td> Removido */}
+            {pedidos.map(pedido => (
+              <tr key={pedido.id} onClick={() => handleVerDetalhesPedido(pedido.id)}style={{ cursor: 'pointer' }}>
                 <td style={{ fontSize: '0.9em' }}>{pedido.numero}</td>
-                <td style={{ fontSize: '0.9em' }}>{new Date(pedido.data).toLocaleDateString('pt-BR')}</td>
-                <td style={{ fontSize: '0.9em' }}>{pedido.contato.nome}</td>
+                <td style={{ fontSize: '0.9em' }}>{new Date(pedido.data_pedido).toLocaleDateString('pt-BR')}</td>
+                <td style={{ fontSize: '0.9em' }}>{pedido.cliente_nome}</td>
                 <td style={{ fontSize: '0.9em' }}>{pedido.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                 <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
                   <span
                     className="badge rounded-pill"
-                    style={getSituacaoBadgeStyle(pedido.situacao?.id)}
+                    style={getSituacaoBadgeStyle(pedido.status_id)}
                   >
-                    {mapSituacaoPedido(pedido.situacao?.id)}
+                    {mapSituacaoPedido(pedido.status_id)}
                   </span>
                 </td>
 

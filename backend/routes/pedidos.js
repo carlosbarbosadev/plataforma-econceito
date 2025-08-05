@@ -4,95 +4,154 @@ const { autenticarToken } = require('../middlewares/authMiddleware');
 const { fetchPedidosVendas, criarPedidoVenda, fetchDetalhesPedidoVenda } = require('../services/bling');
 const blingService = require('../services/bling')
 const { atualizarPedidoNoBling } = require('../services/bling');
+const db = require('../db');
 
-// Rota para: Buscar/Listar pedidos de venda
 router.get('/', autenticarToken, async (req, res) => {
-    console.log(`Rota  GET /api/pedidos acessada por: ${req.usuario.email} (Tipo: ${req.usuario.tipo})`);
+    console.log(`(OTIMIZADO) Rota GET /api/pedidos acessada por: ${req.usuario.email}`);
     try {
-        let idVendedorParaFiltrar = null;
+        const page = parseInt(req.query.page) || 1;
+        const limit = 20;
+        const offset = (page - 1) * limit;
+        const termoBusca = req.query.search || '';
+
+        const queryParams = [];
+        let paramIndex = 1;
+        let whereClauses = [];
+
         if (req.usuario.tipo === 'vendedor') {
-            idVendedorParaFiltrar = req.usuario.id_vendedor_bling;
-            if (!idVendedorParaFiltrar) {
-                console.warn(`Vendedor ${req.usuario.email} não possui 'id_vendedor_bling' definido no token. Buscando todos os pedidos como fallback ou considerar erro.`);
-                return res.status(403).json({ mensagem: 'ID de vendedor do Bling não configurado para este usuário' })
-            }
+            whereClauses.push(`vendedor_id = $${paramIndex++}`);
+            queryParams.push(req.usuario.id_vendedor_bling);
         }
-        const todosOsPedidos = await fetchPedidosVendas(idVendedorParaFiltrar);
-        console.log(`Retornando ${todosOsPedidos.length} pedidos para o usuário ${req.usuario.email}.`);
-        res.json(todosOsPedidos);
+
+        if (termoBusca.trim()) {
+            whereClauses.push(`(cliente_nome ILIKE $${paramIndex} OR numero::text ILIKE $${paramIndex})`);
+            queryParams.push(`%${termoBusca}%`);
+            paramIndex++;
+        }
+
+        const whereString = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+        const totalQuery = `SELECT COUNT(*) FROM cache_pedidos ${whereString}`;
+        const totalResult = await db.query(totalQuery, queryParams);
+        const totalDeItens = parseInt(totalResult.rows[0].count, 10);
+
+        const finalParams = [...queryParams, limit, offset];
+        const pedidosQuery = `
+            SELECT id, numero, data_pedido, cliente_nome, total, status_id
+            FROM cache_pedidos
+            ${whereString}
+            ORDER BY data_pedido DESC
+            LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+        `;
+        const { rows: pedidosDaPagina } = await db.query(pedidosQuery, finalParams);
+
+        res.json({ data: pedidosDaPagina, total: totalDeItens, limit });
+
     } catch (error) {
-        console.error(`Erro na rota /api/pedidos ao buscar pedidos para ${req.usuario.email}:`, error.message);
-        if (!res.headersSent) {
-            res.status(500).json({ mensagem: `Falha ao buscar pedidos: ${error.message}` });
-        }
+        console.error(`Erro na rota /api/pedidos:`, error.message);
+        res.status(500).json({ mensagem: `Falha ao buscar pedidos: ${error.message}` });
     }
 });
 
-// Rota para: Criar um pedido de venda (POST /api/pedidos/)
+
 router.post('/', autenticarToken, async (req, res) => {
     console.log(`Rota POST /api/pedidos (criar) acessada por: ${req.usuario.email} (Tipo: ${req.usuario.tipo})`);
 
-    const {
-        idClienteBling,
-        itensPedido,
-        idFormaPagamentoBling,
-        valorTotalPedido,
-        dataVencimentoParcela,
-        observacoes,
-        dataPedido
-    } = req.body;
+    try {
+        const {
+            idClienteBling,
+            itensPedido,
+            idFormaPagamentoBling,
+            valorTotalPedido,
+            dataVencimentoParcela,
+            observacoes,
+            dataPedido
+        } = req.body;
 
-    if (!idClienteBling || !itensPedido || !Array.isArray(itensPedido) || itensPedido.length === 0) {
+        if (!idClienteBling || !itensPedido || !Array.isArray(itensPedido) || itensPedido.length === 0) {
         return res.status(400).json({ mensagem: "ID do cliente e pelo menos um item são obrigatórios." });
-    }
-    if (!idFormaPagamentoBling || (valorTotalPedido === undefined || valorTotalPedido === null) ) {
+        }
+        if (!idFormaPagamentoBling || (valorTotalPedido === undefined || valorTotalPedido === null) ) {
         return res.status(400).json(400)({ mensagem: "Forma de pagamento e valor total para parcela são obrigatórios." });
-    }
-    if (!req.usuario.id_vendedor_bling && req.usuario.tipo === 'vendedor') {
+        }
+        if (!req.usuario.id_vendedor_bling && req.usuario.tipo === 'vendedor') {
         return res.status(403).json({ mensagem: 'ID de vendedor do Bling não configurado para este usuário. Não é possível criar o pedido.' });
-    }
+        }
 
-    const dadosDoFrontend = req.body;
-    const hoje = new Date().toISOString().split('T')[0];
-    const pedidoParaBling = {
-        data: dataPedido || hoje,
-        dataSaida: dataPedido || hoje,
-        // dataPrevista: dataPedido || hoje,
-        contato: {
-            id: Number(dadosDoFrontend.idClienteBling)
-        },
-        itens: itensPedido.map(item => ({
-            produto: { id: Number(item.idProdutoBling) },
-            quantidade: Number(item.quantidade),
-            valor: Number(item.valorUnitario),
-            codigo: item.codigo || undefined,
-            descricao: item.descricao || undefined
-        })),
-        parcelas: [{
-            dataVencimento: dataVencimentoParcela || hoje,
-            valor: Number(valorTotalPedido),
-            formaPagamento: { id: Number(dadosDoFrontend.idFormaPagamentoBling) }
-            // observacoes: "Parcela única"
-        }],
-        ...(req.usuario.id_vendedor_bling && {
-            vendedor: {
+        const dadosDoFrontend = req.body;
+        const hoje = new Date().toISOString().split('T')[0];
+        const pedidoParaBling = {
+            data: dataPedido || hoje,
+            dataSaida: dataPedido || hoje,
+            // dataPrevista: dataPedido || hoje,
+            contato: {
+                id: Number(dadosDoFrontend.idClienteBling)
+            },
+            itens: itensPedido.map(item => ({
+                produto: { id: Number(item.idProdutoBling) },
+                quantidade: Number(item.quantidade),
+                valor: Number(item.valorUnitario),
+                codigo: item.codigo || undefined,
+                descricao: item.descricao || undefined
+            })),
+            parcelas: [{
+                dataVencimento: dataVencimentoParcela || hoje,
+                valor: Number(valorTotalPedido),
+                formaPagamento: { id: Number(dadosDoFrontend.idFormaPagamentoBling) }
+                // observacoes: "Parcela única"
+            }],
+            ...(req.usuario.id_vendedor_bling && {
+                vendedor: {
                 id: Number(req.usuario.id_vendedor_bling)
             }
-        }),
-        ...(observacoes && { observacoes: observacoes }),
-        // Outros campos como 'loja', 'numeroPedidoCompra', 'desconto', 'transporte' podem ser adicionados aqui
-        // com base no JSON completo que você viu e na documentação do Bling
-    };
+            }),
+            ...(observacoes && { observacoes: observacoes }),
+            // Outros campos como 'loja', 'numeroPedidoCompra', 'desconto', 'transporte' podem ser adicionados aqui
+            // com base no JSON completo que você viu e na documentação do Bling
+        };
 
-    try {
         console.log("Enviando para criarPedidoVenda no service o objeto:", JSON.stringify(pedidoParaBling, null, 2));
         const resultadoBling = await criarPedidoVenda(pedidoParaBling);
-        res.status(201).json({ mensagem: "Pedido criado com sucesso no Bling!", data: resultadoBling });
+        console.log('Pedido criado com sucesso no Bling.');
+
+        const novoPedidoId = resultadoBling.data?.id;
+        if (novoPedidoId) {
+            console.log(`Atualizando cache local para o novo pedido ID: ${novoPedidoId}`);
+            const pedidoDetalhado = await fetchDetalhesPedidoVenda(novoPedidoId);
+
+            const upsertQuery = `
+                INSERT INTO cache_pedidos (
+                    id, numero, data_pedido, data_saida, total, total_produtos, status_id, status_nome,
+                    cliente_id, cliente_nome, cliente_documento, vendedor_id, observacoes, updated_at, dados_completos_json
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), $14)
+                    ON CONFLICT (id) DO UPDATE SET
+                        numero = EXCLUDED.numero, data_pedido = EXCLUDED.data_pedido, data_saida = EXCLUDED.data_saida,
+                        total = EXCLUDED.total, total_produtos = EXCLUDED.total_produtos, status_id = EXCLUDED.status_id,
+                        status_nome = EXCLUDED.status_nome, cliente_id = EXCLUDED.cliente_id, cliente_nome = EXCLUDED.cliente_nome,
+                        cliente_documento = EXCLUDED.cliente_documento, vendedor_id = EXCLUDED.vendedor_id,
+                        observacoes = EXCLUDED.observacoes, updated_at = NOW(), dados_completos_json = EXCLUDED.dados_completos_json;
+            `;
+
+            const params = [
+                pedidoDetalhado.id, pedidoDetalhado.numero, pedidoDetalhado.data, pedidoDetalhado.dataSaida || null,
+                pedidoDetalhado.total, pedidoDetalhado.totalProdutos, pedidoDetalhado.situacao.id, pedidoDetalhado.situacao.valor,
+                pedidoDetalhado.contato.id, pedidoDetalhado.contato.nome, pedidoDetalhado.contato.numeroDocumento || null,
+                pedidoDetalhado.vendedor?.id || null, pedidoDetalhado.observacoes || null, pedidoDetalhado
+            ];
+
+            await db.query(upsertQuery, params);
+            console.log(`Cache local atualizado para o pedido ID: ${novoPedidoId}`);
+        } else {
+            console.warn('Bling criou o pedido, mas não retornou um ID. Cache local não sera atualizado.');
+        }
+
+        res.status(201).json({ mensagem: "Pedido criado com sucesso no Bling!", data: resultadoBling.data });
+
     } catch (error) {
-        console.log('Erro na rota POST /api/pedidos ao criar pedido via service:', error.message);
+        console.error('Erro na rota POST /api/pedidos:', JSON.stringify(error.response?.data, null, 2) || error.message);
         if (!res.headersSent) {
             const status = error.response?.status || 500;
-            res.status(status).json({ mensagem: error.message || "Erro desconhecido ao criar pedido." });
+            res.status(status).json({ mensagem: error.response?.data?.mensagem || error.message || "Erro desconhecido ao criar pedido." });
         }
     }
 });
