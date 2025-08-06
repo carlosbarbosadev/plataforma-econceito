@@ -45,7 +45,12 @@ router.get('/', autenticarToken, async (req, res) => {
         `;
         const { rows: pedidosDaPagina } = await db.query(pedidosQuery, finalParams);
 
-        res.json({ data: pedidosDaPagina, total: totalDeItens, limit });
+        const pedidosFormatados = pedidosDaPagina.map(p => ({
+            ...p,
+            total: parseFloat(p.total)
+        }));
+
+        res.json({ data: pedidosFormatados, total: totalDeItens, limit });
 
     } catch (error) {
         console.error(`Erro na rota /api/pedidos:`, error.message);

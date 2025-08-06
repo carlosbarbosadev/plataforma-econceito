@@ -106,7 +106,8 @@ const mapSituacaoPedido = (idSituacao?: number): string => {
     case 6: return 'Em aberto';
     case 9: return 'Atendido';
     case 12: return 'Cancelado';
-    // Adicionar aqui se eu descobrir mais IDs
+    case 47722: return 'Orçamento';
+    case 49956: return 'Venda consignada'
     default: return `ID ${idSituacao}`;
   }
 };
@@ -125,6 +126,10 @@ const getSituacaoBadgeStyle = (idSituacao?: number): React.CSSProperties => {
       return { ...baseStyle, backgroundColor: '#4CAF50' };
     case 12:
       return { ...baseStyle, backgroundColor: '#f44336' };
+    case 47722:
+      return { ...baseStyle, backgroundColor: '#a824f0' };
+    case 49956:
+      return { ...baseStyle, backgroundColor: '#17d4f5ff' };
     default:
       return { ...baseStyle, backgroundColor: '#6c757d' };
   }
@@ -468,7 +473,7 @@ export default function PedidosView() {
               {/* <th>{headerId}</th> Removido */}
               <th className="fw-normal small text-muted" style={{ width: '6%', fontSize: "0.8em" }}>{headerNumero}</th>
               <th className="fw-normal small text-muted" style={{ width: '18%', fontSize: "0.8em" }}>{headerData}</th>
-              <th className="fw-normal small text-muted" style={{ width: '50%', fontSize: "0.8em" }}>{headerCliente}</th>
+              <th className="fw-normal small text-muted" style={{ width: '45%', fontSize: "0.8em" }}>{headerCliente}</th>
               <th className="fw-normal small text-muted" style={{ width: '5%',fontSize: "0.8em" }}>{headerTotal}</th>
               <th className="fw-normal small text-muted" style={{ textAlign: 'center', width: '30%', fontSize: "0.8em" }}>{headerSituacao}</th>
               <th style={{ width: '5%' }}> </th>
