@@ -170,10 +170,11 @@ export default function PedidosView() {
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [submittedSearch, setSubmittedSearch] = useState(''); 
+  const [statusFilter, setStatusFilter] = useState('');
 
   useEffect(() => {
-      getPedidos(currentPage, submittedSearch);
-  }, [currentPage, submittedSearch]);
+      getPedidos(currentPage, submittedSearch, statusFilter);
+  }, [currentPage, submittedSearch, statusFilter]);
 
   const handleVerDetalhesPedido = async (pedidoId: number) => {
     console.log(`Buscando detalhes para o pedido ID: ${pedidoId}`);
@@ -349,11 +350,11 @@ export default function PedidosView() {
     setNewItemSearchTerm('');
   };
 
-  const getPedidos = async (page = 1, search = submittedSearch) => {
+  const getPedidos = async (page = 1, search = submittedSearch, status = statusFilter) => {
       setLoading(true);
       setError(null);
       try {
-          const params = { page, search };
+          const params = { page, search, statusId: status };
           const res = await api.get('/api/pedidos', { params });
         
           const { data, total, limit } = res.data;
@@ -448,18 +449,37 @@ export default function PedidosView() {
         </h3>
       </div>
     <Form onSubmit={handleSearchSubmit}>  
-    <Row>
-      <Col md={5}>
-      <Form.Group className="mb-4">
-        <Form.Control
-          type="text"
-          placeholder="Pesquisar por número ou nome"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="rounded-3"
-        />
-      </Form.Group>
-      </Col>
+      <Row className="align-items-end">
+        <Col md={5}>
+          <Form.Group className="mb-4">
+            <Form.Control
+              type="text"
+              placeholder="Pesquisar por número ou nome"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="input-foco-azul rounded-3"
+            />
+          </Form.Group>
+        </Col>
+        <Col md={2} className="text-end">
+            <Form.Group className="mb-4">
+                <Form.Select
+                    value={statusFilter}
+                    className="input-foco-azul rounded-3"
+                    onChange={e => {
+                        setCurrentPage(1);
+                        setStatusFilter(e.target.value);
+                    }}
+                >
+                    <option value="">Todos</option>
+                    <option value="6">Em aberto</option>
+                    <option value="9">Atendido</option>
+                    <option value="12">Cancelado</option>
+                    <option value="47722">Orçamento</option>
+                    <option value="49956">Venda consignada</option>
+                </Form.Select>
+            </Form.Group>
+        </Col>
     </Row>
     </Form>
       {pedidos.length === 0 && !loading && (

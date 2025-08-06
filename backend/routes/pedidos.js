@@ -10,9 +10,10 @@ router.get('/', autenticarToken, async (req, res) => {
     console.log(`(OTIMIZADO) Rota GET /api/pedidos acessada por: ${req.usuario.email}`);
     try {
         const page = parseInt(req.query.page) || 1;
-        const limit = 20;
+        const limit = 50;
         const offset = (page - 1) * limit;
         const termoBusca = req.query.search || '';
+        const statusId = req.query.statusId || '';
 
         const queryParams = [];
         let paramIndex = 1;
@@ -21,6 +22,11 @@ router.get('/', autenticarToken, async (req, res) => {
         if (req.usuario.tipo === 'vendedor') {
             whereClauses.push(`vendedor_id = $${paramIndex++}`);
             queryParams.push(req.usuario.id_vendedor_bling);
+        }
+
+        if (statusId) {
+            whereClauses.push(`status_id = $${paramIndex++}`);
+            queryParams.push(statusId);
         }
 
         if (termoBusca.trim()) {
