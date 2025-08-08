@@ -94,7 +94,6 @@ router.post('/', autenticarToken, async (req, res) => {
         const pedidoParaBling = {
             data: dataPedido || hoje,
             dataSaida: dataPedido || hoje,
-            // dataPrevista: dataPedido || hoje,
             contato: {
                 id: Number(dadosDoFrontend.idClienteBling)
             },

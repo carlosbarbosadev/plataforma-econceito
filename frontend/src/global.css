@@ -97,6 +97,7 @@ body.modal-open .desktop-sidebar {
 .form-pequeno .form-control,
 .form-pequeno .form-select {
   font-size: 0.9rem;
+  border-radius: 0.5rem;
 }
 .form-pequeno .form-control:focus,
 .form-pequeno .form-select:focus {
@@ -105,7 +106,6 @@ body.modal-open .desktop-sidebar {
   outline: 0 !important;
 }
 
-/* Página de produtos */
 .pedido-atual-painel {
   background-color: #ffffff;
   color: #474644;

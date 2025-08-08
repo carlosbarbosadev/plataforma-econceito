@@ -77,7 +77,7 @@ router.post('/pedidos', async (req, res) => {
                 pedidoDetalhado.vendedor?.id || null, pedidoDetalhado.observacoes || null, pedidoDetalhado
             ];
             await db.query(upsertQuery, params);
-            console.log(`Pedido ID ${pedidoId} (criando/alterado) salvo no cache via webhook.`);
+            console.log(`Pedido ID ${pedidoId} (criado/alterado) salvo no cache via webhook.`);
         } else {
             await db.query('DELETE FROM cache_pedido_itens WHERE pedido_id = $1', [pedidoId]);
             await db.query('DELETE FROM cache_pedidos WHERE id = $1', [pedidoId]);

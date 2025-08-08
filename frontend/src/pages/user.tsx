@@ -283,7 +283,7 @@ export default function ClientesPage() {
 
       <Modal show={showCreateModal} onHide={handleCloseCreateModal} dialogClassName="modal-largo" contentClassName="modal-com-bordas-destacadas">
         <Modal.Header closeButton closeVariant="white">
-          <Modal.Title className="fw-bold">Criar novo cliente</Modal.Title>
+          <Modal.Title className="fw-bold">Cadastrar novo cliente</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           {createError && <Alert variant="danger">{createError}</Alert>}
