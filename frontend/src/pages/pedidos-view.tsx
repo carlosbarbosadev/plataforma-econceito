@@ -1,6 +1,6 @@
 import React from 'react';
 import { useEffect, useState } from 'react';
-import { Table, Spinner, Alert, Form, Badge, Modal, Button, Row, Col, ListGroup, Dropdown, Container } from 'react-bootstrap';
+import { Table, Spinner, Alert, Form, Badge, Modal, Button, Row, Col, ListGroup, Dropdown, Container, InputGroup } from 'react-bootstrap';
 
 import api from 'src/services/api';
 
@@ -164,17 +164,48 @@ export default function PedidosView() {
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [newItemSearchTerm, setNewItemSearchTerm] = useState("");
   const [isLoadingSearch, setIsLoadingSearch] = useState(false);
-  const [catalogoProdutos, setCatalogoProdutos] = useState<ProdutoEncontrado[]>([]);
-  const [catalogoCarregado, setCatalogoCarregado] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [submittedSearch, setSubmittedSearch] = useState(''); 
   const [statusFilter, setStatusFilter] = useState('');
+  const [modalSearchResults, setModalSearchResults] = useState<ProdutoEncontrado[]>([]);
 
   useEffect(() => {
       getPedidos(currentPage, submittedSearch, statusFilter);
   }, [currentPage, submittedSearch, statusFilter]);
+
+  useEffect(() => {
+      if (newItemSearchTerm.length < 2) {
+          setModalSearchResults([]);
+          return undefined;
+      }
+
+      setIsLoadingSearch(true);
+      const timer = setTimeout(async () => {
+          try {
+              const res = await api.get('/api/produtos', {
+                  params: { search: newItemSearchTerm }
+              });
+              const produtosEncontrados = res.data.data.map((p: any) => ({
+                  id: p.id,
+                  descricao: p.nome,
+                  codigo: p.codigo,
+                  valor: parseFloat(p.preco) || 0
+              }));
+              setModalSearchResults(produtosEncontrados);
+          } catch (err) {
+              console.error('Erro ao buscar produtos para o modal:', err);
+              setModalSearchResults([]);
+          } finally {
+              setIsLoadingSearch(false);
+          }
+      }, 400);
+      return () => {
+        clearTimeout(timer);
+      };
+      
+  }, [newItemSearchTerm]);
 
   const handleVerDetalhesPedido = async (pedidoId: number) => {
     console.log(`Buscando detalhes para o pedido ID: ${pedidoId}`);
@@ -375,39 +406,6 @@ export default function PedidosView() {
       }
   };
 
-  const carregarCatalogo = async () => {
-    if (catalogoCarregado) {
-      return;
-    }
-    console.log("Carregando catálogo de produtos sob demanda...");
-
-    try {
-      const res = await api.get<any[]>('/api/produtos');
-
-      if (Array.isArray(res.data)) {
-        const produtosFormatados = res.data.map(p => ({
-          id: p.id,
-          descricao: p.nome,
-          codigo: p.codigo,
-          valor: parseFloat(p.preco) || 0
-        }));
-        setCatalogoProdutos(produtosFormatados);
-        setCatalogoCarregado(true);
-        console.log("Catálogo de produtos carregado!");
-      }
-    } catch (err) {
-      console.error("Erro ao carregar catálogo de produtos sob demanda", err);
-
-    }
-  };
-
-  const searchResults = newItemSearchTerm.length < 2
-    ? []
-    : catalogoProdutos.filter(p => 
-        p.descricao.toLowerCase().includes(newItemSearchTerm.toLowerCase()) ||
-        (p.codigo && p.codigo.toLowerCase().includes(newItemSearchTerm.toLowerCase()))
-    ).slice(0, 10);
-
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '200px' }}>
@@ -434,7 +432,8 @@ export default function PedidosView() {
     somaDasQuantidades: editedPedido.itens.reduce((acc, item) => acc + item.quantidade, 0),
     subtotal: editedPedido.itens.reduce((acc, item) => acc + (item.valor * item.quantidade), 0),
     valorDoDesconto: function() {
-      return editedPedido.desconto?.valor || 0;
+      const percentualDesconto = editedPedido.desconto?.valor || 0;
+      return (this.subtotal * percentualDesconto) / 100;
     },
     totalDaVenda: function() {
       return this.subtotal - this.valorDoDesconto();
@@ -454,7 +453,7 @@ export default function PedidosView() {
           <Form.Group className="mb-4">
             <Form.Control
               type="text"
-              placeholder="Pesquisar por número ou nome"
+              placeholder="Pesquisar por nome ou n° do pedido"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="input-foco-azul rounded-3"
@@ -542,8 +541,8 @@ export default function PedidosView() {
       )}
 
       {selectedPedidoDetalhes && (
-        <Modal show={showDetalhesModal} onHide={handleAttemptClose} dialogClassName="modal-largo"  centered style={{ fontSize: "0.90rem" }}>
-          <Modal.Header closeButton>
+        <Modal show={showDetalhesModal} onHide={handleAttemptClose} dialogClassName="modal-largo" contentClassName="modal-com-bordas-destacadas" centered style={{ fontSize: "0.90rem" }}>
+          <Modal.Header closeButton closeVariant="white">
             <Modal.Title id="pedido-detalhes-modal-title" style={{ fontWeight: 'bold' }}>
               Pedido de venda - {selectedPedidoDetalhes.numero || selectedPedidoDetalhes.id}
             </Modal.Title>
@@ -556,7 +555,7 @@ export default function PedidosView() {
               <Alert variant="danger">Erro ao carregar detalhes: {errorDetalhes}</Alert>
             )}
             {!loadingDetalhes && !errorDetalhes && selectedPedidoDetalhes && (
-              <div>
+              <div className="form-pequeno">
                 <h5 style={{ fontWeight: 'bold'}}>
                   Dados do cliente
                 </h5>
@@ -584,7 +583,11 @@ export default function PedidosView() {
                         type="text"
                         readOnly
                         disabled
-                        value={new Date(selectedPedidoDetalhes.data).toLocaleDateString('pt-BR')}
+                        value={(() => {
+                          const dataString = selectedPedidoDetalhes.data;
+                          const dataCorrigida = new Date(`${dataString}T00:00:00`);
+                          return dataCorrigida.toLocaleDateString('pt-BR');
+                        })()}
                       />
                     </Form.Group>
                   </Col>
@@ -603,8 +606,7 @@ export default function PedidosView() {
                     <ListGroup.Item key={item.id} className="px-0" style={{ border: 0 }}>
                       <Row className="align-items-center g-2">
                         <Col xs="auto" className="d-flex align-items-center justify-content-center">
-                          <div
-                            style={{
+                          <div style={{
                               backgroundColor: "#ced4da",
                               color: "white",
                               fontWeight: "bold",
@@ -624,7 +626,8 @@ export default function PedidosView() {
                             <div style={{
                               border: "1px solid #dee2e6",
                               borderRadius: "0.5rem",
-                              padding: "0.4rem"
+                              padding: "0.3rem",
+                              paddingRight: isOrderEditable ? '45px' : '0.4rem',
                             }}>
                               <Row className="align-items-center h-100 d-flex">
                                 <Col className="pe-3 flex-grow-1 border-end">
@@ -687,27 +690,26 @@ export default function PedidosView() {
                         {/* Ícone de lixeira separado da lista */}
                         {isOrderEditable && (
                           <Col xs="auto" className="d-flex align-items-center">
-                            <Button 
-                              variant="outline-danger"
-                              size="sm"
-                              className="rounded-3 p-2"
-                              onClick={() => handleRemoveItem(item.id)}
-                              style={{ 
-                                width: "36px", 
-                                height: "36px", 
-                                display: "flex", 
-                                alignItems: "center", 
-                                justifyContent: "center",
-                                marginLeft: "8px"
-                              }}
-                            >
-                              <i className="bi bi-trash" />
-                            </Button>
+                            <div style={{
+                              position: 'absolute',
+                              right: '40px',
+                              top: '55%',
+                              transform: 'translateY(-50%)',
+                            }}>
+                              <Button
+                                  variant='link'
+                                  size='sm'
+                                  className='p-0 text-danger'
+                                  onClick={() => handleRemoveItem(item.id)}
+                              >
+                                  <i className="bi bi-trash" style={{ fontSize: '1rem' }} />
+                              </Button>
+                            </div>
                           </Col>
                         )}
                       </Row>
                     </ListGroup.Item>
-                  )
+                  );
                 })}
 
                 {isAddingItem && editedPedido && (
@@ -735,6 +737,7 @@ export default function PedidosView() {
                         <div style={{ border: "1px solid #dee2e6", borderRadius: "0.5rem", padding: "0.4rem" }}>
                           <Row className="align-items-center h-100 d-flex">
                             <Col xs={12} md={4} className="pe-3" style={{ borderRight: "1px solid #dee2e6" }}>
+                            <InputGroup>
                               <Form.Control
                                 type="text"
                                 placeholder="Pesquise por código ou descrição"
@@ -743,6 +746,8 @@ export default function PedidosView() {
                                 onChange={(e) => setNewItemSearchTerm(e.target.value)}
                                 autoFocus
                               />
+                              
+                            </InputGroup>
                             </Col>
                             <Col xs={6} md={2} className="px-3" style={{ borderRight: "1px solid #dee2e6" }}>
                               ㅤㅤ
@@ -750,7 +755,7 @@ export default function PedidosView() {
                             <Col xs={6} md={2} className="px-3" style={{ borderRight: "1px solid #dee2e6" }}>
                               ㅤㅤ
                             </Col>
-                            <Col xs={6} md={2} className="px-3" style={{ borderRight:"1px solid #dee2e6" }}>
+                            <Col xs={6} md={2} className="px-3" style={{ borderRight:"1px solid #e6e0deff" }}>
                               R$ 0,00
                             </Col>
                             <Col xs={6} md={2} className="ps-3">
@@ -758,11 +763,7 @@ export default function PedidosView() {
                             </Col>
                           </Row>
 
-                          {isLoadingSearch && (
-                            <div className="text-center p-2"><Spinner animation="border" size="sm" /></div>
-                          )}
-
-                          {searchResults.length > 0 && (
+                          {modalSearchResults.length > 0 && (
                             <ListGroup
                               style={{
                                 position: "absolute",
@@ -775,7 +776,7 @@ export default function PedidosView() {
                               }}
                               className="shadow-sm"
                             >
-                              {searchResults.map(produto => (
+                              {modalSearchResults.map(produto => (
                                 <ListGroup.Item
                                   key={produto.id}
                                   action
@@ -790,18 +791,25 @@ export default function PedidosView() {
                         </div>
                       </Col>
 
-                      <Col xs="auto" className="d-flex align-items-center">
-                        <Button
-                          variant="outline-danger"
-                          size="sm"
-                          className="rounded-3 p-2"
-                          onClick={() => setIsAddingItem(false)}
-                          title="Cancelar adição"
-                          style={{ width: "36px", height: "36px", display: "flex", alignItems: "center", justifyContent: "center", marginLeft: "8px"}}
-                        >
-                          <i className="bi bi-trash" />
-                        </Button>
-                      </Col>
+                      {isOrderEditable && (
+                          <Col xs="auto" className="d-flex align-items-center">
+                            <div style={{
+                              position: 'absolute',
+                              right: '40px',
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                            }}>
+                              <Button
+                                  variant='link'
+                                  size='sm'
+                                  className='p-0 text-danger'
+                                  onClick={() => setIsAddingItem(false)}
+                              >
+                                  <i className="bi bi-trash" style={{ fontSize: '1rem' }} />
+                              </Button>
+                            </div>
+                          </Col>
+                        )}
                     </Row>
                   </ListGroup.Item>
                 )}
@@ -818,8 +826,7 @@ export default function PedidosView() {
                     size="sm"
                     className="text-success fw-bold p-0 text-decoration-none"
                     style={{ color: '#198754' }}
-                    onClick={async () => {
-                      await carregarCatalogo();
+                    onClick={async () => {;
                       setIsAddingItem(true);
                     }}
                 >
@@ -858,48 +865,49 @@ export default function PedidosView() {
 
                 <Col md={3}>
                   <Form.Group>
-                    <Form.Label className="small text-muted">Desconto (R$)</Form.Label>
-                    <Form.Control
-                      type="text"
-                      readOnly={!isOrderEditable}
-                      disabled={!isOrderEditable}
-                      value={
-                        editingDesconto !== null
-                        ? editingDesconto
-                        : (editedPedido?.desconto?.valor || 0)
-                      }
-                      onFocus={(e) => {
-                        if (!isOrderEditable) return;
-                        setEditingDesconto(String(editedPedido?.desconto?.valor || 0));
-                        e.target.select();
-                      }}
-                      onChange={(e) => {
-                        setEditingDesconto(e.target.value);
-                      }}
-                      onBlur={() => {
-                        if (editingDesconto === null) return;
-
-                        const novoValor = parseFloat(editingDesconto.replace(",", ".")) || 0;
-
-                        if (editedPedido) {
-                          setEditedPedido({
-                            ...editedPedido,
-                            desconto: {
-                              ...editedPedido.desconto,
-                              unidade: editedPedido.desconto?.unidade || "%",
-                              valor: novoValor,
+                    <Form.Label className="small text-muted">Desconto (%)</Form.Label>
+                    <InputGroup>
+                        <Form.Control
+                            type="text"
+                            readOnly={!isOrderEditable}
+                            disabled={!isOrderEditable}
+                            value={
+                                editingDesconto !== null
+                                ? editingDesconto
+                                : (editedPedido?.desconto?.valor || 0)
                             }
-                          });
-                        }
+                            onFocus={(e) => {
+                                if (!isOrderEditable) return;
+                                setEditingDesconto(String(editedPedido?.desconto?.valor || 0));
+                                e.target.select();
+                            }}
+                            onChange={(e) => {
+                                setEditingDesconto(e.target.value);
+                            }}
+                            onBlur={() => {
+                                if (editingDesconto === null) return;
 
-                        setEditingDesconto(null);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          (e.target as HTMLInputElement).blur();
-                        }
-                      }}
+                                const novoPercentual = parseFloat(editingDesconto.replace(",", ".")) || 0;
+
+                                if (editedPedido) {
+                                    setEditedPedido({
+                                        ...editedPedido,
+                                        desconto: {
+                                            valor: novoPercentual,
+                                            unidade: 'PORCENTAGEM'
+                                        }
+                                    });
+                                }
+
+                                setEditingDesconto(null);
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                    (e.target as HTMLInputElement).blur();
+                                }
+                            }}
                     />
+                    </InputGroup>
                   </Form.Group>
                 </Col>
 

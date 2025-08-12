@@ -1,10 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const { autenticarToken } = require('../middlewares/authMiddleware');
-const { fetchPedidosVendas, criarPedidoVenda, fetchDetalhesPedidoVenda } = require('../services/bling');
 const blingService = require('../services/bling')
-const { atualizarPedidoNoBling } = require('../services/bling');
 const db = require('../db');
+const { generateOrderPdf } = require('../services/pdfGenerator');
+const { sendWhatsAppMedia } = require('../services/whatsappService');
+const { uploadPdfToS3 } = require('../services/s3Service');
+
 
 router.get('/', autenticarToken, async (req, res) => {
     console.log(`(OTIMIZADO) Rota GET /api/pedidos acessada por: ${req.usuario.email}`);
@@ -127,7 +129,7 @@ router.post('/', autenticarToken, async (req, res) => {
         const novoPedidoId = resultadoBling.data?.id;
         if (novoPedidoId) {
             console.log(`Atualizando cache local para o novo pedido ID: ${novoPedidoId}`);
-            const pedidoDetalhado = await fetchDetalhesPedidoVenda(novoPedidoId);
+            const pedidoDetalhado = await blingService.fetchDetalhesPedidoVenda(novoPedidoId);
 
             const upsertQuery = `
                 INSERT INTO cache_pedidos (
@@ -177,7 +179,7 @@ router.get ('/:idPedidoVenda', autenticarToken, async(req, res) => {
     }
 
     try {
-        const detalhesDoPedido = await fetchDetalhesPedidoVenda(idPedidoVenda);
+        const detalhesDoPedido = await blingService.fetchDetalhesPedidoVenda(idPedidoVenda);
 
         // Opcional: Lógica de permissão para verificar se o vendedor pode ver este pedido
         if (req.usuario.tipo === 'vendedor') {
@@ -212,6 +214,43 @@ router.put('/:id', autenticarToken, async (req, res) => {
     } catch (error) {
         console.error(`Erro na rota de atualização do pedido ${pedidoId}:`, error.message);
         res.status(500).json({ mensagem: error.message });
+    }
+});
+
+router.post('/:id/enviar-whatsapp-vendedor', autenticarToken, async (req, res) => {
+    const { id } = req.params;
+    const { id_vendedor_bling } = req.usuario;
+
+    try {
+        const pedidoData = await blingService.fetchDetalhesPedidoVenda(id);
+        const queryVendedor = 'SELECT telefone FROM usuarios WHERE id_vendedor_bling = $1';
+        const resultVendedor = await db.query(queryVendedor, [id_vendedor_bling]);
+
+        if (resultVendedor.rows.length === 0 || !resultVendedor.rows[0].telefone) {
+            return res.status(404).json({ message: 'Telefone do vendedor não encontrado.' });
+        }
+
+        console.log('Gerando PDF do pedido...');
+        const pdfBuffer = await generateOrderPdf(pedidoData);
+        const nomeDoArquivo = `pedido-${pedidoData.numero}.pdf`;
+
+        const urlPublicaDoPdf = await uploadPdfToS3(pdfBuffer, nomeDoArquivo);
+
+        let telefoneLimpo = resultVendedor.rows[0].telefone.replace(/\D/g, '');
+        if (telefoneLimpo.startsWith('55') && telefoneLimpo.length === 13 && telefoneLimpo.substring(4).startsWith('9')) {
+            telefoneLimpo = `55${telefoneLimpo.substring(2, 4)}${telefoneLimpo.substring(5)}`;
+        }
+        const telefoneFormatado = `whatsapp:+${telefoneLimpo}`;
+
+        const mensagem = `Olá! Segue o PDF do pedido #${pedidoData.numero} para o cliente ${pedidoData.contato.nome}.`;
+
+        await sendWhatsAppMedia(telefoneFormatado, urlPublicaDoPdf, mensagem);
+
+        res.status(200).json({ message: 'PDF do pedido enviado para o Whatsapp do vendedor!' });
+
+    } catch (error) {
+        console.error(`Erro na rota de envio de WhatsApp para o pedido ${id}:`, error.message);
+        res.status(500).json({ message: error.message || 'Falha ao enviar o PDF via WhatsApp.' });
     }
 });
 

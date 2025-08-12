@@ -6,6 +6,7 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "aws-sdk": "^2.1692.0",
     "axios": "^1.9.0",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^3.0.2",
@@ -14,8 +15,10 @@
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
     "node-cron": "^4.2.1",
+    "pdfkit": "^0.17.1",
     "pg": "^8.16.0",
-    "querystring": "^0.2.1"
+    "querystring": "^0.2.1",
+    "twilio": "^5.8.0"
   },
   "devDependencies": {
     "@ljharb/tsconfig": "^0.3.2",
