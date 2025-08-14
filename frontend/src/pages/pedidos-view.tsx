@@ -170,6 +170,7 @@ export default function PedidosView() {
   const [submittedSearch, setSubmittedSearch] = useState(''); 
   const [statusFilter, setStatusFilter] = useState('');
   const [modalSearchResults, setModalSearchResults] = useState<ProdutoEncontrado[]>([]);
+  const [sendingWhatsAppId, setSendingWhatsAppId] = useState<number | null>(null);
 
   useEffect(() => {
       getPedidos(currentPage, submittedSearch, statusFilter);
@@ -381,6 +382,19 @@ export default function PedidosView() {
     setNewItemSearchTerm('');
   };
 
+  const handleSendWhatsApp = async (pedidoId: number) => {
+    setSendingWhatsAppId(pedidoId);
+    try {
+      const response = await api.post(`/api/pedidos/${pedidoId}/enviar-whatsapp-vendedor`);
+      alert(response.data.message || 'Notificação enviada com sucesso!');
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || 'Falha ao enviar a notificação'
+      alert(`Erro: ${errorMessage}`);
+    } finally {
+      setSendingWhatsAppId(null);
+    }
+  };
+
   const getPedidos = async (page = 1, search = submittedSearch, status = statusFilter) => {
       setLoading(true);
       setError(null);
@@ -521,11 +535,11 @@ export default function PedidosView() {
                     </Dropdown.Toggle>
 
                     <Dropdown.Menu>
-                      <Dropdown.Item href="#/action-1" onClick={() => console.log(`Ação 1 para pedido ${pedido.id}`)}>
-                        Ação de Exemplo 1
-                      </Dropdown.Item>
-                      <Dropdown.Item href="#/action-2" onClick={() => console.log(`Ação 2 para pedido ${pedido.id}`)}>
-                        Ação de Exemplo 2
+                      <Dropdown.Item onClick={(e) => {
+                        e.stopPropagation();
+                        handleSendWhatsApp(pedido.id);
+                      }}>
+                        Enviar PDF via WhatsApp
                       </Dropdown.Item>
                       <Dropdown.Divider />
                       <Dropdown.Item href="#/action-3" className="text-danger">

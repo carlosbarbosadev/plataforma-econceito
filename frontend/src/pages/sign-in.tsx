@@ -98,7 +98,7 @@ export default function SignInPage() {
                 required
                 fullWidth
                 id="email"
-                label="Endereço de Email"
+                label="Endereço de E-mail"
                 name="email"
                 autoComplete="email"
                 autoFocus
