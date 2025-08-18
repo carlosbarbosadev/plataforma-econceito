@@ -28,12 +28,14 @@ app.use('/api/webhooks', webhooksRoutes);
 const cron = require('node-cron');
 const { iniciarSincronizacaoGeral, iniciarSincronizacaoAgendada } = require('./services/blingSyncService');
 
-cron.schedule('0 */5 * * *', () => {
+cron.schedule('0 0,12 * * *', () => {
     console.log('AGENDADOR: Disparando rotina de sincronização automática...');
     iniciarSincronizacaoGeral();
+}, {
+    timezone: "America/Sao_Paulo"
 });
 
-console.log('Agendamento da sincronização ativado. A rotina rodará a cada 5 horas.');
+console.log('Agendamento da sincronização ativado. A rotina rodará diariamente às 00:00 e 12:00 (horário de São Paulo).');
 
 // --- Inicialização do Servidor ---
 const PORT = process.env.PORT || 3001;

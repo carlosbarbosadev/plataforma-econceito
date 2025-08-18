@@ -85,7 +85,7 @@ router.post('/', autenticarToken, async (req, res) => {
         return res.status(400).json({ mensagem: "ID do cliente e pelo menos um item são obrigatórios." });
         }
         if (!idFormaPagamentoBling || (valorTotalPedido === undefined || valorTotalPedido === null) ) {
-        return res.status(400).json(400)({ mensagem: "Forma de pagamento e valor total para parcela são obrigatórios." });
+        return res.status(400).json({ mensagem: "Forma de pagamento e valor total para parcela são obrigatórios." });
         }
         if (!req.usuario.id_vendedor_bling && req.usuario.tipo === 'vendedor') {
         return res.status(403).json({ mensagem: 'ID de vendedor do Bling não configurado para este usuário. Não é possível criar o pedido.' });
@@ -123,7 +123,7 @@ router.post('/', autenticarToken, async (req, res) => {
         };
 
         console.log("Enviando para criarPedidoVenda no service o objeto:", JSON.stringify(pedidoParaBling, null, 2));
-        const resultadoBling = await criarPedidoVenda(pedidoParaBling);
+        const resultadoBling = await blingService.criarPedidoVenda(pedidoParaBling);
         console.log('Pedido criado com sucesso no Bling.');
 
         const novoPedidoId = resultadoBling.data?.id;

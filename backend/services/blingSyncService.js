@@ -3,7 +3,7 @@ const { fetchPedidosVendas, refreshBlingAccessToken, fetchTodosOsContatos, fetch
 const axios = require('axios');
 const { fetchProdutos } = require('./bling');
 
-const UMA_HORA_EM_MS = 60 * 60 * 1000;
+const MEIA_HORA_EM_MS = 30 * 60 * 1000;
 
 
 async function sincronizarClientes() {
@@ -330,7 +330,7 @@ function iniciarSincronizacaoAgendada() {
     console.log('Agendamento da sincronização de PRODUTOS ativado. A rotina rodará a cada 1 hora.');
     
     sincronizarProdutos();
-    setInterval(sincronizarProdutos, UMA_HORA_EM_MS);
+    setInterval(sincronizarProdutos, MEIA_HORA_EM_MS);
 }
 
 module.exports = {
