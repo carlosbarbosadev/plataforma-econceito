@@ -1,7 +1,7 @@
 const { Pool } = require('pg');
 require('dotenv').config();
 
-const isProduction = process.env.NODE_ENV === 'production';
+const isProduction = process.env.NODE_ENV === 'production' && !!process.env.PROD_DB_HOST;
 
 const connectionConfig = {
     host: isProduction ? process.env.PROD_DB_HOST : process.env.DB_HOST,

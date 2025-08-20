@@ -140,3 +140,6 @@ frontend/.env.local
 
 backend/node_modules/
 backend/.env
+
+frontend/.env.local
+frontend/.env.production

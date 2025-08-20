@@ -25,7 +25,7 @@ async function sincronizarClientes() {
             try {
                 const clienteDetalhado = await fetchDetalhesContato(contatoBasico.id);
 
-                await new Promise(resolve => setTimeout(resolve, 350));
+                await new Promise(resolve => setTimeout(resolve, 500));
 
                 const insertQuery = `
                     INSERT INTO cache_clientes (
@@ -163,9 +163,9 @@ async function sincronizarDadosDeUmVendedor(idVendedor) {
 
     try {
         await db.query(`
-            INSERT INTO cache_sync_control (vendedor_id, ultima_sincronizacao, status) VALUES ($1, $2, 'sincronizando')
-            ON CONFLICT (vendedor_id) DO UPDATE SET ultima_sincronizacao = $2, status = 'sincronizando', erro_mensagem = NULL
-        `, [idVendedor, startTime]);
+            INSERT INTO cache_sync_control (entity_type, last_sync_timestamp) VALUES ('pedidos', $1)
+            ON CONFLICT (entity_type) DO UPDATE SET last_sync_timestamp = $1
+        `, [startTime]);
 
         const listaDePedidosBling = await fetchPedidosVendas(idVendedor);
         console.log(`[Vendedor ${idVendedor}] Encontrados ${listaDePedidosBling.length} pedidos na API do Bling.`);
@@ -176,7 +176,7 @@ async function sincronizarDadosDeUmVendedor(idVendedor) {
             for (const pedidoInfo of listaDePedidosBling) {
                 try {
                     const pedidoDetalhado = await fetchDetalhesPedidoVenda(pedidoInfo.id);
-                    await new Promise(resolve => setTimeout(resolve, 350));
+                    await new Promise(resolve => setTimeout(resolve, 500));
 
                     const upsertPedidoQuery = `INSERT INTO cache_pedidos (id, numero, data_pedido, data_saida, total, total_produtos, status_id, status_nome, cliente_id, cliente_nome, cliente_documento, vendedor_id, observacoes, updated_at, dados_completos_json) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), $14) ON CONFLICT (id) DO UPDATE SET numero = EXCLUDED.numero, data_pedido = EXCLUDED.data_pedido, data_saida = EXCLUDED.data_saida, total = EXCLUDED.total, total_produtos = EXCLUDED.total_produtos, status_id = EXCLUDED.status_id, status_nome = EXCLUDED.status_nome, cliente_id = EXCLUDED.cliente_id, cliente_nome = EXCLUDED.cliente_nome, cliente_documento = EXCLUDED.cliente_documento, vendedor_id = EXCLUDED.vendedor_id, observacoes = EXCLUDED.observacoes, updated_at = NOW(), dados_completos_json = EXCLUDED.dados_completos_json;`;
                     const pedidoParams = [
@@ -242,11 +242,12 @@ async function sincronizarDadosDeUmVendedor(idVendedor) {
         const endTime = new Date();
         const executionTime = Math.round((endTime - startTime) / 1000);
 
-        await db.query(`UPDATE cache_sync_control SET status = 'completo', total_pedidos = $1, tempo_execucao = $2, erro_mensagem = NULL WHERE vendedor_id = $3`, [listaDePedidosBling.length, executionTime, idVendedor]);
+        await db.query(`
+            UPDATE cache_sync_control SET last_sync_timestamp = $1 WHERE entity_type = 'pedidos'
+        `, [endTime]);
         console.log(`--- Sincronização para o Vendedor ID ${idVendedor} concluída com sucesso. ---`);
     } catch (error) {
         console.error(`Erro grave durante a sincronização do Vendedor ID ${idVendedor}:`, error.message);
-        await db.query(`UPDATE cache_sync_control SET status = 'erro', erro_mensagem = $1 WHERE vendedor_id = $2`, [error.message, idVendedor]);
     }
 }
 
