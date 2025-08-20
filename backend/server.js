@@ -5,7 +5,6 @@ const app = express();
 
 const db = require('./db');
 
-
 const authRoutes = require('./routes/auth');
 const clientesRoutes = require('./routes/clientes');
 const produtosRoutes = require('./routes/produtos');
@@ -27,6 +26,22 @@ app.use('/api/webhooks', webhooksRoutes);
 
 const cron = require('node-cron');
 const { iniciarSincronizacaoGeral, iniciarSincronizacaoAgendada } = require('./services/blingSyncService');
+
+app.get('/api/sync/manual-trigger/:secret', (req, res) => {
+    const { secret } = req.params;
+
+    const nossoSegredo = process.env.MANUAL_SYNC_SECRET || 'SEGREDO_PADRAO_MUITO_FORTE_2854';
+
+    if (secret !== nossoSegredo) {
+        return res.status(403).json({ message: 'Acesso negado. Segredo inválido.' });
+    }
+
+    res.status(200).json({ message: 'Comando de sincronização recebido. O processo foi iniciado em segundo plano. Verifique os logs para acompanhar.' });
+
+    iniciarSincronizacaoGeral().catch(err => {
+        console.error('Erro crítico na sincronização manual disparada via API:', err);
+    });
+});
 
 cron.schedule('0 0,12 * * *', () => {
     console.log('AGENDADOR: Disparando rotina de sincronização automática...');
