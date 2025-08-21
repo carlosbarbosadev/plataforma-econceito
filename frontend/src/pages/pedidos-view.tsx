@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Table, Spinner, Alert, Form, Badge, Modal, Button, Row, Col, ListGroup, Dropdown, Container, InputGroup } from 'react-bootstrap';
 
 import api from 'src/services/api';
+import { generateOrderPdf } from 'src/services/pdfService';
 
 import { Iconify } from 'src/components/iconify';
 
@@ -11,6 +12,7 @@ type ClienteDoPedidoDetalhado = {
   nome: string;
   tipoPessoa?: string;
   numeroDocumento?: string;
+  fone?: string;
 };
 
 type ItemDoPedidoDetalhado = {
@@ -82,6 +84,9 @@ type PedidoDetalhado = {
   vendedor?: VendedorDoPedido;
   intermediador?: any;
   taxas?: any;
+  dados_completos_json?: {
+    itens: ItemDoPedidoDetalhado[]
+  };
 };
 
 type ProdutoEncontrado = {
@@ -170,7 +175,7 @@ export default function PedidosView() {
   const [submittedSearch, setSubmittedSearch] = useState(''); 
   const [statusFilter, setStatusFilter] = useState('');
   const [modalSearchResults, setModalSearchResults] = useState<ProdutoEncontrado[]>([]);
-  const [sendingWhatsAppId, setSendingWhatsAppId] = useState<number | null>(null);
+  const [downloadingPdfId, setDownloadingPdfId] = useState<number | null>(null);
 
   useEffect(() => {
       getPedidos(currentPage, submittedSearch, statusFilter);
@@ -382,16 +387,21 @@ export default function PedidosView() {
     setNewItemSearchTerm('');
   };
 
-  const handleSendWhatsApp = async (pedidoId: number) => {
-    setSendingWhatsAppId(pedidoId);
+  const handleDownloadPdf = async (pedidoId: number) => {
+    setDownloadingPdfId(pedidoId);
     try {
-      const response = await api.post(`/api/pedidos/${pedidoId}/enviar-whatsapp-vendedor`);
-      alert(response.data.message || 'Notificação enviada com sucesso!');
+      const response = await api.get<PedidoDetalhado>(`/api/pedidos/${pedidoId}`);
+
+      if (response.data && response.data.id) {
+        generateOrderPdf(response.data);
+      } else {
+        throw new Error('Não foi possível obter os dados detalhados do pedido');
+      }
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Falha ao enviar a notificação'
+      const errorMessage = err.response?.data?.message || 'Falha ao gerar o PDF do pedido.'
       alert(`Erro: ${errorMessage}`);
     } finally {
-      setSendingWhatsAppId(null);
+      setDownloadingPdfId(null);
     }
   };
 
@@ -533,13 +543,21 @@ export default function PedidosView() {
                     <Dropdown.Toggle as={CustomToggle} id={`dropdown-custom-${pedido.id}`}>
                       <Iconify icon="eva:more-vertical-fill" width={20} />
                     </Dropdown.Toggle>
-
                     <Dropdown.Menu>
                       <Dropdown.Item onClick={(e) => {
                         e.stopPropagation();
-                        handleSendWhatsApp(pedido.id);
+                        handleDownloadPdf(pedido.id);
                       }}>
-                        Enviar PDF via WhatsApp
+                        {downloadingPdfId === pedido.id ? (
+                          <>
+                            <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true"/>
+                            <span className="ms-2">Gerando...</span>
+                          </>
+                        ) : (
+                          <>
+                          Baixar cópia do pedido
+                          </>
+                        )}
                       </Dropdown.Item>
                       <Dropdown.Divider />
                       <Dropdown.Item href="#/action-3" className="text-danger">
