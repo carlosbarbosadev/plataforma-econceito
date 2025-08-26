@@ -405,6 +405,29 @@ export default function PedidosView() {
     }
   };
 
+  const handleStatusChange = async (novoStatusId: number) => {
+      if (!selectedPedidoDetalhes || !editedPedido) return;
+
+      const pedidoId = selectedPedidoDetalhes.id;
+      const pedidoAtualizado = {
+          ...editedPedido,
+          situacao: {
+              ...(editedPedido!.situacao || {}),
+              id: novoStatusId
+          }
+      };
+      setEditedPedido(pedidoAtualizado);
+
+      try {
+          await api.patch(`/api/pedidos/${pedidoId}/status`, {statusId: novoStatusId});
+          alert('Status atualizdo com sucesso!');
+          getPedidos(currentPage, submittedSearch, statusFilter);
+      } catch (err: any) {
+          alert(`Erro ao atualizar status: ${err.response?.data?.mensagem || err.message}`);
+          setEditedPedido(selectedPedidoDetalhes);
+      }
+  };
+
   const getPedidos = async (page = 1, search = submittedSearch, status = statusFilter) => {
       setLoading(true);
       setError(null);
@@ -449,7 +472,7 @@ export default function PedidosView() {
   const headerTotal = 'Total (R$)';
   const headerSituacao = 'Situação';
 
-  const isOrderEditable = selectedPedidoDetalhes?.situacao.id === 6;
+  const isOrderEditable = selectedPedidoDetalhes?.situacao.id === 6 || selectedPedidoDetalhes?.situacao.id === 47722;
 
   const totais = editedPedido ? {
     numeroDeItens: editedPedido.itens.length,
@@ -622,6 +645,26 @@ export default function PedidosView() {
                         })()}
                       />
                     </Form.Group>
+                  </Col>
+
+                  <Col md={4}>
+                      <Form.Group>
+                          <Form.Label style={{ fontSize: '0.8rem' }}>Status do pedido</Form.Label>
+                          <Form.Select
+                              value={editedPedido?.situacao.id || ''}
+                              disabled={!isOrderEditable}
+                              onChange={(e) => handleStatusChange(Number(e.target.value))}
+                          >
+                              <option value="6">Em aberto</option>
+                              <option value="47722">Orçamento</option>
+
+                              {![6, 47722].includes(selectedPedidoDetalhes?.situacao.id || 0) && (
+                                  <option value={selectedPedidoDetalhes?.situacao.id}>
+                                      {mapSituacaoPedido(selectedPedidoDetalhes?.situacao.id)}
+                                  </option>
+                              )}
+                          </Form.Select>
+                      </Form.Group>
                   </Col>
                 </Row>
                 
