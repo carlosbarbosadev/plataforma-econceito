@@ -95,6 +95,9 @@ router.post('/', autenticarToken, async (req, res) => {
             contato: {
                 id: Number(dadosDoFrontend.idClienteBling)
             },
+            situacao: {
+                id: 47722
+            },
             itens: itensPedido.map(item => ({
                 produto: { id: Number(item.idProdutoBling) },
                 quantidade: Number(item.quantidade),
@@ -225,5 +228,54 @@ router.put('/:id', autenticarToken, async (req, res) => {
         res.status(500).json({ mensagem: error.message });
     }
 });
+
+router.patch('/:id/status', autenticarToken, async (req, res) => {
+    const { id } = req.params;
+    const { statusId } = req.body;
+    const novoStatusId = Number(statusId);
+
+    console.log(`Atualizando status do pedido ${id} para ${statusId}`);
+
+    if (!statusId || ![6, 47722].includes(novoStatusId)) {
+        return res.status(400).json({ mensagem: 'Status inválido. Apenas "Em aberto" ou "Orçamento" são permitidos.' });
+    }
+
+    try {
+        const pedidoAtual = await blingService.fetchDetalhesPedidoVenda(id);
+
+        if (req.usuario.tipo === 'vendedor') {
+            if (!pedidoAtual.vendedor || Number(pedidoAtual.vendedor.id) != Number(req.usuario.id_vendedor_bling)) {
+                return res.status(403).json({ mensagem: "Você não tem permissão para alterar este pedido."  });
+            }
+        }
+
+        await blingService.alterarSituacaoPedidoBling(id, novoStatusId);
+
+        const statusNome = novoStatusId === 6 ? 'Em aberto' : 'Orçamento';
+        const dadosCompletosAtualizados = { ...pedidoAtual, situacao: { id: novoStatusId, valor: statusNome } };
+
+        const updateQuery = `
+            UPDATE cache_pedidos SET
+                status_id = $1,
+                status_nome = $2,
+                dados_completos_json = $3,
+                updated_at = NOW()
+            WHERE id = $4
+        `;
+        await db.query(updateQuery, [
+            novoStatusId,
+            statusNome,
+            dadosCompletosAtualizados,
+            id
+        ]);
+
+        res.status(200).json({ mensagem: 'Status do pedido atualizado com sucesso.' });
+
+    } catch (error) {
+        console.error(`Erro ao atualizar status do pedido ${id}:`, error.message);
+        res.status(500).json({ mensagem: error.message || 'Falha ao atualizar o status do pedido.' });
+    }
+});
+
 
 module.exports = router;

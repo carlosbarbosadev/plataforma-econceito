@@ -274,6 +274,24 @@ async function fetchFormasPagamento() {
     return response.data.data || [];
 }
 
+/**
+ * @params {string|number} pedidoId O ID do pedido a ser atualizado
+ * @params {number} statusId O novo ID da situação
+ */
+
+async function alterarSituacaoPedidoBling(pedidoId, statusId) {
+    console.log(`[blingService] Atualizando status do pedido ${pedidoId} para o ID ${statusId}`);
+    
+    const response = await blingApiCall({
+        method: 'patch',
+        url: `${BLING_API_V3_URL}/pedidos/vendas/${pedidoId}/situacoes/${statusId}`,
+        data: {}
+    });;
+
+    console.log(`[blingService] Status do pedido ${pedidoId} atualizado com sucesso no Bling.`);
+    return response.data;
+}
+
 module.exports = {
     refreshBlingAccessToken,
     fetchProdutos,
@@ -285,4 +303,5 @@ module.exports = {
     criarPedidoVenda,
     atualizarPedidoNoBling,
     fetchFormasPagamento,
+    alterarSituacaoPedidoBling
 };
