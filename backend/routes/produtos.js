@@ -10,7 +10,7 @@ router.get('/', autenticarToken, async (req, res) => {
     const limit = 100;
     const offset = (page - 1) * limit;
 
-    const codigosParaExcluir = ['AC01', 'BAN0501', 'CRTAB2', 'CRTAB3', 'CRTAB1', 'CRTAK2', 'CRTAK3', 'CRTAK1', '90121084', '3424', 'CXECOMK', 'CDB3', 'CDK3', 'CDG3', 'CD3P', '01062023', 'PCBW', 'PER', 'CBPDQC32', 'CBPRQ32', 'CAMP', 'CAGP', 'CAGGP', 'CMNPX', 'CIEC', '09911', 'FPG100', 'FPG12', 'FPG50', 'FPM100', 'FPM12', 'FPM50', 'FPP100', 'FPP12', 'FPP50', 'FPV12', 'Kit01', 'SCPZ', 'SCB1', 'TMF', '40002003', '400002015', '40002027'];
+    const codigosParaExcluir = ['AC01', 'BAN0501', 'CRTAB2', 'CRTAB3', 'CRTAB1', 'CRTAK2', 'CRTAK3', 'CRTAK1', '90121084', '3424', 'CXECOMK', 'CDB3', 'CDK3', 'CDG3', 'CD3P', '01062023', 'PCBW', 'PER', 'CBPDQC32', 'CBPRQ32', 'CAMP', 'CAGP', 'CAGGP', 'CMNPX', 'CIEC', '09911', 'FPG100', 'FPG12', 'FPG50', 'FPM100', 'FPM12', 'FPM50', 'FPP100', 'FPP12', 'FPP50', 'FPV12', 'Kit01', 'SCPZ', 'SCB1', 'TMF', '40002003', '400002015', '40002027', 'BLD1', 'BLD12', 'BLD2', 'BLD3', 'BLD5', 'BLD7', 'BLDR', 'BONI-FD02'];
 
     const queryParams = [];
     let paramIndex = 1;

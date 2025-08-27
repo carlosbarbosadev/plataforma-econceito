@@ -99,21 +99,35 @@ export const generateOrderPdf = (pedidoData) => {
 
         // -- TOTAIS --
         const finalY = doc.lastAutoTable.finalY;
+        const pageHeight = doc.internal.pageSize.getHeight();
         const rightAlignX = pageWidth - margin;
+
+        const spaceForTotal = 100;
+
+        let totalsY = finalY + 40;
+
+        if (pageHeight - finalY < spaceForTotal) {
+            doc.addPage();
+            totalsY = margin;
+        }
         
         const numeroDeItens = itens.length;
         const somaDasQuantidades = itens.reduce((total, item) => total + Number(item.quantidade), 0);
 
         doc.setFontSize(9).setFont('helvetica', 'bold');
 
-        doc.text('Nº de Itens:', rightAlignX - 80, finalY + 60, { align: 'right'});
-        doc.text(numeroDeItens.toString(), rightAlignX - 10, finalY + 60, {align: 'right' });
+        doc.text('Nº de Itens:', rightAlignX - 80, totalsY, { align: 'right' });
+        doc.text(numeroDeItens.toString(), rightAlignX - 10, totalsY, { align: 'right' });
 
-        doc.text('Soma das Quantidades:', rightAlignX - 80, finalY + 75, { align: 'right' });
-        doc.text(somaDasQuantidades.toFixed(2), rightAlignX - 10, finalY + 75, { align: 'right' });
+        totalsY += 15;
 
-        doc.text('Total do pedido:', rightAlignX - 80, finalY + 90, { align: 'right' });
-        doc.text(Number(pedidoData.total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), rightAlignX - 8, finalY + 90, { align: 'right' });
+        doc.text('Soma das Quantidades:', rightAlignX - 80, totalsY, { align: 'right' });
+        doc.text(somaDasQuantidades.toFixed(2), rightAlignX - 10, totalsY, { align: 'right' });
+
+        totalsY += 15;
+
+        doc.text('Total do pedido:', rightAlignX - 80, totalsY, { align: 'right' });
+        doc.text(Number(pedidoData.total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), rightAlignX - 8, totalsY, { align: 'right' });
 
         // -- Inicia o download --
         doc.save(`Pedido-${pedidoData.numero}.pdf`);

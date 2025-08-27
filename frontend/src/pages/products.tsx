@@ -151,12 +151,57 @@ export default function ProductsPage() {
     })), 
     [listaDeClientes]);
 
-  const optionsFormasPagamento = useMemo(() =>
-    listaFormasPagamento.map(forma => ({
-      value: forma.id.toString(),
-      label: forma.descricao
-    })),
-    [listaFormasPagamento])
+  const optionsFormasPagamento = useMemo(() => {
+    const formasDePagamentoExcluidas = [
+        'Fiado',
+        '1ª Compra - Pagamento Antecipado TED/DOC',
+        '4x - Boleto Bancário para 30, 60, 90,120 dias NÃO USAR',
+        'CONSIGNADO',
+        '4x - Boleto Bancário para 30, 60, 90,120 dias',
+        '5x - Boleto Bancário para 30, 45, 60, 75 e 90 Dias',
+        '7x - Boleto Bancário para 30, 45, 60, 75, 90, 105, 120 Dias',
+        '9x - Boleto Bancário para 28, 35, 42, 49, 56, 63, 70, 77 Dias',
+        'Á Vista - Boleto para 10 Dias',
+        'Aporte financeiro - Cartão de Crédito Santander PF ',
+        'Boleto - Bling Conta',
+        'Boleto BOLETO SICREDI - CONCEITO FESTAS',
+        'Boleto Boletos Sicoob',
+        'Cartão de Crédito - Bling Conta',
+        'Conta a receber/pagar',
+        'Crédito',
+        'Crédito - Inter Embalagens Conceito',
+        'Débito - Banco Inter ',
+        'Depósito BOLETO SICREDI - CONCEITO FESTAS',
+        'Depósito Boletos Sicoob',
+        'Devolução de mercadorias',
+        'Dinheiro',
+        'Link de Pagamento - Múltiplas Formas',
+        'Outros',
+        'Pix',
+        'Pix - Banco Inter ',
+        'Pix - Bling Conta',
+        'PIX - Mercado Pago',
+        'SHOPEE',
+        'Taxa Amazon',
+        'Taxa Magalu',
+        'Taxa Mercado Livre',
+        'Taxa Shopee',
+        'Vendas Amazon',
+        'Vendas Magalu',
+        'Vendas NuvemShop - Site ArtFestas',
+        'Vendas Shopee',
+        'Débito',
+        'Crédito - Inter Embalagens Conceito ',
+        '1ª Compra - Pagamento Antecipado PIX',
+    ];
+
+    return listaFormasPagamento
+          .filter(forma => !formasDePagamentoExcluidas.includes(forma.descricao))
+          .map(forma => ({
+              value: forma.id.toString(),
+              label: forma.descricao
+          }));
+  }, [listaFormasPagamento]);
 
   const handleClienteSelectChange = (selectedOptions: any) => {
     setSelectedClientId(selectedOptions ? selectedOptions.value : '');
