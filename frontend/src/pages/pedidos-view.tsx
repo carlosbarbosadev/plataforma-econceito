@@ -611,9 +611,9 @@ export default function PedidosView() {
             )}
             {!loadingDetalhes && !errorDetalhes && selectedPedidoDetalhes && (
               <div className="form-pequeno">
-                <h5 style={{ fontWeight: 'bold'}}>
+                <h6 style={{ fontWeight: 'bold'}}>
                   Dados do cliente
-                </h5>
+                </h6>
 
                 <Row className="mb-3">
                   <Col md={5}>
@@ -910,8 +910,8 @@ export default function PedidosView() {
             </div>
           )}
 
-          <div className="mt-4">
-            <h5 style={{ fontWeight: "bold" }}>Totais</h5>
+          <div className="mt-5">
+            <h6 style={{ fontWeight: "bold" }}>Totais</h6>
             {totais && (
               <Row>
                 <Col md={3}>
@@ -988,7 +988,7 @@ export default function PedidosView() {
 
                 <Col md={3}>
                   <Form.Group>
-                    <Form.Label className="small text-muted">Total da Venda</Form.Label>
+                    <Form.Label className="small text-muted">Total do pedido</Form.Label>
                     <Form.Control
                       type="text"
                       readOnly
@@ -1002,7 +1002,19 @@ export default function PedidosView() {
             )}
           </div>
 
-            </div>
+              <>
+                  <h6 style={{ fontWeight: 'bold'}} className="mt-4">Observações</h6>
+                  <Form.Group>
+                      <Form.Control
+                          as="textarea"
+                          rows={3}
+                          value={editedPedido?.observacoes || ''}
+                          onChange={(e) => setEditedPedido(prev => prev ? { ...prev, observacoes: e.target.value } : null)}
+                      />
+                  </Form.Group>
+              </>
+
+          </div>
           )}
         </Modal.Body>
         <Modal.Footer>

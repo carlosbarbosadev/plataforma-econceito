@@ -57,6 +57,7 @@ export default function ProductsPage() {
   const [selectedFormaPagamentoId, setSelectedFormaPagamentoId] = useState<string>('');
   
   const [submittingOrder, setSubmittingOrder] = useState(false);
+  const [observacoes, setObservacoes] = useState('')
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -325,7 +326,7 @@ export default function ProductsPage() {
       }),
       idFormaPagamentoBling: Number(selectedFormaPagamentoId),
       valorTotalPedido: valorTotalDoPedido,
-      observacoes: "Pedido gerado pela plataforma de vendas."
+      observacoes: observacoes,
     };
 
     try {
@@ -339,6 +340,7 @@ export default function ProductsPage() {
       setSelectedClientId('');
       setSelectedFormaPagamentoId('');
       setSearchTerm('');
+      setObservacoes('');
 
     } catch (apiError: any) {
       console.error('Erro ao finalizar o pedido:', apiError);
@@ -362,6 +364,7 @@ export default function ProductsPage() {
     setSelectedClientId('');
     setSelectedFormaPagamentoId('');
     setSearchTerm('');
+    setObservacoes('');
   };
 
   const handleRemoverItemDoPedido = (idProdutoParaRemover: number) => {
@@ -428,7 +431,7 @@ export default function ProductsPage() {
       <Form.Group className="mb-3" controlId="selecionarCliente">
         <Select
           options={optionsClientes}
-          value={optionsClientes.find(option => option.value === selectedClientId)}
+          value={optionsClientes.find(option => option.value === selectedClientId) || null}
           onChange={handleClienteSelectChange}
           placeholder="Selecione ou digite para buscar um cliente"
           isLoading={loadingClientes}
@@ -448,7 +451,7 @@ export default function ProductsPage() {
       <Form.Group controlId="selecionarFormaPagamento">
         <Select
           options={optionsFormasPagamento}
-          value={optionsFormasPagamento.find(option => option.value === selectedFormaPagamentoId)}
+          value={optionsFormasPagamento.find(option => option.value === selectedFormaPagamentoId) || null}
           onChange={handleFormaPagamentoSelectChange}
           placeholder="Selecione uma forma de pagamento"
           isLoading={loadingFormasPagamento}
@@ -516,6 +519,17 @@ export default function ProductsPage() {
             ))}
           </ul>
           <p><strong>Total: R$ {itensDoPedidoAtual.reduce((acc, item) => acc + (Number(item.quantidade) * item.valorUnitario), 0).toFixed(2)}</strong></p>
+
+          <Form.Group className="mt-4" controlId="observacoes">
+              <Form.Control
+                  as="textarea"
+                  rows={3}
+                  placeholder="Observações"
+                  value={observacoes}
+                  onChange={(e) => setObservacoes(e.target.value)}
+                  className="input-foco-verde"
+              />
+          </Form.Group>
           <div className="d-flex justify-content-end gap-2 mt-3">
             <Button
               variant="secondary"
