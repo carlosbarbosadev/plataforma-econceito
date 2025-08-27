@@ -223,6 +223,15 @@ async function criarPedidoVenda(dadosDoPedido) {
 
 async function atualizarPedidoNoBling(pedidoId, pedidoEditadoDoFrontend) {
     const pedidoOriginalDoBling = await fetchDetalhesPedidoVenda(pedidoId);
+
+    const statusOriginal = pedidoOriginalDoBling.situacao.id;
+    const statusNovo = pedidoEditadoDoFrontend.situacao.id;
+
+    if (statusNovo !== statusOriginal) {
+        console.log(`[blingService] Detectada mudança de status de ${statusOriginal} para ${statusNovo}.`);
+        await alterarSituacaoPedidoBling(pedidoId, statusNovo);
+    }
+
     if (pedidoOriginalDoBling.contato.id === pedidoEditadoDoFrontend.contato.id && 
         pedidoOriginalDoBling.contato.nome !== pedidoEditadoDoFrontend.contato.nome) {
         
@@ -256,6 +265,8 @@ async function atualizarPedidoNoBling(pedidoId, pedidoEditadoDoFrontend) {
         desconto: { valor: valorDoDesconto, unidade: "REAL" },
         parcelas: (pedidoEditadoDoFrontend.parcelas?.length > 0) ? [{ ...pedidoEditadoDoFrontend.parcelas[0], valor: totalFinal }] : []
     };
+
+    delete payloadFinal.situacao;
     
     const response = await blingApiCall({
         method: 'put',

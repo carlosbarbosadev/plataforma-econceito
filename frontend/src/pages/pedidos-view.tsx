@@ -405,27 +405,16 @@ export default function PedidosView() {
     }
   };
 
-  const handleStatusChange = async (novoStatusId: number) => {
-      if (!selectedPedidoDetalhes || !editedPedido) return;
+  const handleStatusSelectChange = (novoStatusId: number) => {
+      if (!editedPedido) return;
 
-      const pedidoId = selectedPedidoDetalhes.id;
-      const pedidoAtualizado = {
-          ...editedPedido,
+      setEditedPedido(prev => ({
+          ...prev!,
           situacao: {
-              ...(editedPedido!.situacao || {}),
+              ...(prev!.situacao || {}),
               id: novoStatusId
           }
-      };
-      setEditedPedido(pedidoAtualizado);
-
-      try {
-          await api.patch(`/api/pedidos/${pedidoId}/status`, {statusId: novoStatusId});
-          alert('Status atualizdo com sucesso!');
-          getPedidos(currentPage, submittedSearch, statusFilter);
-      } catch (err: any) {
-          alert(`Erro ao atualizar status: ${err.response?.data?.mensagem || err.message}`);
-          setEditedPedido(selectedPedidoDetalhes);
-      }
+      }));
   };
 
   const getPedidos = async (page = 1, search = submittedSearch, status = statusFilter) => {
@@ -653,7 +642,7 @@ export default function PedidosView() {
                           <Form.Select
                               value={editedPedido?.situacao.id || ''}
                               disabled={!isOrderEditable}
-                              onChange={(e) => handleStatusChange(Number(e.target.value))}
+                              onChange={(e) => handleStatusSelectChange(Number(e.target.value))}
                           >
                               <option value="6">Em aberto</option>
                               <option value="47722">Orçamento</option>
