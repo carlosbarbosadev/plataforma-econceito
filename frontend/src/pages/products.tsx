@@ -58,6 +58,7 @@ export default function ProductsPage() {
   
   const [submittingOrder, setSubmittingOrder] = useState(false);
   const [observacoes, setObservacoes] = useState('')
+  const [observacoesInternas, setObservacoesInternas] = useState('')
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -327,6 +328,7 @@ export default function ProductsPage() {
       idFormaPagamentoBling: Number(selectedFormaPagamentoId),
       valorTotalPedido: valorTotalDoPedido,
       observacoes: observacoes,
+      observacoesInternas: observacoesInternas,
     };
 
     try {
@@ -341,6 +343,7 @@ export default function ProductsPage() {
       setSelectedFormaPagamentoId('');
       setSearchTerm('');
       setObservacoes('');
+      setObservacoesInternas('');
 
     } catch (apiError: any) {
       console.error('Erro ao finalizar o pedido:', apiError);
@@ -365,6 +368,7 @@ export default function ProductsPage() {
     setSelectedFormaPagamentoId('');
     setSearchTerm('');
     setObservacoes('');
+    setObservacoesInternas('');
   };
 
   const handleRemoverItemDoPedido = (idProdutoParaRemover: number) => {
@@ -527,6 +531,16 @@ export default function ProductsPage() {
                   placeholder="Observações"
                   value={observacoes}
                   onChange={(e) => setObservacoes(e.target.value)}
+                  className="input-foco-verde"
+              />
+          </Form.Group>
+          <Form.Group className="mt-4" controlId="observacoesInternas">
+              <Form.Control
+                  as="textarea"
+                  rows={3}
+                  placeholder="Observações Internas"
+                  value={observacoesInternas}
+                  onChange={(e) => setObservacoesInternas(e.target.value)}
                   className="input-foco-verde"
               />
           </Form.Group>

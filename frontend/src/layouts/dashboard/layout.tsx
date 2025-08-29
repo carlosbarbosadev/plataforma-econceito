@@ -58,7 +58,7 @@ export function DashboardLayout({
 }: DashboardLayoutProps) {
   const theme = useTheme();
   const navigate = useNavigate();
-  const { value: open, onFalse: onClose, onTrue: onOpen } = useBoolean();
+  const { value: navOpen, onFalse: onNavClose, onTrue: onNavOpen } = useBoolean();
 
   const handleLogout = () => {
     console.log('Executando logout');
@@ -70,6 +70,7 @@ export function DashboardLayout({
   // Nova barra de pesquisa fixa no topo
   const renderFixedSearchAppBar = () => (
     <AppBar
+    className='rounded-3'
       position="fixed"
       elevation={1}
       sx={{
@@ -79,11 +80,16 @@ export function DashboardLayout({
       }}
     >
       <Toolbar>
-        <Box sx={{ width: 88 }} />
+
+        <MenuButton
+          onClick={onNavOpen}
+          sx={{ mr: 1, display: { [layoutQuery]: 'none' } }}
+        />
         <Box sx={{
           flexGrow: 1,
           display: 'flex',
           justifyContent: 'center',
+          pl: { xs: 1, [layoutQuery]: 11 }
         }}>
           <TextField
             variant="outlined"
@@ -142,6 +148,13 @@ export function DashboardLayout({
           minHeight: `calc(100vh - ${theme.mixins.toolbar.minHeight || 64}px)` 
         }}
       >
+        <NavMobile
+          open={navOpen}
+          onClose={onNavClose}
+          data={navData}
+          slots={{ bottomArea: <NavLogout onLogout={handleLogout} /> }}
+          workspaces={_workspaces}
+        />
         <LayoutSection
           headerSection={null}
           sidebarSection={
