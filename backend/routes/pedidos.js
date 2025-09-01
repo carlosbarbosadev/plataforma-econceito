@@ -4,6 +4,56 @@ const { autenticarToken } = require('../middlewares/authMiddleware');
 const blingService = require('../services/bling')
 const db = require('../db');
 
+const calcularParcelas = (formaPagamentoId, valorTotal) => {
+    const regrasDeParcelamento = {
+        3359853: [7],
+        2076718: [30],
+        2076727: [60],
+        2076783: [30],
+        7758544: [1],
+        4421026: [7, 14],
+        2076737: [28, 35],
+        2091116: [30, 45],
+        3514108: [30, 45, 60],
+        2076738: [28, 35, 42],
+        2076750: [30, 45, 60],
+        2306222: [28, 35, 42, 49],
+        2076765: [28, 35, 42, 49, 56],
+        2127537: [1],
+    };
+
+    const diasParaVencimentos = regrasDeParcelamento[formaPagamentoId];
+
+    if (!diasParaVencimentos) {
+        const hoje = new Date().toISOString().split('T')[0];
+        return [{
+            dataVencimento: hoje,
+            valor: Number(valorTotal),
+            formaPagamento: { id: Number(formaPagamentoId) }
+        }];
+    }
+
+    const numeroDeParcelas = diasParaVencimentos.length;
+    const valorPorParcela = numeroDeParcelas > 0 ? (valorTotal / numeroDeParcelas) : valorTotal;
+    
+    const parcelasCalculadas = diasParaVencimentos.map(dias => {
+        const dataVencimento = new Date();
+        dataVencimento.setDate(dataVencimento.getDate() + dias);
+
+        const ano = dataVencimento.getFullYear();
+        const mes = String(dataVencimento.getMonth() + 1).padStart(2, '0');
+        const dia = String(dataVencimento.getDate()).padStart(2, '0');
+
+        return {
+            dataVencimento: `${ano}-${mes}-${dia}`,
+            valor: parseFloat(valorPorParcela.toFixed(2)),
+            formaPagamento: { id: Number(formaPagamentoId) }
+        };
+    });
+
+    return parcelasCalculadas;
+};
+
 router.get('/', autenticarToken, async (req, res) => {
     console.log(`(OTIMIZADO) Rota GET /api/pedidos acessada por: ${req.usuario.email}`);
     try {
@@ -72,7 +122,6 @@ router.post('/', autenticarToken, async (req, res) => {
             itensPedido,
             idFormaPagamentoBling,
             valorTotalPedido,
-            dataVencimentoParcela,
             observacoes,
             observacoesInternas,
             dataPedido
@@ -88,13 +137,14 @@ router.post('/', autenticarToken, async (req, res) => {
         return res.status(403).json({ mensagem: 'ID de vendedor do Bling não configurado para este usuário. Não é possível criar o pedido.' });
         }
 
-        const dadosDoFrontend = req.body;
+        const parcelasParaBling = calcularParcelas(idFormaPagamentoBling, valorTotalPedido);
+
         const hoje = new Date().toISOString().split('T')[0];
         const pedidoParaBling = {
             data: dataPedido || hoje,
             dataSaida: dataPedido || hoje,
             contato: {
-                id: Number(dadosDoFrontend.idClienteBling)
+                id: Number(idClienteBling)
             },
             situacao: {
                 id: 47722
@@ -106,16 +156,11 @@ router.post('/', autenticarToken, async (req, res) => {
                 codigo: item.codigo || undefined,
                 descricao: item.descricao || undefined
             })),
-            parcelas: [{
-                dataVencimento: dataVencimentoParcela || hoje,
-                valor: Number(valorTotalPedido),
-                formaPagamento: { id: Number(dadosDoFrontend.idFormaPagamentoBling) }
-                // observacoes: "Parcela única"
-            }],
+            parcelas: parcelasParaBling,
             ...(req.usuario.id_vendedor_bling && {
                 vendedor: {
                     id: Number(req.usuario.id_vendedor_bling)
-            }
+                }
             }),
             ...(observacoes && { observacoes: observacoes }),
             ...(observacoesInternas && { observacoesInternas: observacoesInternas }),
@@ -222,8 +267,21 @@ router.put('/:id', autenticarToken, async (req, res) => {
 
     console.log(`Backend: Recebida requisição para ATUALIZAR o pedido ID: ${pedidoId}`);
 
+    const payloadParaBling = {
+        ...pedidoEditadoDoFrontend,
+    };
+
+    if (payloadParaBling.desconto && typeof payloadParaBling.desconto.valor !== 'undefined') {
+        payloadParaBling.desconto = {
+            valor: payloadParaBling.desconto.valor,
+            unidade: 'PERCENTUAL'
+        };
+    } else {
+        delete payloadParaBling.desconto;
+    }
+
     try {
-        const resultado = await blingService.atualizarPedidoNoBling(pedidoId, pedidoEditadoDoFrontend);
+        const resultado = await blingService.atualizarPedidoNoBling(pedidoId, payloadParaBling);
         res.json(resultado);
     } catch (error) {
         console.error(`Erro na rota de atualização do pedido ${pedidoId}:`, error.message);

@@ -246,10 +246,13 @@ async function atualizarPedidoNoBling(pedidoId, pedidoEditadoDoFrontend) {
         });
         console.log(`Contato ID ${pedidoEditadoDoFrontend.contato.id} atualizado com sucesso.`);
     }
-    
+
     const subtotal = pedidoEditadoDoFrontend.itens.reduce((acc, item) => acc + (item.valor * item.quantidade), 0);
-    const valorDoDesconto = pedidoEditadoDoFrontend.desconto?.valor || 0;
-    const totalFinal = subtotal - valorDoDesconto;
+    
+    const percentualDesconto = pedidoEditadoDoFrontend.desconto?.valor || 0;
+    const valorDoDescontoEmReais = (subtotal * percentualDesconto) / 100;
+    const totalFinal = subtotal - valorDoDescontoEmReais;
+
     const itensFormatados = pedidoEditadoDoFrontend.itens.map(item => ({
         produto: { id: item.produto.id },
         quantidade: item.quantidade,
@@ -262,7 +265,7 @@ async function atualizarPedidoNoBling(pedidoId, pedidoEditadoDoFrontend) {
         ...pedidoEditadoDoFrontend,
         itens: itensFormatados,
         total: totalFinal,
-        desconto: { valor: valorDoDesconto, unidade: "REAL" },
+        desconto: pedidoEditadoDoFrontend.desconto,
         parcelas: (pedidoEditadoDoFrontend.parcelas?.length > 0) ? [{ ...pedidoEditadoDoFrontend.parcelas[0], valor: totalFinal }] : []
     };
 
