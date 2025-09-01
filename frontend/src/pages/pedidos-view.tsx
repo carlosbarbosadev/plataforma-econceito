@@ -996,9 +996,24 @@ export default function PedidosView() {
                   <Form.Group>
                       <Form.Control
                           as="textarea"
+                          readOnly={!isOrderEditable}
+                          disabled={!isOrderEditable}
                           rows={3}
                           value={editedPedido?.observacoes || ''}
                           onChange={(e) => setEditedPedido(prev => prev ? { ...prev, observacoes: e.target.value } : null)}
+                      />
+                  </Form.Group>
+              </>
+              <>
+                  <h6 style={{ fontWeight: 'bold' }} className="mt-4">Observações Internas</h6>
+                  <Form.Group>
+                      <Form.Control
+                          as="textarea"
+                          rows={3}
+                          readOnly={!isOrderEditable}
+                          disabled={!isOrderEditable}
+                          value={editedPedido?.observacoesInternas || ''}
+                          onChange={(e) => setEditedPedido(prev => prev ? { ...prev, observacoesInternas: e.target.value } : null)}
                       />
                   </Form.Group>
               </>
