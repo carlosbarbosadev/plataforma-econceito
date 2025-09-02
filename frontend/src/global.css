@@ -105,7 +105,6 @@ body.modal-open .desktop-sidebar {
   box-shadow: 0 0 0.2rem rgba(36, 83, 220, 0.25) !important;
   outline: 0 !important;
 }
-
 .pedido-atual-painel {
   background-color: #ffffff;
   color: #474644;
@@ -137,28 +136,40 @@ body.modal-open .desktop-sidebar {
   box-shadow: 0 0 0.2rem rgba(36, 83, 220, 0.25) !important;
 }
 .select-padrao__control {
-  /* A classe .rounded-3 do Bootstrap corresponde a um border-radius de 0.5rem */
   border-radius: 0.5rem !important;
 
-  /* Opcional: ajusta a altura para ficar mais alinhado com outros inputs do Bootstrap */
   min-height: 38px;
 }
 .rodape-busca-fixo {
   position: fixed;
-  bottom: 20px; /* Damos um espaço da parte de baixo da tela */
-  left: 50%;    /* Posiciona o início do elemento no meio da tela */
-  transform: translateX(-50%); /* Move o elemento de volta 50% da sua PRÓPRIA largura, centralizando-o perfeitamente */
-  width: 80%; /* Define que a largura do rodapé será 80% da tela */
-  max-width: 900px; /* Define uma largura máxima para telas muito grandes */
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  max-width: 900px;
   
   z-index: 1020;
   background-color: #c1c5c7;
   padding: 1rem;
   border: 1px solid #c1c5c7;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1); /* Sombra mais destacada para o efeito flutuante */
-  border-radius: 16px; /* Bordas arredondadas em todos os cantos */
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  border-radius: 16px;
 }
 .form-control::placeholder {
-  color: #adb5bd !important; /* Um tom de cinza claro */
-  opacity: 1; /* Garante que a cor seja aplicada */
+  color: #adb5bd !important;
+  opacity: 1;
+}
+.campo-bloqueado:disabled,
+.campo-bloqueado[readonly] {
+    background-color: #fff !important;
+    color: #212529 !important;
+    opacity: 1 !important;
+    cursor: default;
+}
+.form-select.campo-bloqueado:disabled {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: none !important;
+    padding-right: 0.75rem;
 }

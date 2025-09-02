@@ -12,6 +12,9 @@ const pedidosRoutes = require('./routes/pedidos');
 const utilRoutes = require('./routes/utils');
 const dashboardRoutes = require("./routes/dashboard");
 const webhooksRoutes = require('./routes/webhooks');
+const campanhasRoutes = require('./routes/campanhas');
+const apicache = require('apicache');
+const cache = apicache.middleware;
 
 app.use(cors());
 app.use(express.json());
@@ -20,9 +23,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/clientes', clientesRoutes);
 app.use('/api/produtos', produtosRoutes);
 app.use('/api/pedidos', pedidosRoutes);
-app.use('/api/utils', utilRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/webhooks', webhooksRoutes);
+app.use('/api/campanhas', campanhasRoutes);
+app.use('/api/utils', cache('1 hour'), utilRoutes);
 
 const cron = require('node-cron');
 const { iniciarSincronizacaoGeral, iniciarSincronizacaoAgendada } = require('./services/blingSyncService');

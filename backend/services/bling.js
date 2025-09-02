@@ -248,7 +248,6 @@ async function atualizarPedidoNoBling(pedidoId, pedidoEditadoDoFrontend) {
     }
 
     const subtotal = pedidoEditadoDoFrontend.itens.reduce((acc, item) => acc + (item.valor * item.quantidade), 0);
-    
     const percentualDesconto = pedidoEditadoDoFrontend.desconto?.valor || 0;
     const valorDoDescontoEmReais = (subtotal * percentualDesconto) / 100;
     const totalFinal = subtotal - valorDoDescontoEmReais;
@@ -261,12 +260,18 @@ async function atualizarPedidoNoBling(pedidoId, pedidoEditadoDoFrontend) {
         descricao: item.descricao,
         ...(item.id > 0 && { id: item.id })
     }));
+    const parcelasFormatadas = pedidoEditadoDoFrontend.parcelas.map(p => ({
+        dataVencimento: p.dataVencimento,
+        valor: p.valor,
+        formaPagamento: { id: p.formaPagamento.id },
+        observacoes: p.observacoes
+    }));
     const payloadFinal = {
         ...pedidoEditadoDoFrontend,
         itens: itensFormatados,
         total: totalFinal,
         desconto: pedidoEditadoDoFrontend.desconto,
-        parcelas: (pedidoEditadoDoFrontend.parcelas?.length > 0) ? [{ ...pedidoEditadoDoFrontend.parcelas[0], valor: totalFinal }] : []
+        parcelas: parcelasFormatadas
     };
 
     delete payloadFinal.situacao;

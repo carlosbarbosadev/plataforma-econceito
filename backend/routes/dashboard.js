@@ -65,7 +65,7 @@ router.get('/all', async (req, res) => {
                 vendasMes: Math.round(metricas.vendas_mes * 100) / 100,
                 vendasAno: Math.round(metricas.vendas_ano * 100) / 100,
                 pedidosAbertos: parseInt(metricas.pedidos_abertos, 10),
-                metaMes: 30000,
+                metaMes: 35000,
             },
             comparativoAnual: {
                 chart: {

@@ -105,6 +105,11 @@ type PedidoResumido = {
   status_id: number;
 };
 
+type CondicaoPagamento = {
+  id: number;
+  descricao: string;
+};
+
 const mapSituacaoPedido = (idSituacao?: number): string => {
   if (idSituacao === undefined || idSituacao === null) return 'N/A';
   switch (idSituacao) {
@@ -176,6 +181,10 @@ export default function PedidosView() {
   const [statusFilter, setStatusFilter] = useState('');
   const [modalSearchResults, setModalSearchResults] = useState<ProdutoEncontrado[]>([]);
   const [downloadingPdfId, setDownloadingPdfId] = useState<number | null>(null);
+  const [listaFormasPagamento, setListaFormasPagamento] = useState<{ id: number, descricao: string }[]>([]);
+  const [listaCondicoesPagamento, setListaCondicoesPagamento] = useState<CondicaoPagamento[]>([]);
+  const [selectedCondicaoId, setSelectedCondicaoId] = useState<string>('');
+
 
   useEffect(() => {
       getPedidos(currentPage, submittedSearch, statusFilter);
@@ -213,6 +222,36 @@ export default function PedidosView() {
       
   }, [newItemSearchTerm]);
 
+  useEffect(() => {
+      const fetchFormasPagamento = async () => {
+          try {
+              const response = await api.get('/api/utils/formas-pagamento');
+              if (Array.isArray(response.data)) {
+                  setListaFormasPagamento(response.data);
+              }
+          } catch (err) {
+              console.error("Erro ao buscar formas de pagamento para o modal:", err);
+          }
+      };
+
+      fetchFormasPagamento();
+  }, []);
+
+  useEffect(() => {
+      const fetchCondicoesPagamento = async () => {
+          try {
+              const response = await api.get('/api/utils/condicoes-pagamento');
+              if (Array.isArray(response.data)) {
+                  setListaCondicoesPagamento(response.data);
+              }
+          } catch (err) {
+              console.error("Erro ao buscar condições de pagamento", err);
+          }
+      };
+
+      fetchCondicoesPagamento();
+  }, []);
+
   const handleVerDetalhesPedido = async (pedidoId: number) => {
     console.log(`Buscando detalhes para o pedido ID: ${pedidoId}`);
     setLoadingDetalhes(true);
@@ -244,6 +283,7 @@ export default function PedidosView() {
     setEditingQuantities({});
     setIsAddingItem(false);
     setNewItemSearchTerm('');
+    setSelectedCondicaoId('');
   };
 
   const handleAttemptClose = () => {
@@ -416,6 +456,63 @@ export default function PedidosView() {
           }
       }));
   };
+
+  const handleGerarParcelas = () => {
+      if (!editedPedido || !selectedCondicaoId) return;
+
+      const regrasDeParcelamento: Record<string, number[]> = {
+          '3359853': [7],
+          '2076718': [30],
+          '2076727': [60],
+          '2076783': [30],
+          '7758544': [1],
+          '4421026': [7, 14],
+          '2076737': [28, 35],
+          '2091116': [30, 45],
+          '3514108': [30, 45, 60],
+          '2076738': [28, 35, 42],
+          '2076750': [30, 45, 60],
+          '2306222': [28, 35, 42, 49],
+          '2076765': [28, 35, 42, 49, 56],
+          '2127537': [1],
+      };
+
+      const diasParaVencimento = regrasDeParcelamento[selectedCondicaoId];
+      if (!diasParaVencimento) {
+          alert("Esta condição de pagamento não possui uma regra de geração automática.");
+          return;
+      }
+
+      const valorTotalDoPedido = totais ? totais.totalDaVenda() : 0;
+      const numeroDeParcelas = diasParaVencimento.length;
+      const valorPorParcela = numeroDeParcelas > 0 ? (valorTotalDoPedido / numeroDeParcelas) : valorTotalDoPedido;
+
+      const novasParcelas = diasParaVencimento.map(dias => {
+          const dataVencimento = new Date(`${editedPedido.data}T00:00:00`);
+          dataVencimento.setDate(dataVencimento.getDate() + dias);
+
+          const ano = dataVencimento.getFullYear();
+          const mes = String(dataVencimento.getMonth() + 1).padStart(2, '0');
+          const dia = String(dataVencimento.getDate()).padStart(2, '0');
+
+          return {
+              id: -Date.now() * Math.random(),
+              dataVencimento: `${ano}-${mes}-${dia}`,
+              valor: parseFloat(valorPorParcela.toFixed(2)),
+              formaPagamento: { id: parseInt(selectedCondicaoId, 10) }
+          };
+      });
+
+      setEditedPedido(prev => prev ? { ...prev, parcelas: novasParcelas } : null);
+  };
+
+  const calcularDiferencaDias = (dataPedidoStr: string, dataVencimentoStr: string) : number => {
+      const dataPedido = new Date(`${dataPedidoStr}T00:00:00`);
+      const dataVencimento = new Date(`${dataVencimentoStr}T00:00:00`);
+      const diferencaEmMs = dataVencimento.getTime() - dataPedido.getTime();
+      const diferencaEmDias = Math.round(diferencaEmMs / (1000 * 60 * 60 * 24));
+      return diferencaEmDias;
+  }
 
   const getPedidos = async (page = 1, search = submittedSearch, status = statusFilter) => {
       setLoading(true);
@@ -657,7 +754,7 @@ export default function PedidosView() {
                   </Col>
                 </Row>
                 
-                <h6 style={{ fontWeight: 'bold' }} className="mt-5">Itens do Pedido</h6>
+                <h6 style={{ fontWeight: 'bold' }} className="mt-5">Itens do pedido</h6>
                 {editedPedido?.itens && editedPedido.itens.length > 0 ? (
                   <ListGroup variant="flush" className="mt-2" style={{ gap: '0rem' }}>
 
@@ -899,7 +996,7 @@ export default function PedidosView() {
             </div>
           )}
 
-          <div className="mt-5">
+          <div className="mt-3">
             <h6 style={{ fontWeight: "bold" }}>Totais</h6>
             {totais && (
               <Row>
@@ -991,8 +1088,97 @@ export default function PedidosView() {
             )}
           </div>
 
+          {editedPedido && (
+              <div className="mt-5">
+                  <h6 style={{ fontWeight: 'bold' }}>Pagamento</h6>
+
+                  {isOrderEditable && (
+                      <Row className="align-items-end mb-3">
+                          <Col md={7}>
+                            <Form.Label className="small text-muted">Condições de pagamento</Form.Label>
+                            <Form.Select
+                                value={selectedCondicaoId}
+                                onChange={(e) => setSelectedCondicaoId(e.target.value)}
+                            >
+                                <option value="">Selecione para gerar parcelas...</option>
+                                {listaCondicoesPagamento.map(condicao => (
+                                    <option key={condicao.id} value={condicao.id}>
+                                        {condicao.descricao}
+                                    </option>
+                                ))}
+                            </Form.Select>
+                          </Col>
+                          <Col md={2}>
+                              <Button
+                                  variant="outline-primary"
+                                  className="w-100 rounded-3"
+                                  onClick={handleGerarParcelas}
+                                  disabled={!selectedCondicaoId}
+                              >
+                                  Gerar parcelas
+                              </Button>
+                          </Col>
+                      </Row>
+                  )}
+
+                  <Row className="small text-muted">
+                      <Col md={2}>Dias</Col>
+                      <Col md={3}>Data</Col>
+                      <Col md={2}>Valor</Col>
+                      <Col md={5}>Forma</Col>
+                      <Col md={1} />
+                  </Row>
+
+                  {editedPedido.parcelas.map((parcela, index) => (
+                      <Row key={parcela.id} className="mt-2 mb-2 align-items-center">
+                          <Col md={2}>
+                              <Form.Control
+                                  type="number"
+                                  value={calcularDiferencaDias(editedPedido.data, parcela.dataVencimento)}
+                                  disabled
+                                  className="campo-bloqueado"
+                              />
+                          </Col>
+                          <Col md={3}>
+                              <Form.Control
+                                  type="date"
+                                  value={parcela.dataVencimento.split('T')[0]}
+                                  disabled
+                                  className="campo-bloqueado"
+                              />
+                          </Col>
+                          <Col md={2}>
+                              <Form.Control
+                                  type="text"
+                                  value={
+                                      typeof parcela.valor === 'number'
+                                      ? parcela.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+                                      : '0,00'
+                                  }
+                                  disabled
+                                  className="campo-bloqueado"
+                              />
+                          </Col>
+                          <Col md={4}>
+                              <Form.Select
+                                  value={parcela.formaPagamento.id}
+                                  disabled
+                                  className="campo-bloqueado"
+                              >
+                                  {listaFormasPagamento.map(forma => (
+                                      <option key={forma.id} value={forma.id}>
+                                          {forma.descricao}
+                                      </option>
+                                  ))}
+                              </Form.Select>
+                          </Col>
+                      </Row>
+                  ))}
+              </div>
+          )}
+
               <>
-                  <h6 style={{ fontWeight: 'bold'}} className="mt-4">Observações</h6>
+                  <h6 style={{ fontWeight: 'bold'}} className="mt-5">Observações</h6>
                   <Form.Group>
                       <Form.Control
                           as="textarea"
@@ -1005,7 +1191,7 @@ export default function PedidosView() {
                   </Form.Group>
               </>
               <>
-                  <h6 style={{ fontWeight: 'bold' }} className="mt-4">Observações Internas</h6>
+                  <h6 style={{ fontWeight: 'bold' }} className="mt-3">Observações internas</h6>
                   <Form.Group>
                       <Form.Control
                           as="textarea"
