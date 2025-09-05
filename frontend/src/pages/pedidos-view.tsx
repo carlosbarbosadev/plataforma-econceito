@@ -117,29 +117,35 @@ const mapSituacaoPedido = (idSituacao?: number): string => {
     case 9: return 'Atendido';
     case 12: return 'Cancelado';
     case 47722: return 'Orçamento';
-    case 49956: return 'Venda consignada'
+    case 49956: return 'Venda consignada';
+    case 24: return 'Verificado'
+    case 464197: return 'Natal 2025';
     default: return `ID ${idSituacao}`;
   }
 };
 
 const getSituacaoBadgeStyle = (idSituacao?: number): React.CSSProperties => {
   const baseStyle: React.CSSProperties = {
-    fontSize: '0.80em',
+    fontSize: '0.78em',
     padding: '0.5em 0.75em',
-    color: '#fff' // Cor do texto
+    color: '#fff',
   };
   
   switch (idSituacao) {
     case 6:
-      return { ...baseStyle, backgroundColor: '#ff9800' };
+      return { ...baseStyle, backgroundColor: '#fff1c7', color: '#833f12' };
     case 9:
-      return { ...baseStyle, backgroundColor: '#4CAF50' };
+      return { ...baseStyle, backgroundColor: '#b5e667', color: '#355313' };
     case 12:
-      return { ...baseStyle, backgroundColor: '#f44336' };
+      return { ...baseStyle, backgroundColor: '#ffe5e3', color: '#cc291c' };
     case 47722:
-      return { ...baseStyle, backgroundColor: '#a824f0' };
+      return { ...baseStyle, backgroundColor: '#a725ee', color: '#edfefe' };
+    case 464197:
+      return { ...baseStyle, backgroundColor: '#f70202', color: '#ffffff' };
     case 49956:
-      return { ...baseStyle, backgroundColor: '#17d4f5ff' };
+      return { ...baseStyle, backgroundColor: '#35dffd', color: '#000000' };
+    case 24:
+      return { ...baseStyle, backgroundColor: '#def3fc', color: '#0680c4' }
     default:
       return { ...baseStyle, backgroundColor: '#6c757d' };
   }
@@ -604,11 +610,13 @@ export default function PedidosView() {
                     }}
                 >
                     <option value="">Todos</option>
+                    <option value="464197">Natal 2025</option>
                     <option value="6">Em aberto</option>
                     <option value="9">Atendido</option>
                     <option value="12">Cancelado</option>
                     <option value="47722">Orçamento</option>
                     <option value="49956">Venda consignada</option>
+                    <option value="24">Verificado</option>
                 </Form.Select>
             </Form.Group>
         </Col>
