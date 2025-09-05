@@ -222,67 +222,93 @@ async function criarPedidoVenda(dadosDoPedido) {
 }
 
 async function atualizarPedidoNoBling(pedidoId, pedidoEditadoDoFrontend) {
-    const pedidoOriginalDoBling = await fetchDetalhesPedidoVenda(pedidoId);
+    try {
+        const pedidoOriginalDoBling = await fetchDetalhesPedidoVenda(pedidoId);
 
-    const statusOriginal = pedidoOriginalDoBling.situacao.id;
-    const statusNovo = pedidoEditadoDoFrontend.situacao.id;
+        const statusOriginal = pedidoOriginalDoBling.situacao.id;
+        const statusNovo = pedidoEditadoDoFrontend.situacao.id;
 
-    if (statusNovo !== statusOriginal) {
-        console.log(`[blingService] Detectada mudança de status de ${statusOriginal} para ${statusNovo}.`);
-        await alterarSituacaoPedidoBling(pedidoId, statusNovo);
-    }
+        if (statusNovo !== statusOriginal) {
+            console.log(`[blingService] Detectada mudança de status de ${statusOriginal} para ${statusNovo}.`);
+            await alterarSituacaoPedidoBling(pedidoId, statusNovo);
+        }
 
-    if (pedidoOriginalDoBling.contato.id === pedidoEditadoDoFrontend.contato.id && 
-        pedidoOriginalDoBling.contato.nome !== pedidoEditadoDoFrontend.contato.nome) {
-        
-        const contatoOriginalCompleto = await fetchDetalhesContato(pedidoEditadoDoFrontend.contato.id);
-        const payloadContato = { ...contatoOriginalCompleto, nome: pedidoEditadoDoFrontend.contato.nome };
-        
-        await blingApiCall({
+        if (pedidoOriginalDoBling.contato.id === pedidoEditadoDoFrontend.contato.id && 
+            pedidoOriginalDoBling.contato.nome !== pedidoEditadoDoFrontend.contato.nome) {
+            const contatoOriginalCompleto = await fetchDetalhesContato(pedidoEditadoDoFrontend.contato.id);
+            const payloadContato = { ...contatoOriginalCompleto, nome: pedidoEditadoDoFrontend.contato.nome };
+            await blingApiCall({
+                method: 'put',
+                url: `${BLING_API_V3_URL}/contatos/${pedidoEditadoDoFrontend.contato.id}`,
+                data: payloadContato,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
+        const subtotal = pedidoEditadoDoFrontend.itens.reduce((acc, item) => acc + (item.valor * item.quantidade), 0);
+        const percentualDesconto = pedidoEditadoDoFrontend.desconto?.valor || 0;
+        const valorDoDescontoEmReais = (subtotal * percentualDesconto) / 100;
+        const totalFinal = subtotal - valorDoDescontoEmReais;
+
+        const itensFormatados = pedidoEditadoDoFrontend.itens.map(item => {
+            const itemPayload = {
+                produto: { id: item.produto.id },
+                quantidade: item.quantidade,
+                valor: item.valor,
+                codigo: item.codigo,
+                descricao: item.descricao,
+            };
+            if (item.id > 0) {
+                itemPayload.id = item.id;
+            }
+            return itemPayload
+        });
+
+        const numeroDeParcelas = pedidoEditadoDoFrontend.parcelas.length;
+        const valorPorParcela = numeroDeParcelas > 0 ? (totalFinal / numeroDeParcelas) : totalFinal;
+
+        const parcelasFormatadas = pedidoEditadoDoFrontend.parcelas.map(p => {
+            const parcelaPayload = {
+                dataVencimento: p.dataVencimento,
+                valor: parseFloat(valorPorParcela.toFixed(2)),
+                formaPagamento: { id: p.formaPagamento.id },
+                observacoes: p.observacoes || ''
+            };
+            if (p.id > 0) {
+                parcelaPayload.id = p.id;
+            }
+            return parcelaPayload;
+        });
+
+        const payloadFinal = {
+            ...pedidoEditadoDoFrontend,
+            itens: itensFormatados,
+            parcelas: parcelasFormatadas,
+            total: totalFinal,
+            observacoesInternas: pedidoEditadoDoFrontend.observacoesInternas,
+        };
+
+        delete payloadFinal.situacao;
+
+        const response = await blingApiCall({
             method: 'put',
-            url: `${BLING_API_V3_URL}/contatos/${pedidoEditadoDoFrontend.contato.id}`,
-            data: payloadContato,
+            url: `${BLING_API_V3_URL}/pedidos/vendas/${pedidoId}`,
+            data: payloadFinal,
             headers: { 'Content-Type': 'application/json' }
         });
-        console.log(`Contato ID ${pedidoEditadoDoFrontend.contato.id} atualizado com sucesso.`);
+
+        return response.data;
+
+    } catch (error) {
+        console.error('ERRO DETALHADO DA API DO BLING (ATUALIZAÇÃO):');
+        if (error.response) {
+            console.error('Status:', error.response.status);
+            console.error('Data:', JSON.stringify(error.response.data, null, 2));
+        } else {
+            console.error('Erro:', error.message);
+        }
+        throw error;
     }
-
-    const subtotal = pedidoEditadoDoFrontend.itens.reduce((acc, item) => acc + (item.valor * item.quantidade), 0);
-    const percentualDesconto = pedidoEditadoDoFrontend.desconto?.valor || 0;
-    const valorDoDescontoEmReais = (subtotal * percentualDesconto) / 100;
-    const totalFinal = subtotal - valorDoDescontoEmReais;
-
-    const itensFormatados = pedidoEditadoDoFrontend.itens.map(item => ({
-        produto: { id: item.produto.id },
-        quantidade: item.quantidade,
-        valor: item.valor,
-        codigo: item.codigo,
-        descricao: item.descricao,
-        ...(item.id > 0 && { id: item.id })
-    }));
-    const parcelasFormatadas = pedidoEditadoDoFrontend.parcelas.map(p => ({
-        dataVencimento: p.dataVencimento,
-        valor: p.valor,
-        formaPagamento: { id: p.formaPagamento.id },
-        observacoes: p.observacoes
-    }));
-    const payloadFinal = {
-        ...pedidoEditadoDoFrontend,
-        itens: itensFormatados,
-        total: totalFinal,
-        desconto: pedidoEditadoDoFrontend.desconto,
-        parcelas: parcelasFormatadas
-    };
-
-    delete payloadFinal.situacao;
-    
-    const response = await blingApiCall({
-        method: 'put',
-        url: `${BLING_API_V3_URL}/pedidos/vendas/${pedidoId}`,
-        data: payloadFinal,
-        headers: { 'Content-Type': 'application/json' }
-    });
-    return response.data;
 }
 
 async function fetchFormasPagamento() {

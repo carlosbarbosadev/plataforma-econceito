@@ -16,7 +16,24 @@ const campanhasRoutes = require('./routes/campanhas');
 const apicache = require('apicache');
 const cache = apicache.middleware;
 
-app.use(cors());
+const whiteList = [
+    'http://localhost:3039',
+    'https://d2euv2imqscvrl.cloudfront.net'
+];
+
+const corsOptions = {
+    origin: function (origin, callback) {
+        if (whiteList.includes(origin) || !origin) {
+            callback(null, true);
+        } else {
+            callback(new Error('Acesso negado pelo CORS'));
+        }
+    },
+    credentials: true 
+};
+
+app.use(cors(corsOptions));
+
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
