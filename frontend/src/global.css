@@ -15,12 +15,9 @@
 /* scrollbar */
 @import './components/scrollbar/styles.css';
 
-/* chart */
+
 @import './components/chart/styles.css';
 
-/** **************************************
-* Baseline
-*************************************** */
 html {
   height: 100%;
   -webkit-overflow-scrolling: touch;
@@ -172,4 +169,88 @@ body.modal-open .desktop-sidebar {
     -moz-appearance: none;
     background-image: none !important;
     padding-right: 0.75rem;
+}
+.card-campanha {
+  min-height: 400px;
+}
+.border-sutil {
+  border: 1px solid #e9ecef !important;
+}
+.btn-custom-azul {
+  background-color: #3c78de;
+  border-color: #3c78de;
+}
+.btn-custom-azul:hover {
+  background-color: #2c4fb8;
+  border-color: #2c4fb8;
+}
+.modal-header .btn-close:focus {
+  box-shadow: none;
+  outline: none;
+}
+.progress-fino {
+  height: 5px;
+}
+.modal-margin-top {
+  margin-top: 74px !important;
+}
+.texto-progresso-custom {
+  color: #439746 !important; /* Exemplo de cor. Troque pelo código da cor que você quer! */
+}
+.no-caret.dropdown-toggle::after {
+  display: none !important;
+}
+.texto-pre-wrap { /*Preserva os espaços em branco e as quebras de linha do texto. (Descrição de campanha)*/
+  white-space: pre-wrap;
+}
+.campaign-button {
+  background-color: #a01711;
+  border-color: rgba(160, 24, 17, 0);
+  width: 195px;
+  color: white; /* Garante que o texto seja branco */
+  
+  /* A mágica da suavidade acontece aqui */
+  transition: background-color 0.2s ease-in-out;
+}
+
+/* ESTILO PARA BOTÃO DE VER PRODUTOS DA CAMPANHA, PÁGINA DE PRODUTOS */
+.campaign-button:hover {
+  background-color: #7c120d; /* Um tom um pouco mais escuro que o original */
+  border-color: #7c130d00;
+}
+.campaign-button:active {
+  background-color: #5a0d0a !important; /* Um tom ainda mais escuro para o clique */
+  border-color: transparent !important;
+}
+
+/* ESTILO PARA BOTÕES DE SALVAR/FECHAR/CANCELAR */
+.btn-custom-salvar {
+  background-color: #4CAF50;
+  border-color: #4CAF50;
+  color: white;
+  width: 130px;
+}
+.btn-custom-salvar:hover {
+  background-color: #439746;
+  border-color: #409242;
+}
+.btn-custom-salvar:active {
+  background-color: #439746 !important;
+  border-color: #439746  !important;
+}
+.btn-custom-cancelar {
+  background-color: #ffffff;
+  border: 1px solid #4CAF50;
+  color: #4CAF50;
+  width: 130px;
+}
+.btn-custom-cancelar:hover {
+  background-color: #dcfae6;
+  border-color: #4CAF50;
+  color: #4CAF50 !important;
+}
+.btn-custom-cancelar:active {
+  background-color: #dcfae6 !important;
+  border-color: #4CAF50 !important;
+  color: #4CAF50 !important;
 }
