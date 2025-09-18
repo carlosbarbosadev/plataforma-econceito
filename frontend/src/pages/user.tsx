@@ -217,7 +217,7 @@ export default function ClientesPage() {
   return (
     <Container className="mb-4">
     <div>
-      <div className="mt-5 mb-5" style={{ background: 'linear-gradient(135deg, #2453dc 0%, #577CFF 100%)', color: '#fff', padding: '25px', borderRadius: '16px', maxWidth: '250px', display: 'flex', justifyContent: 'center' }}>
+      <div className="mt-5 mb-5" style={{ background: 'linear-gradient(135deg, #2453dc 0%, #577CFF 100%)', color: '#fff', padding: '25px', borderRadius: '16px', maxWidth: '300px', display: 'flex', justifyContent: 'center' }}>
         <h3 className="fw-bold mb-0" style={{ color: '#fff' }}>
           {pageTitle}
         </h3>
@@ -285,7 +285,7 @@ export default function ClientesPage() {
         <Modal.Header closeButton closeVariant="white">
           <Modal.Title className="fw-bold">Cadastrar novo cliente</Modal.Title>
         </Modal.Header>
-        <Modal.Body>
+        <Modal.Body className="modal-form-sm">
           {createError && <Alert variant="danger">{createError}</Alert>}
           <Form>
             <div className="mb-4 mt-4 form-pequeno">
@@ -389,9 +389,9 @@ export default function ClientesPage() {
           </Form>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={handleCloseCreateModal} disabled={isCreating}>Cancelar</Button>
-          <Button variant="primary" onClick={handleCreateClient} disabled={isCreating}>
-            {isCreating ? <Spinner as="span" animation="border" size="sm" /> : 'Salvar cliente'}
+          <Button className="btn-custom-cancelar fw-bold" onClick={handleCloseCreateModal} disabled={isCreating}>Cancelar</Button>
+          <Button className="btn-custom-salvar fw-bold" onClick={handleCreateClient} disabled={isCreating}>
+            {isCreating ? <Spinner as="span" animation="border" size="sm" /> : 'Salvar'}
           </Button>
         </Modal.Footer>
       </Modal>

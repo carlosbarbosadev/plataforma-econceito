@@ -1219,25 +1219,22 @@ export default function PedidosView() {
           {isOrderEditable ? (
             <>
               <Button
-                variant="secondary"
                 onClick={handleAttemptClose}
-                style={{ width: "120px" }}
+                className="btn-custom-cancelar fw-bold"
               >
                 Cancelar
               </Button>
               <Button
-                variant="primary"
                 onClick={handleSaveChanges}
-                style={{ width: "120px" }}
+                className="btn-custom-salvar fw-bold"
               >
                 Salvar
               </Button>
             </>
           ) : (
           <Button
-            variant="secondary"
             onClick={handleCloseModal}
-            style={{ width: "120px"}}
+            className="btn-custom-cancelar fw-bold"
           >
             Fechar
           </Button>
