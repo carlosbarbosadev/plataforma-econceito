@@ -27,4 +27,12 @@ function autenticarToken(req, res, next) {
   });
 }
 
-module.exports = { autenticarToken };
+function autorizarAdmin(req, res, next) {
+    if (req.usuario && req.usuario.tipo === 'admin') {
+        next();
+    } else {
+        res.status(403).json({ mensagem: 'Acesso negado. Rota exclusiva para administradores.' });
+    }
+}
+
+module.exports = { autenticarToken, autorizarAdmin };
