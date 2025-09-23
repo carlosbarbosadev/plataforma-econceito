@@ -14,14 +14,18 @@ router.get('/all', async (req, res) => {
             return res.status(403).json({ error: 'Usuário não tem um ID de vendedor associado.'});
         }
 
-        const queryMetricas = 'SELECT * FROM vw_dashboard_dados WHERE vendedor_id = $1';
-        const { rows: [metricasDoCache] } = await db.query(queryMetricas, [idVendedor]);
+        const queryMetricas = `
+          SELECT
+            COALESCE(SUM(CASE WHEN DATE_TRUNC('month', data_pedido) = DATE_TRUNC('month', CURRENT_DATE) AND status_id = 9 THEN total - valor_frete ELSE 0 END), 0) AS vendas_mes,
+            COALESCE(SUM(CASE WHEN DATE_TRUNC('month', data_pedido) = DATE_TRUNC('month', CURRENT_DATE) THEN total - valor_frete ELSE 0 END), 0) AS vendas_mes_geral,
+            COALESCE(SUM(CASE WHEN EXTRACT(YEAR FROM data_pedido) = EXTRACT(YEAR FROM CURRENT_DATE) THEN total - valor_frete ELSE 0 END), 0) AS vendas_ano,
+            COALESCE(SUM(CASE WHEN status_id = 6 THEN 1 ELSE 0 END), 0) AS pedidos_abertos,
+            COALESCE(COUNT(CASE WHEN DATE_TRUNC('month', data_pedido) = DATE_TRUNC('month', CURRENT_DATE) THEN id END), 0) AS pedidos_mes
 
-        const metricas = metricasDoCache || {
-            vendas_mes: 0,
-            vendas_ano: 0,
-            pedidos_abertos: 0,
-        };
+          FROM cache_pedidos
+          WHERE vendedor_id = $1 AND status_id <> 12;
+        `;
+        const { rows: [metricas] } = await db.query(queryMetricas, [idVendedor]);
 
         const queryTopProdutos = `
             SELECT produto_nome AS label, total_vendido AS value
@@ -43,8 +47,8 @@ router.get('/all', async (req, res) => {
         const queryComparativo = `
             SELECT
                 EXTRACT(MONTH FROM data_pedido) AS mes,
-                SUM(CASE WHEN EXTRACT(YEAR FROM data_pedido) = $1 THEN total ELSE 0 END) AS total_ano_atual,
-                SUM(CASE WHEN EXTRACT(YEAR FROM data_pedido) = $2 THEN total ELSE 0 END) AS total_ano_anterior
+                SUM(CASE WHEN EXTRACT(YEAR FROM data_pedido) = $1 THEN total - valor_frete ELSE 0 END) AS total_ano_atual,
+                SUM(CASE WHEN EXTRACT(YEAR FROM data_pedido) = $2 THEN total - valor_frete ELSE 0 END) AS total_ano_anterior
             FROM cache_pedidos
             WHERE status_id = 9 AND vendedor_id = $3 AND EXTRACT(YEAR FROM data_pedido) IN ($1, $2)
             GROUP BY EXTRACT(MONTH FROM data_pedido);
@@ -62,10 +66,11 @@ router.get('/all', async (req, res) => {
 
         res.json({
             metricas: {
-                vendasMes: Math.round(metricas.vendas_mes * 100) / 100,
+                atendidosMes: Math.round(metricas.vendas_mes * 100) / 100,
                 vendasAno: Math.round(metricas.vendas_ano * 100) / 100,
-                pedidosAbertos: parseInt(metricas.pedidos_abertos, 10),
                 metaMes: 35000,
+                pedidosAbertos: parseInt(metricas.pedidos_abertos, 10),
+                vendasMes: metricas.vendas_mes_geral,
             },
             comparativoAnual: {
                 chart: {
