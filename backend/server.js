@@ -43,7 +43,7 @@ app.use('/api/pedidos', pedidosRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/webhooks', webhooksRoutes);
 app.use('/api/campanhas', campanhasRoutes);
-app.use('/api/utils', cache('1 hour'), utilRoutes);
+app.use('/api/utils', cache('1 hour', (req, res) => res.statusCode === 200), utilRoutes);
 
 const cron = require('node-cron');
 const { iniciarSincronizacaoGeral, iniciarSincronizacaoAgendada } = require('./services/blingSyncService');
