@@ -4,6 +4,8 @@ const { autenticarToken } = require('../middlewares/authMiddleware');
 const blingService = require('../services/bling')
 const db = require('../db');
 
+const { formatInTimeZone } = require('date-fns-tz');
+
 const calcularParcelas = (formaPagamentoId, valorTotal) => {
     const regrasDeParcelamento = {
         3359853: [7],
@@ -91,10 +93,10 @@ router.get('/', autenticarToken, async (req, res) => {
 
         const finalParams = [...queryParams, limit, offset];
         const pedidosQuery = `
-            SELECT id, numero, data_pedido, cliente_nome, total, status_id
+            SELECT id, numero, TO_CHAR(data_pedido, 'DD/MM/YYYY') AS data_pedido, cliente_nome, total, status_id
             FROM cache_pedidos
             ${whereString}
-            ORDER BY data_pedido DESC
+            ORDER BY cache_pedidos.data_pedido DESC
             LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
         `;
         const { rows: pedidosDaPagina } = await db.query(pedidosQuery, finalParams);
@@ -262,31 +264,79 @@ router.get ('/:idPedidoVenda', autenticarToken, async(req, res) => {
 });
 
 router.put('/:id', autenticarToken, async (req, res) => {
-    const pedidoId = req.params.id;
-    const pedidoEditadoDoFrontend = req.body;
+  const pedidoId = req.params.id;
+  const pedidoEditadoDoFrontend = req.body;
 
-    console.log(`Backend: Recebida requisição para ATUALIZAR o pedido ID: ${pedidoId}`);
+  console.log(`Backend: Recebida requisição para ATUALIZAR o pedido ID: ${pedidoId}`);
 
+  try {
+    const selectQuery = 'SELECT status_id FROM cache_pedidos WHERE id = $1';
+    const queryResult = await db.query(selectQuery, [pedidoId]);  
+
+    if (queryResult.rows.length === 0) {
+        return res.status(404).json({ mensagem: `Pedido ${pedidoId} não encontrado no cache local.` });
+    }
+
+    const statusIdAnterior = queryResult.rows[0].status_id;
+    const statusIdNovo = pedidoEditadoDoFrontend.situacao.id;
+
+    const ID_ORCAMENTO = 47722;
+    const ID_EM_ABERTO = 6;
+
+    const deveAtualizarData = statusIdAnterior === ID_ORCAMENTO && statusIdNovo === ID_EM_ABERTO;
+    
     const payloadParaBling = {
         ...pedidoEditadoDoFrontend,
     };
 
+    if (deveAtualizarData) {
+        const hoje = new Date();
+        const dia = String(hoje.getDate()).padStart(2, '0');
+        const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+        const ano = hoje.getFullYear();
+        const dataFormatada = `${dia}/${mes}/${ano}`;
+        payloadParaBling.data = dataFormatada;
+    }
+
     if (payloadParaBling.desconto && typeof payloadParaBling.desconto.valor !== 'undefined') {
         payloadParaBling.desconto = {
-            valor: payloadParaBling.desconto.valor,
-            unidade: 'PERCENTUAL'
+          valor: payloadParaBling.desconto.valor,
+          unidade: 'PERCENTUAL'
         };
     } else {
         delete payloadParaBling.desconto;
     }
 
-    try {
-        const resultado = await blingService.atualizarPedidoNoBling(pedidoId, payloadParaBling);
-        res.json(resultado);
-    } catch (error) {
-        console.error(`Erro na rota de atualização do pedido ${pedidoId}:`, error.message);
-        res.status(500).json({ mensagem: error.message });
-    }
+    const resultadoBling = await blingService.atualizarPedidoNoBling(pedidoId, payloadParaBling);
+
+    const pedidoDetalhado = await blingService.fetchDetalhesPedidoVenda(pedidoId);
+
+    const upsertQuery = `
+      INSERT INTO cache_pedidos (
+        id, numero, data_pedido, data_saida, total, total_produtos, status_id, status_nome,
+        cliente_id, cliente_nome, cliente_documento, vendedor_id, observacoes, observacoes_internas, updated_at, dados_completos_json
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), $15)
+      ON CONFLICT (id) DO UPDATE SET
+        numero = EXCLUDED.numero, data_pedido = EXCLUDED.data_pedido, data_saida = EXCLUDED.data_saida,
+        total = EXCLUDED.total, total_produtos = EXCLUDED.total_produtos, status_id = EXCLUDED.status_id,
+        status_nome = EXCLUDED.status_nome, cliente_id = EXCLUDED.cliente_id, cliente_nome = EXCLUDED.cliente_nome,
+        cliente_documento = EXCLUDED.cliente_documento, vendedor_id = EXCLUDED.vendedor_id,
+        observacoes = EXCLUDED.observacoes, observacoes_internas = EXCLUDED.observacoes_internas, updated_at = NOW(), dados_completos_json = EXCLUDED.dados_completos_json;
+    `;
+    const params = [
+      pedidoDetalhado.id, pedidoDetalhado.numero, pedidoDetalhado.data, pedidoDetalhado.dataSaida || null,
+      pedidoDetalhado.total, pedidoDetalhado.totalProdutos, pedidoDetalhado.situacao.id, pedidoDetalhado.situacao.valor,
+      pedidoDetalhado.contato.id, pedidoDetalhado.contato.nome, pedidoDetalhado.contato.numeroDocumento || null,
+      pedidoDetalhado.vendedor?.id || null, pedidoDetalhado.observacoes || null, pedidoDetalhado.observacoesInternas || null, pedidoDetalhado
+    ];
+    await db.query(upsertQuery, params);
+
+    res.json(resultadoBling);
+
+  } catch (error) {
+    console.error(`Erro na rota de atualização do pedido ${pedidoId}:`, error.message);
+    res.status(500).json({ mensagem: error.message });
+  }
 });
 
 module.exports = router;
