@@ -643,15 +643,17 @@ export default function PedidosView() {
                 placeholder="Pesquisar por nome ou n° do pedido"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="input-foco-azul rounded-3"
+                className="input-foco-azul"
+                style={{ borderRadius: '5px' }}
               />
             </Form.Group>
           </Col>
           <Col md={2} className="text-end">
             <Form.Group className="mb-4">
               <Form.Select
+                style={{ borderRadius: '5px' }}
                 value={statusFilter}
-                className="input-foco-azul rounded-3"
+                className="input-foco-azul"
                 onChange={(e) => {
                   setCurrentPage(1);
                   setStatusFilter(e.target.value);
@@ -890,7 +892,7 @@ export default function PedidosView() {
                               <div
                                 style={{
                                   border: '1px solid #dee2e6',
-                                  borderRadius: '0.5rem',
+                                  borderRadius: '5px',
                                   padding: '0.3rem',
                                   paddingRight: isOrderEditable ? '45px' : '0.4rem',
                                 }}
@@ -994,7 +996,7 @@ export default function PedidosView() {
                                   style={{
                                     position: 'absolute',
                                     right: '40px',
-                                    top: '55%',
+                                    top: '50%',
                                     transform: 'translateY(-50%)',
                                   }}
                                 >
