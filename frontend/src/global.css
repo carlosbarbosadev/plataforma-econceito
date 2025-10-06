@@ -94,7 +94,7 @@ body.modal-open .desktop-sidebar {
 .form-pequeno .form-control,
 .form-pequeno .form-select {
   font-size: 0.9rem;
-  border-radius: 0.5rem;
+  border-radius: 5px;
 }
 .form-pequeno .form-control:focus,
 .form-pequeno .form-select:focus {
@@ -133,7 +133,7 @@ body.modal-open .desktop-sidebar {
   box-shadow: 0 0 0.2rem rgba(36, 83, 220, 0.25) !important;
 }
 .select-padrao__control {
-  border-radius: 0.5rem !important;
+  border-radius: 5px !important;
 
   min-height: 38px;
 }
@@ -253,4 +253,105 @@ body.modal-open .desktop-sidebar {
   background-color: #dcfae6 !important;
   border-color: #4CAF50 !important;
   color: #4CAF50 !important;
+}
+
+/* ESTILOS PARA PÁGINA DE EXPEDIÇÃO */
+.custom-badge {
+  background-color: #d9dbdf !important;
+  color: #414246 !important;
+}
+
+.meu-modal-custom {
+  max-width: 1000px;
+  margin-top: 90px;
+}
+.meu-modal-custom .modal-content {
+  border-radius: 5px;
+}
+.meu-modal-custom .modal-title {
+  color: #282829;
+  font-weight: 700;
+}
+.meu-modal-custom .modal-header {
+  padding-top: 25px; 
+  border-bottom: none;
+}
+
+.info-block small {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #282829;
+}
+.info-block p {
+  font-size: 0.9rem;
+  color: #282829;
+}
+
+.product-card {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 12px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+}
+
+.product-card small {
+  color: #6c757d;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.product-card p {
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin: 0;
+  word-break: break-word; 
+}
+
+.status-dropdown-menu .dropdown-item {
+  font-size: 0.9rem; 
+}
+.status-dropdown-menu .dropdown-item:hover,
+.status-dropdown-menu .dropdown-item:focus {
+  background-color: #e9ecef;
+  color: #212529;
+}
+.product-number-badge {
+  position: absolute; 
+  bottom: 10px;       
+  right: 10px;        
+  font-size: 0.8rem;    
+  font-weight: bold;
+}
+.scroll-to-top-btn {
+  position: fixed;
+  bottom: 43px;
+  right: 100px;
+  z-index: 1000;
+
+  background-color: #6B778C;
+  color: white;
+  border: none;
+  border-radius: 100%;
+  width: 45px;
+  height: 45px;
+  font-size: 1.3rem;
+
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease-in-out, visibility 0.3 ease-in-out;
+}
+
+.scroll-to-top-btn.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.scroll-to-top-btn:hover {
+  background-color: #2453dc
 }
