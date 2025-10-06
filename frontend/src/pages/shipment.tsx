@@ -108,6 +108,7 @@ export default function ShipmentPage() {
 
     container?.addEventListener('scroll', toggleVisibility);
 
+    // eslint-disable-next-line consistent-return
     return () => container?.removeEventListener('scroll', toggleVisibility);
   }, [loading]);
 
@@ -197,11 +198,11 @@ export default function ShipmentPage() {
   }
 
   function handlePedidoAtualizado(pedidoId: string | number, novaColuna: string) {
-    setPedidos((prevPedidos) => {
-      return prevPedidos.map((p) =>
+    setPedidos((prevPedidos) =>
+      prevPedidos.map((p) =>
         String(p.id) === String(pedidoId) ? { ...p, kanban_column: novaColuna } : p
-      );
-    });
+      )
+    );
   }
 
   function handleCloseModal() {
@@ -261,7 +262,7 @@ export default function ShipmentPage() {
         <Form.Control
           className="input-foco-azul"
           type="text"
-          placeholder="Pesquisar por nome do cliente ou nº do pedido"
+          placeholder="Pesquisar por nome, vendedor ou nº do pedido"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           style={{
