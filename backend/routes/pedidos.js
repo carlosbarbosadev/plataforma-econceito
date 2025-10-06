@@ -216,10 +216,8 @@ router.post('/', autenticarToken, async (req, res) => {
     }
 });
 
-// NOVA ROTA: Buscar detalhes de um pedido de venda específico
-// GET /api/pedidos/{idPedidoVenda}
 router.get ('/:idPedidoVenda', autenticarToken, async(req, res) => {
-    const { idPedidoVenda } = req.params; // Pega o ID da URL
+    const { idPedidoVenda } = req.params;
     console.log(`Rota GET /api/pedidos/${idPedidoVenda} acessada por: ${req.usuario.email}`);
 
     if(!idPedidoVenda || isNaN(Number(idPedidoVenda))) {
@@ -240,7 +238,25 @@ router.get ('/:idPedidoVenda', autenticarToken, async(req, res) => {
             } else {
                 console.log(`Vendedor com ID Bling ${vendedorIdBling} não encontrado.`);
             }
-        } 
+        }
+
+        try {
+            const queryKanban = 'SELECT kanban_column, observacoes_expedicao FROM shipment_status WHERE order_id = $1';
+            const resultKanban = await db.query(queryKanban, [idPedidoVenda]);
+
+            if (resultKanban.rows.length > 0) {
+                detalhesDoPedido.kanban_column = resultKanban.rows[0].kanban_column;
+                detalhesDoPedido.observacoes_expedicao = resultKanban.rows[0].observacoes_expedicao || '';
+            } else {
+                detalhesDoPedido.kanban_column = 'em-aberto';
+                detalhesDoPedido.observacoes_expedicao = '';
+            }
+
+        } catch (dbError) {
+            console.error('Erro ao buscar status do Kanban:', dbError);
+            detalhesDoPedido.kanban_column = 'em-aberto';
+            detalhesDoPedido.observacoes_expedicao = '';
+        }
 
         // Lógica de permissão para verificar se o vendedor pode ver este pedido
         if (req.usuario.tipo === 'vendedor') {
