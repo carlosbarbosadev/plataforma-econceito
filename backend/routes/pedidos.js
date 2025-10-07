@@ -22,6 +22,7 @@ const calcularParcelas = (formaPagamentoId, valorTotal) => {
         2306222: [28, 35, 42, 49],
         2076765: [28, 35, 42, 49, 56],
         2127537: [1],
+        7616572: [1],
     };
 
     const diasParaVencimentos = regrasDeParcelamento[formaPagamentoId];

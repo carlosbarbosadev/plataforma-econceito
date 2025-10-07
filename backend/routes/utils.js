@@ -5,7 +5,7 @@ const { fetchFormasPagamento } = require('../services/bling'); // Importa a funÃ
 
 const idsCondicoesDePagamento = [
     3359853, 2076718, 2076727, 2076783, 7758544, 4421026, 2076737,
-    2091116, 3514108, 2076738, 2076750, 2306222, 2076765, 2127537
+    2091116, 3514108, 2076738, 2076750, 2306222, 2076765, 2127537, 7616572
 ];
 
 router.get('/condicoes-pagamento', autenticarToken, async (req, res) => {
