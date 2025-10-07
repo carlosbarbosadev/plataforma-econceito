@@ -144,15 +144,6 @@ export default function ShipmentPage() {
         titleColor: '#ffffff',
         indicatorColor: '#c75e68',
       },
-      verificado: {
-        id: 'verificado',
-        title: 'VERIFICADO',
-        pedidos: [],
-        color: '#eee9fcff',
-        titleBgColor: '#6317f8',
-        titleColor: '#ffffff',
-        indicatorColor: '#6317f8',
-      },
       'em-producao': {
         id: 'em-producao',
         title: 'AGUARDANDO PRODUÇÃO',
@@ -170,6 +161,15 @@ export default function ShipmentPage() {
         titleBgColor: '#f8ae00',
         titleColor: '#48412f',
         indicatorColor: '#f8ae00',
+      },
+      verificado: {
+        id: 'verificado',
+        title: 'VERIFICADO',
+        pedidos: [],
+        color: '#eee9fcff',
+        titleBgColor: '#6317f8',
+        titleColor: '#ffffff',
+        indicatorColor: '#6317f8',
       },
       'pronto-para-envio': {
         id: 'pronto-para-envio',
