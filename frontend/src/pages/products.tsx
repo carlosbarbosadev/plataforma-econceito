@@ -224,7 +224,6 @@ export default function ProductsPage() {
       'Aporte financeiro - Cartão de Crédito Santander PF ',
       'Boleto - Bling Conta',
       'Boleto BOLETO SICREDI - CONCEITO FESTAS',
-      'Boleto Boletos Sicoob',
       'Cartão de Crédito - Bling Conta',
       'Conta a receber/pagar',
       'Crédito',
