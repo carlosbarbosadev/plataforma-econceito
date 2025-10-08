@@ -29,7 +29,12 @@ router.get('/pedidos-para-envio', autenticarToken, async (req, res) => {
                 cp.cliente_nome,
                 cp.total,
                 ss.kanban_column,
-                u.nome AS vendedor_nome
+                u.nome AS vendedor_nome,
+                CASE
+                    WHEN (ss.observacoes_expedicao IS NOT NULL AND ss.observacoes_expedicao <> '')
+                    THEN TRUE
+                    ELSE FALSE
+                END AS has_observation
             FROM
                 cache_pedidos AS cp
             LEFT JOIN
@@ -64,6 +69,7 @@ router.get('/pedidos-para-envio', autenticarToken, async (req, res) => {
                 total: parseFloat(p.total),
                 kanban_column: colunaInicial,
                 vendedor_nome: p.vendedor_nome,
+                has_observation: p.has_observation,
             };
         });
 
