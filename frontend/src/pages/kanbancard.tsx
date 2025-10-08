@@ -10,6 +10,7 @@ type Pedido = {
   total: number;
   kanban_column: string;
   vendedor_nome?: string;
+  has_observation: boolean;
 };
 
 interface KanbanCardProps {
@@ -85,6 +86,17 @@ export function KanbanCard({
               {columnTitle}
             </span>
           </div>
+
+          {pedido.has_observation && (
+            <div className="mb-1" title="Este pedido possui observações">
+              <img
+                src="/assets/icons/glass/observation-icon.svg"
+                alt="Possui observação"
+                style={{ width: '16px', height: '16px' }}
+              />
+            </div>
+          )}
+
           <div className="d-flex align-items-center gap-1">
             <small className="text-muted" style={{ fontSize: '0.8rem' }}>
               {pedido.vendedor_nome || '-'}

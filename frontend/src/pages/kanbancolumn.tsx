@@ -10,6 +10,7 @@ type Pedido = {
   cliente_nome: string;
   total: number;
   kanban_column: string;
+  has_observation: boolean;
 };
 
 type KanbanColumn = {

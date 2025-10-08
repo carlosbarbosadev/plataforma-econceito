@@ -25,6 +25,7 @@ type Pedido = {
   total: number;
   vendedor_nome?: string;
   kanban_column: 'em-aberto' | 'em-separação' | 'pronto-para-envio' | string;
+  has_observation: boolean;
 };
 
 type KanbanColumn = {
