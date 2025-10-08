@@ -312,6 +312,7 @@ export default function ShipmentPage() {
         pedido={selectedPedido}
         columns={Object.values(columns)}
         onPedidoUpdate={handlePedidoAtualizado}
+        unmountOnExit={false}
       />
 
       <Button

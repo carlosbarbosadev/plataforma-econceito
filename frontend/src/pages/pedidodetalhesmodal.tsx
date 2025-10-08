@@ -56,6 +56,7 @@ interface PedidoDetalhesModalProps {
   pedido: PedidoResumido | null;
   columns: KanbanColumn[];
   onPedidoUpdate: (pedidoId: string | number, novaColuna: string) => void;
+  unmountOnExit?: boolean;
 }
 
 export function PedidoDetalhesModal({
@@ -64,6 +65,7 @@ export function PedidoDetalhesModal({
   pedido,
   columns,
   onPedidoUpdate,
+  unmountOnExit,
 }: PedidoDetalhesModalProps) {
   const [detalhes, setDetalhes] = useState<PedidoDetalhes | null>(null);
   const [editedObservacoes, setEditedObservacoes] = useState('');
@@ -275,7 +277,14 @@ export function PedidoDetalhesModal({
     );
   };
   return (
-    <Modal show={show} onHide={onHide} size="lg" centered dialogClassName="meu-modal-custom">
+    <Modal
+      show={show}
+      onHide={onHide}
+      size="lg"
+      centered
+      dialogClassName="meu-modal-custom"
+      unmountOnExit={unmountOnExit}
+    >
       <Modal.Header closeButton>
         <Modal.Title>Detalhes do Pedido {pedido?.numero || pedido?.id}</Modal.Title>
       </Modal.Header>
