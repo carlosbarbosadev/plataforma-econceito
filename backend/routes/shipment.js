@@ -30,6 +30,7 @@ router.get('/pedidos-para-envio', autenticarToken, async (req, res) => {
                 cp.total,
                 ss.kanban_column,
                 u.nome AS vendedor_nome,
+                ss.acknowledged,
                 CASE
                     WHEN (ss.observacoes_expedicao IS NOT NULL AND ss.observacoes_expedicao <> '')
                     THEN TRUE
@@ -70,6 +71,7 @@ router.get('/pedidos-para-envio', autenticarToken, async (req, res) => {
                 kanban_column: colunaInicial,
                 vendedor_nome: p.vendedor_nome,
                 has_observation: p.has_observation,
+                acknowledged: p.acknowledged,
             };
         });
 
@@ -124,6 +126,50 @@ router.put('/status/:orderId', autenticarToken, async (req, res) => {
     } catch (error) {
         console.error(`Erro ao atualizar dados de expedição do pedido ${orderId}:`, error.message);
         res.status(500).json({ mensagem: 'Falha ao atualizar os dados de expedição.' });
+    }
+});
+
+router.post('/acknowledge/:orderId', autenticarToken, async (req, res) => {
+    const { orderId } = req.params;
+    
+    try {
+        const checkQuery = 'SELECT * FROM shipment_status WHERE order_id = $1';
+        const { rows } = await db.query(checkQuery, [orderId]);
+
+        if (rows.length > 0) {
+            const updateQuery = `
+                UPDATE shipment_status
+                SET acknowledged = TRUE, updated_at = NOW()
+                WHERE order_id = $1;
+            `;
+            await db.query(updateQuery, [orderId]);
+        } else {
+            const pedidoQuery = 'SELECT status_id FROM cache_pedidos WHERE id = $1';
+            const pedidoResult = await db.query(pedidoQuery, [orderId]);
+
+            if (pedidoResult.rows.length === 0) {
+                return res.status(404).json({ mensagem: 'Pedido não encontrado no cache.' });
+            }
+            
+            const statusId = pedidoResult.rows[0].status_id;
+
+            let defaultColumn = 'em-aberto';
+            if (statusId === 464197) {
+                defaultColumn = 'natal';
+            }
+
+            const insertQuery = `
+                INSERT INTO shipment_status (order_id, kanban_column, acknowledged, updated_at)
+                VALUES ($1, $2, TRUE, NOW());
+            `;
+            await db.query(insertQuery, [orderId, defaultColumn]);
+        }
+
+        res.status(200).json({ mensagem: `Pedido ${orderId} marcado como visto com sucesso.` });
+
+    } catch (error) {
+        console.error(`Erro ao marcar pedido ${orderId} com visto:`, error.message);
+        res.status(500).json({ mensagem: 'Falha ao marcar pedido com visto.' });
     }
 });
 

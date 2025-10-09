@@ -242,15 +242,17 @@ router.get ('/:idPedidoVenda', autenticarToken, async(req, res) => {
         }
 
         try {
-            const queryKanban = 'SELECT kanban_column, observacoes_expedicao FROM shipment_status WHERE order_id = $1';
+            const queryKanban = 'SELECT kanban_column, observacoes_expedicao, acknowledged FROM shipment_status WHERE order_id = $1';
             const resultKanban = await db.query(queryKanban, [idPedidoVenda]);
 
             if (resultKanban.rows.length > 0) {
                 detalhesDoPedido.kanban_column = resultKanban.rows[0].kanban_column;
                 detalhesDoPedido.observacoes_expedicao = resultKanban.rows[0].observacoes_expedicao || '';
+                detalhesDoPedido.acknowledged = resultKanban.rows[0].acknowledged;
             } else {
                 detalhesDoPedido.kanban_column = 'em-aberto';
                 detalhesDoPedido.observacoes_expedicao = '';
+                detalhesDoPedido.acknowledged = false;
             }
 
         } catch (dbError) {
