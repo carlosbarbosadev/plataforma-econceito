@@ -36,6 +36,7 @@ type PedidoDetalhes = {
   itens: Item[];
   kanban_column: string;
   observacoes_expedicao: string;
+  acknowledged: boolean;
 };
 
 type PedidoResumido = {
@@ -57,6 +58,7 @@ interface PedidoDetalhesModalProps {
   columns: KanbanColumn[];
   onPedidoUpdate: (pedidoId: string | number, novaColuna: string) => void;
   unmountOnExit?: boolean;
+  onAcknowledged: (pedidoId: string | number) => void;
 }
 
 export function PedidoDetalhesModal({
@@ -66,12 +68,33 @@ export function PedidoDetalhesModal({
   columns,
   onPedidoUpdate,
   unmountOnExit,
+  onAcknowledged,
 }: PedidoDetalhesModalProps) {
   const [detalhes, setDetalhes] = useState<PedidoDetalhes | null>(null);
   const [editedObservacoes, setEditedObservacoes] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isAcknowledging, setIsAcknowledging] = useState(false);
+
+  const handleAcknowledge = async () => {
+    if (!pedido) return;
+    setIsAcknowledging(true);
+    try {
+      await api.post(`/api/expedicao/acknowledge/${pedido.id}`);
+
+      onAcknowledged(pedido.id);
+
+      setDetalhes((prevDetalhes) =>
+        prevDetalhes ? { ...prevDetalhes, acknowledged: true } : null
+      );
+    } catch (err) {
+      console.error('Erro ao marcar pedido com visto:', err);
+      alert('Não foi possível marcar o pedido como visto.');
+    } finally {
+      setIsAcknowledging(false);
+    }
+  };
 
   useEffect(() => {
     if (pedido && show) {
@@ -162,13 +185,16 @@ export function PedidoDetalhesModal({
               variant="light"
               id="dropdown-status"
               disabled={isUpdating}
-              size="sm"
               className="fw-bold"
               style={{
                 backgroundColor: colunaAtual?.titleBgColor || '#6c757d',
                 color: colunaAtual?.titleColor || '#ffffff',
                 border: 'none',
                 borderRadius: '3px',
+                marginRight: '10px',
+                padding: '0.2rem 1rem',
+                fontSize: '0.9rem',
+                lineHeight: '1.5',
               }}
             >
               {isUpdating ? 'Atualizando' : colunaAtual?.title || detalhes.kanban_column}
@@ -184,6 +210,25 @@ export function PedidoDetalhesModal({
                 ))}
             </Dropdown.Menu>
           </Dropdown>
+          {!detalhes.acknowledged && (
+            <Button
+              className="fw-bold"
+              onClick={handleAcknowledge}
+              disabled={isAcknowledging}
+              style={{
+                backgroundColor: '#439746',
+                color: 'white',
+                border: 'none',
+                borderRadius: '3px',
+                padding: '0.2rem 1rem',
+                fontSize: '0.9rem',
+                lineHeight: '1.5',
+                width: '120px',
+              }}
+            >
+              {isAcknowledging ? <Spinner animation="border" size="sm" /> : 'CONFIRMAR'}
+            </Button>
+          )}
         </div>
 
         <Row className="mb-4">

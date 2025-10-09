@@ -1,6 +1,6 @@
-import { Card } from 'react-bootstrap';
 import { CSS } from '@dnd-kit/utilities';
 import { useDraggable } from '@dnd-kit/core';
+import { Card, Badge } from 'react-bootstrap';
 
 type Pedido = {
   id: string | number;
@@ -11,6 +11,7 @@ type Pedido = {
   kanban_column: string;
   vendedor_nome?: string;
   has_observation: boolean;
+  acknowledged: boolean;
 };
 
 interface KanbanCardProps {
@@ -95,6 +96,16 @@ export function KanbanCard({
                 style={{ width: '16px', height: '16px' }}
               />
             </div>
+          )}
+
+          {!pedido.acknowledged && (
+            <Badge
+              bg="danger"
+              className="mt-1 mb-2 badge-confirmar"
+              style={{ borderRadius: '2px' }}
+            >
+              NOVO
+            </Badge>
           )}
 
           <div className="d-flex align-items-center gap-1">

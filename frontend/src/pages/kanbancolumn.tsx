@@ -11,6 +11,7 @@ type Pedido = {
   total: number;
   kanban_column: string;
   has_observation: boolean;
+  acknowledged: boolean;
 };
 
 type KanbanColumn = {

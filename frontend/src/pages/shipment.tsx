@@ -26,6 +26,7 @@ type Pedido = {
   vendedor_nome?: string;
   kanban_column: 'em-aberto' | 'em-separação' | 'pronto-para-envio' | string;
   has_observation: boolean;
+  acknowledged: boolean;
 };
 
 type KanbanColumn = {
@@ -250,6 +251,12 @@ export default function ShipmentPage() {
       });
   }
 
+  const handlePedidoAcknowledged = (pedidoId: string | number) => {
+    setPedidos((prevPedidos) =>
+      prevPedidos.map((p) => (p.id === pedidoId ? { ...p, acknowledged: true } : p))
+    );
+  };
+
   if (loading) return <Spinner animation="border" />;
   if (error) return <Alert variant="danger">{error}</Alert>;
 
@@ -314,6 +321,7 @@ export default function ShipmentPage() {
         columns={Object.values(columns)}
         onPedidoUpdate={handlePedidoAtualizado}
         unmountOnExit={false}
+        onAcknowledged={handlePedidoAcknowledged}
       />
 
       <Button
