@@ -20,6 +20,7 @@ type Item = {
   quantidade: number;
   valor: number;
   codigo: string;
+  isForProduction?: boolean;
 };
 
 type PedidoDetalhes = {
@@ -76,6 +77,41 @@ export function PedidoDetalhesModal({
   const [error, setError] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isAcknowledging, setIsAcknowledging] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+
+  const handleItemSelection = (itemCode: string, quantity: number, isSelected: boolean) => {
+    setSelectedItems((prevSelected) => {
+      const updatedSelection = new Set(prevSelected);
+      if (isSelected) {
+        updatedSelection.add(itemCode);
+      } else {
+        updatedSelection.delete(itemCode);
+      }
+      return updatedSelection;
+    });
+
+    api
+      .post('/api/expedicao/production-item', {
+        orderId: pedido?.id,
+        productCode: itemCode,
+        quantity: quantity,
+        isSelected: isSelected,
+      })
+      .then(() => console.log(`Item ${itemCode} atualizado com sucesso.`))
+      .catch((err) => {
+        console.error('Falha ao salvar seleção do item:', err);
+        alert('Ocorreu um erro ao salvar a seleção deste item.');
+        setSelectedItems((prevSelected) => {
+          const updatedSelection = new Set(prevSelected);
+          if (updatedSelection.has(itemCode)) {
+            updatedSelection.delete(itemCode);
+          } else {
+            updatedSelection.add(itemCode);
+          }
+          return updatedSelection;
+        });
+      });
+  };
 
   const handleAcknowledge = async () => {
     if (!pedido) return;
@@ -102,10 +138,21 @@ export function PedidoDetalhesModal({
         setIsLoading(true);
         setError(null);
         setDetalhes(null);
+
         try {
           const response = await api.get(`/api/pedidos/${pedido.id}`);
           setDetalhes(response.data);
           setEditedObservacoes(response.data.observacoes_expedicao || '');
+
+          const initialSelected = new Set<string>();
+          if (response.data.itens) {
+            response.data.itens.forEach((item: Item) => {
+              if (item.isForProduction) {
+                initialSelected.add(item.codigo);
+              }
+            });
+          }
+          setSelectedItems(initialSelected);
         } catch (err) {
           console.error('Erro ao buscar detalhes do pedido', err);
           setError('Não foi possível carregar os detalhes do pedido.');
@@ -170,6 +217,8 @@ export function PedidoDetalhesModal({
     if (!detalhes) {
       return null;
     }
+
+    const isForProductionColumn = detalhes.kanban_column === 'em-producao';
 
     console.log('ID da coluna vindo da API:', detalhes.kanban_column);
     console.log('Array de colunas vindo das props:', columns);
@@ -241,13 +290,13 @@ export function PedidoDetalhesModal({
           </Col>
           <Col md={4}>
             <div className="info-block">
-              <small>Data do Pedido</small>
+              <small>Data do pedido</small>
               <p>{new Date(detalhes.data + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
             </div>
           </Col>
           <Col md={4}>
             <div className="info-block">
-              <small>Valor Total</small>
+              <small>Valor total</small>
               <p>
                 {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
                   detalhes.total
@@ -267,10 +316,30 @@ export function PedidoDetalhesModal({
                 {detalhes.itens.map((item, index) => (
                   <Col md={6} key={item.id}>
                     <div className="product-card">
-                      <div>
-                        <small>Descrição</small>
-                        <p>{item.descricao}</p>
+                      <div className="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                          <small>Descrição</small>
+                          <p>{item.descricao}</p>
+                        </div>
+
+                        {isForProductionColumn && (
+                          <Form.Check
+                            type="checkbox"
+                            id={`item-${item.id}`}
+                            checked={selectedItems.has(item.codigo)}
+                            onChange={(e) =>
+                              handleItemSelection(item.codigo, item.quantidade, e.target.checked)
+                            }
+                            style={{
+                              minWidth: '20px',
+                              position: 'relative',
+                              left: '6px',
+                            }}
+                            className="custom-checkbox-producao"
+                          />
+                        )}
                       </div>
+
                       <Row className="mt-3">
                         <Col xs={4}>
                           <small>Código</small>
