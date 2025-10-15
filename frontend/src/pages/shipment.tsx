@@ -15,6 +15,7 @@ import api from 'src/services/api';
 
 import { KanbanCard } from './kanbancard';
 import { PedidoDetalhesModal } from './pedidodetalhesmodal';
+import { ProductionReportModal } from './productionreportmodal';
 import { KanbanColumn as KanbanColumnComponent } from './kanbancolumn';
 
 type Pedido = {
@@ -60,6 +61,7 @@ export default function ShipmentPage() {
   const [modalShow, setModalShow] = useState(false);
   const [selectedPedido, setSelectedPedido] = useState<Pedido | null>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   const scrollToTop = () => {
     scrollableContainerRef.current?.scrollTo({
@@ -266,18 +268,23 @@ export default function ShipmentPage() {
   return (
     <Container fluid className="mt-4 d-flex flex-column" style={{ height: 'calc(100vh - 100px)' }}>
       <h3 className=" mt-3 mb-4 fw-bold">Quadro de Expedição</h3>
-      <Form.Group className="mb-4" style={{ maxWidth: '420px' }}>
-        <Form.Control
-          className="input-foco-azul"
-          type="text"
-          placeholder="Pesquisar por nome, vendedor ou nº do pedido"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={{
-            borderRadius: '5px',
-          }}
-        />
-      </Form.Group>
+
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <Form.Group style={{ width: '100%', maxWidth: '500px' }}>
+          <Form.Control
+            className="input-foco-azul"
+            type="text"
+            placeholder="Pesquisar por nome, vendedor ou nº do pedido"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ borderRadius: '5px' }}
+          />
+        </Form.Group>
+
+        <Button onClick={() => setShowReportModal(true)} className="relatorio-button">
+          Relatório de produção
+        </Button>
+      </div>
 
       <div
         ref={scrollableContainerRef}
@@ -331,6 +338,8 @@ export default function ShipmentPage() {
       >
         &uarr;
       </Button>
+
+      <ProductionReportModal show={showReportModal} onHide={() => setShowReportModal(false)} />
     </Container>
   );
 }
