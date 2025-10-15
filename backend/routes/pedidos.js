@@ -228,6 +228,18 @@ router.get ('/:idPedidoVenda', autenticarToken, async(req, res) => {
     try {
         const detalhesDoPedido = await blingService.fetchDetalhesPedidoVenda(idPedidoVenda);
 
+        const productionItemsQuery = 'SELECT product_code FROM production_items WHERE order_id = $1';
+        const { rows: productionItems } = await db.query(productionItemsQuery, [idPedidoVenda]);
+
+        const productionItemSet = new Set(productionItems.map(item => item.product_code));
+
+        if (detalhesDoPedido.itens) {
+            detalhesDoPedido.itens = detalhesDoPedido.itens.map(item => ({
+                ...item,
+                isForProduction: productionItemSet.has(item.codigo)
+            }));
+        }
+
         if (detalhesDoPedido.vendedor && detalhesDoPedido.vendedor.id) {
             const vendedorIdBling = detalhesDoPedido.vendedor.id;
             const queryVendedor = 'SELECT nome FROM usuarios WHERE id_vendedor_bling = $1';
