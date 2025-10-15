@@ -87,41 +87,63 @@ router.put('/status/:orderId', autenticarToken, async (req, res) => {
     const { orderId } = req.params;
     const { newColumn, observacoes } = req.body;
 
-    if (!newColumn && typeof observacoes === 'undefined') {
-        return res.status(400).json({ mensagem: 'Nenhum dado para atualizar foi fornecido.' });
-    }
-
     try {
-        let query;
-        let queryParams;
-        let successMessage;
+        const checkQuery = 'SELECT order_id FROM shipment_status WHERE order_id = $1';
+        const { rows } = await db.query(checkQuery, [orderId]);
+        const recordExists = rows.length > 0;
 
-        if (typeof observacoes !== 'undefined') {
-            query = `
-                INSERT INTO shipment_status (order_id, observacoes_expedicao, kanban_column, updated_at)
-                VALUES ($1, $2, 'em-aberto', NOW())
-                ON CONFLICT (order_id) DO UPDATE SET
-                    observacoes_expedicao = EXCLUDED.observacoes_expedicao,
-                    updated_at = NOW();
+        if (recordExists) {
+            const fieldsToUpdate = [];
+            const queryParams = [orderId]
+            let paramIndex = 2;
+
+            if (newColumn) {
+                fieldsToUpdate.push(`kanban_column = $${paramIndex++}`);
+                queryParams.push(newColumn);
+            }
+            if (observacoes !== undefined) {
+                fieldsToUpdate.push(`observacoes_expedicao = $${paramIndex++}`);
+                queryParams.push(observacoes);
+            }
+
+            const upsertQuery = `
+                UPDATE shipment_status SET ${fieldsToUpdate.join(', ')}, updated_at = NOW()
+                WHERE order_id = $1;
             `;
-            queryParams = [orderId, observacoes];
-            successMessage = `Observações do pedido ${orderId} salvas com sucesso.`;
+
+            await db.query(upsertQuery, queryParams);
+
+        } else {
+            const pedidoQuery = 'SELECT status_id FROM cache_pedidos WHERE id = $1';
+            const pedidoResult = await db.query(pedidoQuery, [orderId]);
+
+            if (pedidoResult.rows.length === 0) {
+                return res.status(404).json({ mensagem: 'Pedido não encontrado no cache.' });
+            }
+            const statusId = pedidoResult.rows[0].status_id;
+
+            let defaultColumn = 'em-aberto';
+            if (statusId === 464197) {
+                defaultColumn = 'natal';
+            }
+            
+            const finalColumn = newColumn || defaultColumn;
+            const finalObservacoes = observacoes || '';
+
+            const insertQuery = `
+                INSERT INTO shipment_status (order_id, kanban_column, observacoes_expedicao, updated_at)
+                VALUES ($1, $2, $3, NOW());
+            `;
+            await db.query(insertQuery, [orderId, finalColumn, finalObservacoes]);
         }
 
-        else if (newColumn) {
-            query = `
-            INSERT INTO shipment_status (order_id, kanban_column, updated_at)
-            VALUES ($1, $2, NOW())
-            ON CONFLICT (order_id) DO UPDATE SET
-                kanban_column = EXCLUDED.kanban_column,
-                updated_at = NOW();
-            `;
-            queryParams = [orderId, newColumn];
-            successMessage = `Pedido ${orderId} movido para ${newColumn} com sucesso.`;
+        if (newColumn && newColumn !== 'em-producao') {
+            console.log(`Limpando itens de produção para o pedido ${orderId}...`);
+            const deleteQuery = 'DELETE FROM production_items WHERE order_id = $1';
+            await db.query(deleteQuery, [orderId]);
         }
-        
-        await db.query(query, queryParams);
-        res.status(200).json({ mensagem: successMessage });
+
+        res.status(200).json({ mensagem: `Dados de expedição do pedido ${orderId} atualizados com sucesso.` });
 
     } catch (error) {
         console.error(`Erro ao atualizar dados de expedição do pedido ${orderId}:`, error.message);
@@ -170,6 +192,56 @@ router.post('/acknowledge/:orderId', autenticarToken, async (req, res) => {
     } catch (error) {
         console.error(`Erro ao marcar pedido ${orderId} com visto:`, error.message);
         res.status(500).json({ mensagem: 'Falha ao marcar pedido com visto.' });
+    }
+});
+
+router.post('/production-item', autenticarToken, async (req, res) => {
+    const { orderId, productCode, quantity, isSelected } = req.body;
+
+    try {
+        if (isSelected) {
+            const insertQuery = `
+                INSERT INTO production_items (order_id, product_code, quantity)
+                VALUES ($1, $2, $3)
+                ON CONFLICT (order_id, product_code) DO NOTHING;
+            `;
+            await db.query(insertQuery, [orderId, productCode, quantity]);
+            res.status(200).json({ mensagem: 'Item adicionado à lista de produção.' });
+        } else {
+            const deleteQuery = `
+                DELETE FROM production_items
+                WHERE order_id = $1 AND product_code = $2;
+            `;
+            await db.query(deleteQuery, [orderId, productCode]);
+            res.status(200).json({ mensagem: 'Item removido da lista de produção.' });
+        }
+    } catch (error) {
+        console.error('Erro ao atualizar a lista de produção:', error.message);
+        res.status(500).json({ mensagem: 'Falha ao atualizar a lista de produção.' });
+    }
+});
+
+router.get('/production-report', autenticarToken, async (req, res) => {
+    try {
+        const query = `
+            SELECT
+                pi.product_code,
+                COALESCE(cp.nome, 'Descrição não encontrada') AS descricao,
+                SUM(pi.quantity) as total_quantity
+            FROM
+                production_items AS pi
+            LEFT JOIN
+                cache_produtos AS cp ON pi.product_code = cp.codigo
+            GROUP BY
+                pi.product_code, cp.nome
+            ORDER BY
+                pi.product_code ASC;
+        `;
+        const { rows } = await db.query(query);
+        res.json(rows);
+    } catch (error) {
+        console.error('Erro ao gerar relatório de produção:', error.message);
+        res.status(500).json({ mensagem: 'Falha ao gerar relatório de produção.' });
     }
 });
 
