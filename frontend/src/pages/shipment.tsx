@@ -128,6 +128,11 @@ export default function ShipmentPage() {
     });
   }, [pedidos, q]);
 
+  const pedidosOrdenados = useMemo(
+    () => [...pedidosFiltrados].sort((a, b) => Number(a.acknowledged) - Number(b.acknowledged)),
+    [pedidosFiltrados]
+  );
+
   const columns: Columns = useMemo(() => {
     const base: Columns = {
       'em-aberto': {
@@ -186,7 +191,7 @@ export default function ShipmentPage() {
       },
     };
 
-    for (const pedido of pedidosFiltrados) {
+    for (const pedido of pedidosOrdenados) {
       const col = pedido.kanban_column;
       if (!base[col]) {
         base[col] = { id: col, title: col, pedidos: [] };
@@ -194,7 +199,7 @@ export default function ShipmentPage() {
       base[col].pedidos.push(pedido);
     }
     return base;
-  }, [pedidosFiltrados]);
+  }, [pedidosOrdenados]);
 
   function handleShowModal(pedido: Pedido) {
     setSelectedPedido(pedido);
