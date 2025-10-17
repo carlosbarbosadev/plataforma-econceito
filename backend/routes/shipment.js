@@ -32,10 +32,14 @@ router.get('/pedidos-para-envio', autenticarToken, async (req, res) => {
                 u.nome AS vendedor_nome,
                 ss.acknowledged,
                 CASE
-                    WHEN (ss.observacoes_expedicao IS NOT NULL AND ss.observacoes_expedicao <> '')
-                    THEN TRUE
-                    ELSE FALSE
-                END AS has_observation
+                    WHEN (ss.observacoes_expedicao IS NOT NULL AND ss.observacoes_expedicao <> '') THEN TRUE ELSE FALSE
+                END AS has_observation,
+                (
+                    SELECT COUNT(*) = 0
+                    FROM jsonb_to_recordset(cp.dados_completos_json->'itens') AS item(codigo text, quantidade integer)
+                    LEFT JOIN cache_produtos prod ON prod.codigo = item.codigo
+                    WHERE item.quantidade > COALESCE(prod.estoque_saldo_virtual, 0)
+                ) AS is_fully_in_stock
             FROM
                 cache_pedidos AS cp
             LEFT JOIN
@@ -44,6 +48,7 @@ router.get('/pedidos-para-envio', autenticarToken, async (req, res) => {
                 usuarios AS u ON cp.vendedor_id = u.id_vendedor_bling
             ${whereString}
             ORDER BY
+                is_fully_in_stock DESC,
                 cp.data_pedido ASC;
         `;
 
@@ -51,7 +56,6 @@ router.get('/pedidos-para-envio', autenticarToken, async (req, res) => {
 
         const pedidosFormatados = pedidosParaEnvio.map(p => {
             let colunaInicial;
-
             if (p.kanban_column) {
                 colunaInicial = p.kanban_column;
             } else {
@@ -72,6 +76,7 @@ router.get('/pedidos-para-envio', autenticarToken, async (req, res) => {
                 vendedor_nome: p.vendedor_nome,
                 has_observation: p.has_observation,
                 acknowledged: p.acknowledged,
+                isFullyInStock: p.is_fully_in_stock,
             };
         });
 
