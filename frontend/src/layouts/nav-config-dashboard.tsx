@@ -18,31 +18,36 @@ export type NavItem = {
 
 export const navData: NavItem[] = [
   {
-    title: 'Painel',
+    title: 'DASHBOARD',
     path: '/',
     icon: <Iconify icon="uil:home-alt" sx={{ color: 'white' }} />,
     bgcolor: '#2453dc',
   },
   {
-    title: 'Clientes',
+    title: 'CLIENTES',
     path: '/clientes',
     icon: <Iconify icon="uil:user" sx={{ color: 'white' }} />,
     bgcolor: '#28b463',
   },
   {
-    title: 'Pedidos',
+    title: 'PEDIDOS',
     path: '/pedidos',
-    icon: <Iconify icon="mdi:file-document-box-multiple-outline" sx={{ color: 'white', width: '40', height: '40' }} />,
-    bgcolor: "#FFC300",
+    icon: (
+      <Iconify
+        icon="mdi:file-document-box-multiple-outline"
+        sx={{ color: 'white', width: '40', height: '40' }}
+      />
+    ),
+    bgcolor: '#FFC300',
   },
   {
-    title: 'Produtos',
+    title: 'PRODUTOS',
     path: '/produtos',
     icon: <Iconify icon="uil:archive-alt" sx={{ color: 'white' }} />,
     bgcolor: '#9b1dda',
   },
   {
-    title: 'Campanhas',
+    title: 'CAMPANHAS',
     path: '/campanhas',
     icon: <Iconify icon="material-symbols:bid-landscape-outline" sx={{ color: 'white' }} />,
     bgcolor: '#f66c1d',
@@ -50,8 +55,8 @@ export const navData: NavItem[] = [
 ];
 
 export const logoutItem: NavItem = {
-  title: 'Logout',
+  title: 'Sair',
   path: '/login',
   icon: <Iconify icon="material-symbols:logout-rounded" sx={{ color: 'white' }} />,
-  bgcolor: "#D32F2F",
+  bgcolor: '#D32F2F',
 };

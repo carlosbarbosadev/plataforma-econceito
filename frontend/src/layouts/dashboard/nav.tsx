@@ -12,8 +12,6 @@ import Drawer, { drawerClasses } from '@mui/material/Drawer';
 import { usePathname } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
-import logoDaPlataforma from 'src/assets/stratto-logo.png';
-
 import { Scrollbar } from 'src/components/scrollbar';
 
 import { logoutItem } from '../nav-config-dashboard';
@@ -44,12 +42,11 @@ export function NavDesktop({
 
   return (
     <Box
-    component="nav"
-    className="desktop-sidebar"
+      component="nav"
+      className="desktop-sidebar"
       sx={{
-        bgcolor: "background.paper",
-        pt: 2.5,
-        px: 2.5,
+        bgcolor: '#f9fafb',
+        pt: 13,
         pb: 5,
         top: 0,
         left: 0,
@@ -59,8 +56,6 @@ export function NavDesktop({
         flexDirection: 'column',
         zIndex: 'var(--layout-nav-zIndex)',
         width: 'var(--layout-nav-vertical-width)',
-        borderRight: `1px solid ${varAlpha(theme.vars.palette.grey['500Channel'], 0.12)}`,
-        boxShadow: `4px 0px 12px -2px ${varAlpha(theme.vars.palette.grey["600Channel"], 0.12)}`,
         [theme.breakpoints.up(layoutQuery)]: {
           display: 'flex',
         },
@@ -97,8 +92,7 @@ export function NavMobile({
       onClose={onClose}
       sx={{
         [`& .${drawerClasses.paper}`]: {
-          pt: 2.5,
-          px: 2.5,
+          pt: 13,
           overflow: 'unset',
           width: 'var(--layout-nav-mobile-width)',
           ...sx,
@@ -117,14 +111,6 @@ export function NavContent({ data, slots, workspaces, sx }: NavContentProps) {
 
   return (
     <>
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '40px' }}>
-      <img
-        src={logoDaPlataforma}
-        alt="Logo da plataforma"
-        style={{ height: "150px", display: 'block' }}
-      />
-    </div>
-
       {slots?.topArea}
 
       <Scrollbar fillContent>
@@ -153,46 +139,48 @@ export function NavContent({ data, slots, workspaces, sx }: NavContentProps) {
               return (
                 <ListItem disableGutters disablePadding key={item.title}>
                   <ListItemButton
+                    disableRipple
                     disableGutters
                     component={RouterLink}
                     href={item.path}
-                    sx={[
-                      (theme) => ({
-                        pl: 2,
-                        py: 1,
-                        gap: 2,
-                        pr: 1.5,
-                        borderRadius: 0.75,
-                        typography: 'body2',
-                        minHeight: 44,
-                        fontWeight: isActived ? 'fontWeightSemiBold' : 'fontWeightMedium',
-                        // Letras cinza padrão, azul quando ativo
-                        color: isActived ? '#1976d2' : '#b0b0b0',
-                        backgroundColor: isActived ? 'rgba(25, 118, 210, 0.08)' : 'transparent',
-                        ...(isActived && {
-                          '&:hover': {
-                            bgcolor: 'rgba(25, 118, 210, 0.15)',
-                          },
-                        }),
-                        ...(!isActived && {
-                          '&:hover': {
-                            bgcolor: 'rgba(255, 255, 255, 0.08)',
-                          }
-                        })
-                      }),
-                    ]}
+                    sx={(theme) => ({
+                      py: 1,
+                      gap: 1.8,
+                      pr: 1.5,
+                      borderRadius: 0,
+                      minHeight: 40,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: isActived ? '#1976d2' : '#b0b0b0',
+
+                      backgroundColor: 'transparent',
+
+                      borderLeft: isActived ? '3px solid #1976d2' : '3px solid transparent',
+
+                      paddingLeft: theme.spacing(2.5),
+                      paddingRight: theme.spacing(2.5),
+
+                      '&:active': {
+                        backgroundColor: 'transparent',
+                      },
+
+                      // Efeito hover unificado
+                      '&:hover': {
+                        backgroundColor: 'transparent',
+                      },
+                    })}
                   >
                     <Box
                       component="span"
                       sx={{
                         width: 45,
-                        height:45,
+                        height: 45,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        borderRadius: "5px",
+                        borderRadius: '3px',
                         bgcolor: item.bgcolor,
-                        color: "white",
+                        color: 'white',
                       }}
                     >
                       {item.icon}
@@ -212,7 +200,6 @@ export function NavContent({ data, slots, workspaces, sx }: NavContentProps) {
       </Scrollbar>
 
       {slots?.bottomArea}
-
     </>
   );
 }
@@ -224,47 +211,47 @@ type NavLogoutProps = {
 };
 
 export function NavLogout({ onLogout }: NavLogoutProps) {
-return (
-  <Box>
-    <ListItem disableGutters disablePadding key ={logoutItem.title}>
-      <ListItemButton
-        disableGutters
-        onClick={onLogout}
-        sx={{
-          pl: 2,
-          py: 1,
-          gap: 2,
-          pr: 1.5,
-          borderRadius: 0.75,
-          typography: 'body2',
-          minHeight: 44,
-          fontWeight: 'fontWeightMedium',
-          color: '#b0b0b0',
-          '&:hover': {
-            bgcolor: 'rgba(255, 255, 255, 0.08)',
-          },
-        }}
-      >
-        <Box
-          component="span"
+  return (
+    <Box>
+      <ListItem disableGutters disablePadding key={logoutItem.title}>
+        <ListItemButton
+          disableGutters
+          onClick={onLogout}
           sx={{
-            width: 45,
-            height: 45,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: "5px",
-            bgcolor: logoutItem.bgcolor,
-            color: "white",
+            pl: 2,
+            py: 1,
+            gap: 2,
+            pr: 1.5,
+            borderRadius: 0.75,
+            typography: 'body2',
+            minHeight: 44,
+            fontWeight: 'fontWeightMedium',
+            color: '#b0b0b0',
+            '&:hover': {
+              bgcolor: 'rgba(255, 255, 255, 0.08)',
+            },
           }}
         >
-          {logoutItem.icon}
-        </Box>
-        <Box component="span" sx={{ flexGrow: 1 }}>
-          {logoutItem.title}
-        </Box>
-      </ListItemButton>
-    </ListItem>
-  </Box>
+          <Box
+            component="span"
+            sx={{
+              width: 45,
+              height: 45,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '5px',
+              bgcolor: logoutItem.bgcolor,
+              color: 'white',
+            }}
+          >
+            {logoutItem.icon}
+          </Box>
+          <Box component="span" sx={{ flexGrow: 1 }}>
+            {logoutItem.title}
+          </Box>
+        </ListItemButton>
+      </ListItem>
+    </Box>
   );
 }
