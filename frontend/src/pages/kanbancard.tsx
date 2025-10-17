@@ -12,6 +12,7 @@ type Pedido = {
   vendedor_nome?: string;
   has_observation: boolean;
   acknowledged: boolean;
+  isFullyInStock: boolean;
 };
 
 interface KanbanCardProps {
@@ -53,7 +54,14 @@ export function KanbanCard({
       {...attributes}
       onClick={() => onCardClick && onCardClick(pedido)}
     >
-      <Card className="kanban-card" style={{ minHeight: '100px', opacity: isOverlay ? 0.7 : 1 }}>
+      <Card
+        className="kanban-card"
+        style={{
+          minHeight: '100px',
+          opacity: isOverlay ? 0.7 : 1,
+          backgroundColor: pedido.isFullyInStock ? '#E8F5E9' : '#FFFFFF',
+        }}
+      >
         <Card.Header
           style={{ backgroundColor: '#fff' }}
           as="div"

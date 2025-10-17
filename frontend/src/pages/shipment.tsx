@@ -28,6 +28,7 @@ type Pedido = {
   kanban_column: 'em-aberto' | 'em-separação' | 'pronto-para-envio' | string;
   has_observation: boolean;
   acknowledged: boolean;
+  isFullyInStock: boolean;
 };
 
 type KanbanColumn = {
@@ -129,7 +130,18 @@ export default function ShipmentPage() {
   }, [pedidos, q]);
 
   const pedidosOrdenados = useMemo(
-    () => [...pedidosFiltrados].sort((a, b) => Number(a.acknowledged) - Number(b.acknowledged)),
+    () =>
+      [...pedidosFiltrados].sort((a, b) => {
+        if (a.isFullyInStock !== b.isFullyInStock) {
+          return Number(b.isFullyInStock) - Number(a.isFullyInStock);
+        }
+
+        if (a.acknowledged !== b.acknowledged) {
+          return Number(a.acknowledged) - Number(b.acknowledged);
+        }
+
+        return 0;
+      }),
     [pedidosFiltrados]
   );
 
