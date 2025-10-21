@@ -321,6 +321,7 @@ body.modal-open .desktop-sidebar {
   background-color: #e9ecef;
   color: #212529;
 }
+
 .product-number-badge {
   position: absolute; 
   bottom: 10px;       
@@ -328,10 +329,11 @@ body.modal-open .desktop-sidebar {
   font-size: 0.8rem;    
   font-weight: bold;
 }
+
 .scroll-to-top-btn {
   position: fixed;
   bottom: 43px;
-  right: 100px;
+  right: 150px;
   z-index: 1000;
 
   background-color: #6B778C;
@@ -354,4 +356,70 @@ body.modal-open .desktop-sidebar {
 
 .scroll-to-top-btn:hover {
   background-color: #2453dc
+}
+
+.relatorio-button {
+  background-color: #1868db; /* Cor padrão */
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 550;
+  border-radius: 4px;
+  color: white; 
+  padding: 9px 14px;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.relatorio-button:hover {
+  background-color: #1558bc; 
+}
+
+.relatorio-button:active {
+  background-color: #123263 !important;
+}
+
+.custom-checkbox-producao .form-check-input {
+  border-radius: 2px;
+  border-color: #adb5bd;
+  cursor: pointer;
+}
+
+.custom-checkbox-producao .form-check-input:not(:checked) {
+  border: 1px solid #ced4da;
+  box-shadow: none;
+}
+
+.custom-checkbox-producao .form-check-input:checked {
+  background-color: #1868db;
+  border-color: #1868db;
+  box-shadow: none
+}
+
+.production-table {
+  font-size: 0.9rem;
+}
+
+.product-table-quantity {
+  width: 60px;
+  font-size: 0.9rem;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.fix-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.botao-margin {
+  margin-top: 43px;
+}
+
+.badge-novo {
+  background-color: #439746 !important;
+  color: white !important;
+}
+
+.badge-atualizado {
+  background-color: #f8ae00 !important;
+  color: white !important;
 }
