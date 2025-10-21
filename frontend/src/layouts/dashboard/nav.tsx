@@ -160,13 +160,14 @@ export function NavContent({ data, slots, workspaces, sx }: NavContentProps) {
                       paddingLeft: theme.spacing(2.5),
                       paddingRight: theme.spacing(2.5),
 
-                      '&:active': {
-                        backgroundColor: 'transparent',
-                      },
-
                       // Efeito hover unificado
                       '&:hover': {
                         backgroundColor: 'transparent',
+
+                        ...(!isActived && {
+                          color: '#1976d2',
+                          borderLeft: `3px solid rgba(25, 118, 210, 0.4)`,
+                        }),
                       },
                     })}
                   >
