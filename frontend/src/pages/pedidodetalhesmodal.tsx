@@ -21,6 +21,7 @@ type Item = {
   valor: number;
   codigo: string;
   isForProduction?: boolean;
+  estoqueDisponivel?: number;
 };
 
 type PedidoDetalhes = {
@@ -313,54 +314,68 @@ export function PedidoDetalhesModal({
             </div>
             {detalhes.itens && detalhes.itens.length > 0 ? (
               <Row className="g-3">
-                {detalhes.itens.map((item, index) => (
-                  <Col md={6} key={item.id}>
-                    <div className="product-card">
-                      <div className="d-flex justify-content-between align-items-start mb-2">
-                        <div>
-                          <small>Descrição</small>
-                          <p>{item.descricao}</p>
+                {detalhes.itens.map((item, index) => {
+                  const estoqueDisponivel = item.estoqueDisponivel ?? 0;
+                  const isOutOfStock = item.quantidade > estoqueDisponivel;
+
+                  return (
+                    <Col md={6} key={item.id}>
+                      <div
+                        className={`product-card ${isOutOfStock ? 'border border-danger' : ''}`}
+                        style={{
+                          backgroundColor: isOutOfStock ? '#fff0f1' : '#fffff',
+                          position: 'relative',
+                          padding: '1rem',
+                          borderRadius: '0.25rem',
+                          marginBottom: '1rem',
+                        }}
+                      >
+                        <div className="d-flex justify-content-between align-items-start mb-2">
+                          <div>
+                            <small>Descrição</small>
+                            <p>{item.descricao}</p>
+                          </div>
+
+                          {isForProductionColumn && (
+                            <Form.Check
+                              type="checkbox"
+                              id={`item-${item.id}`}
+                              checked={selectedItems.has(item.codigo)}
+                              onChange={(e) =>
+                                handleItemSelection(item.codigo, item.quantidade, e.target.checked)
+                              }
+                              style={{
+                                minWidth: '20px',
+                                position: 'relative',
+                                left: '6px',
+                              }}
+                              className="custom-checkbox-producao"
+                            />
+                          )}
                         </div>
 
-                        {isForProductionColumn && (
-                          <Form.Check
-                            type="checkbox"
-                            id={`item-${item.id}`}
-                            checked={selectedItems.has(item.codigo)}
-                            onChange={(e) =>
-                              handleItemSelection(item.codigo, item.quantidade, e.target.checked)
-                            }
-                            style={{
-                              minWidth: '20px',
-                              position: 'relative',
-                              left: '6px',
-                            }}
-                            className="custom-checkbox-producao"
-                          />
-                        )}
+                        <Row className="mt-3">
+                          <Col xs={4}>
+                            <small>Código</small>
+                            <p>{item.codigo}</p>
+                          </Col>
+                          <Col xs={4}>
+                            <small>Qtd.</small>
+                            <p>{item.quantidade}</p>
+                          </Col>
+                        </Row>
+
+                        <Badge
+                          bg="secondary"
+                          className="product-number-badge"
+                          style={{ borderRadius: '2px' }}
+                        >
+                          {index + 1}
+                        </Badge>
                       </div>
-
-                      <Row className="mt-3">
-                        <Col xs={4}>
-                          <small>Código</small>
-                          <p>{item.codigo}</p>
-                        </Col>
-                        <Col xs={4}>
-                          <small>Qtd.</small>
-                          <p>{item.quantidade}</p>
-                        </Col>
-                      </Row>
-
-                      <Badge
-                        bg="secondary"
-                        className="product-number-badge"
-                        style={{ borderRadius: '2px' }}
-                      >
-                        {index + 1}
-                      </Badge>
-                    </div>
-                  </Col>
-                ))}
+                    </Col>
+                  );
+                })}
               </Row>
             ) : (
               <p className="text-muted">Nenhum item encontrado.</p>
@@ -372,7 +387,7 @@ export function PedidoDetalhesModal({
           <Col>
             <Form.Group>
               <Form.Label className="info-block mb-2">
-                <small>Observações da Expedição</small>
+                <small>Observações da expedição</small>
               </Form.Label>
               <Form.Control
                 style={{ fontSize: '0.9rem', borderRadius: '4px' }}
