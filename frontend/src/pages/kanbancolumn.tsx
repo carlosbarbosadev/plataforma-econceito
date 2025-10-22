@@ -13,6 +13,7 @@ type Pedido = {
   has_observation: boolean;
   acknowledged: boolean;
   isFullyInStock: boolean;
+  outOfStockCount: number;
 };
 
 type KanbanColumn = {

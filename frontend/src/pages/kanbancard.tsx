@@ -13,6 +13,7 @@ type Pedido = {
   has_observation: boolean;
   acknowledged: boolean;
   isFullyInStock: boolean;
+  outOfStockCount: number;
 };
 
 interface KanbanCardProps {
@@ -107,14 +108,17 @@ export function KanbanCard({
           )}
 
           {!pedido.acknowledged && (
-            <Badge
-              bg="danger"
-              className="mt-1 mb-2 badge-confirmar"
-              style={{ borderRadius: '2px' }}
-            >
+            <Badge className="mt-1 mb-2 badge-novo" style={{ borderRadius: '2px' }}>
               NOVO
             </Badge>
           )}
+          <div>
+            {!pedido.isFullyInStock && pedido.outOfStockCount > 0 && (
+              <Badge className="mt-1 mb-2 badge-faltando" style={{ borderRadius: '2px' }}>
+                {pedido.outOfStockCount} {pedido.outOfStockCount > 1 ? 'ITENS' : 'ITEM'} FALTANDO
+              </Badge>
+            )}
+          </div>
 
           <div className="d-flex align-items-center gap-1">
             <small className="text-muted" style={{ fontSize: '0.8rem' }}>
