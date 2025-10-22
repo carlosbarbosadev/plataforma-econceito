@@ -228,6 +228,24 @@ router.get ('/:idPedidoVenda', autenticarToken, async(req, res) => {
     try {
         const detalhesDoPedido = await blingService.fetchDetalhesPedidoVenda(idPedidoVenda);
 
+        if (detalhesDoPedido.itens && detalhesDoPedido.itens.length > 0) {
+            const itensComEstoquePromises = detalhesDoPedido.itens.map(async (item) => {
+                let estoqueDisponivel = 0;
+                try {
+                    const stockQuery = 'SELECT estoque_saldo_virtual FROM cache_produtos WHERE codigo = $1';
+                    const stockResult = await db.query(stockQuery, [item.codigo]);
+                    if (stockResult.rows.length > 0) {
+                        estoqueDisponivel = parseFloat(stockResult.rows[0].estoque_saldo_virtual) || 0;
+                    }
+                } catch (stockError) {
+                    console.error(`Erro ao buscar estoque para o item ${item.codigo}:`, stockError);
+                }
+                return { ...item, estoqueDisponivel };
+            });
+
+            detalhesDoPedido.itens = await Promise.all(itensComEstoquePromises);
+        }
+
         const productionItemsQuery = 'SELECT product_code FROM production_items WHERE order_id = $1';
         const { rows: productionItems } = await db.query(productionItemsQuery, [idPedidoVenda]);
 
