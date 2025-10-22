@@ -31,21 +31,26 @@ router.get('/pedidos-para-envio', autenticarToken, async (req, res) => {
                 ss.kanban_column,
                 u.nome AS vendedor_nome,
                 ss.acknowledged,
-                CASE
-                    WHEN (ss.observacoes_expedicao IS NOT NULL AND ss.observacoes_expedicao <> '') THEN TRUE ELSE FALSE
-                END AS has_observation,
+                CASE WHEN (ss.observacoes_expedicao IS NOT NULL AND ss.observacoes_expedicao <> '') THEN TRUE ELSE FALSE END AS has_observation,
+                
                 (
-                    SELECT COUNT(*) = 0
+                    SELECT 
+                        -- Conta quantos itens têm quantidade maior que o estoque
+                        COUNT(*) FILTER (WHERE item.quantidade > COALESCE(prod.estoque_saldo_virtual, 0)) AS out_of_stock_count
                     FROM jsonb_to_recordset(cp.dados_completos_json->'itens') AS item(codigo text, quantidade integer)
                     LEFT JOIN cache_produtos prod ON prod.codigo = item.codigo
-                    WHERE item.quantidade > COALESCE(prod.estoque_saldo_virtual, 0)
+                ) AS out_of_stock_count,
+                
+                (
+                    (SELECT COUNT(*) FILTER (WHERE item.quantidade > COALESCE(prod.estoque_saldo_virtual, 0))
+                     FROM jsonb_to_recordset(cp.dados_completos_json->'itens') AS item(codigo text, quantidade integer)
+                     LEFT JOIN cache_produtos prod ON prod.codigo = item.codigo) = 0
                 ) AS is_fully_in_stock
+
             FROM
                 cache_pedidos AS cp
-            LEFT JOIN
-                shipment_status AS ss ON cp.id = ss.order_id
-            LEFT JOIN
-                usuarios AS u ON cp.vendedor_id = u.id_vendedor_bling
+            LEFT JOIN shipment_status AS ss ON cp.id = ss.order_id
+            LEFT JOIN usuarios AS u ON cp.vendedor_id = u.id_vendedor_bling
             ${whereString}
             ORDER BY
                 is_fully_in_stock DESC,
@@ -55,16 +60,7 @@ router.get('/pedidos-para-envio', autenticarToken, async (req, res) => {
         const { rows: pedidosParaEnvio } = await db.query(query, queryParams);
 
         const pedidosFormatados = pedidosParaEnvio.map(p => {
-            let colunaInicial;
-            if (p.kanban_column) {
-                colunaInicial = p.kanban_column;
-            } else {
-                if (p.status_id === 464197) {
-                    colunaInicial = 'natal';
-                } else {
-                    colunaInicial = 'em-aberto'
-                }
-            }
+            let colunaInicial = p.kanban_column || (p.status_id === 464197 ? 'natal' : 'em-aberto');
 
             return {
                 id: p.id,
@@ -77,6 +73,7 @@ router.get('/pedidos-para-envio', autenticarToken, async (req, res) => {
                 has_observation: p.has_observation,
                 acknowledged: p.acknowledged,
                 isFullyInStock: p.is_fully_in_stock,
+                outOfStockCount: parseInt(p.out_of_stock_count, 10),
             };
         });
 
