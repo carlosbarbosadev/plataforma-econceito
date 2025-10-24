@@ -247,4 +247,52 @@ router.get('/production-report', autenticarToken, async (req, res) => {
     }
 });
 
+router.get('/stock-demand-report', autenticarToken, async (req, res) => {
+    try {
+        const query = `
+            WITH ItemsFromOrders AS (
+                SELECT
+                    (item_data->>'codigo')::text AS produto_codigo,
+                    (item_data->>'quantidade')::integer AS quantidade
+                FROM
+                    cache_pedidos cp,
+                    jsonb_array_elements(cp.dados_completos_json->'itens') AS item_data
+                WHERE
+                    cp.status_id IN (6, 464197)
+                    AND (item_data->>'codigo') IS NOT NULL
+                    AND (item_data->>'codigo') <> ''
+            ),
+            Demand AS (
+                SELECT
+                    produto_codigo,
+                    SUM(quantidade) AS total_demand
+                FROM
+                    ItemsFromOrders
+                GROUP BY
+                    produto_codigo
+            )
+            SELECT
+                d.produto_codigo AS product_code,
+                COALESCE(prod.nome, 'Descrição não encontrada') AS description,
+                d.total_demand::integer,
+                COALESCE(prod.estoque_saldo_virtual, 0)::integer AS current_stock,
+                GREATEST(0, d.total_demand - COALESCE(prod.estoque_saldo_virtual, 0))::integer AS needed_quantity
+            FROM
+                Demand d
+            LEFT JOIN
+                cache_produtos prod ON d.produto_codigo = prod.codigo
+            ORDER BY
+                needed_quantity DESC,
+                product_code ASC;
+        `;
+
+        const { rows } = await db.query(query);
+        res.json(rows);
+
+    } catch (error) {
+        console.error('Erro ao gerar relatório de estoque vs demanda:', error.message);
+        res.status(500).json({ mensagem: 'Falha ao gerar relatório de estoque.' });
+    }
+});
+
 module.exports = router;
