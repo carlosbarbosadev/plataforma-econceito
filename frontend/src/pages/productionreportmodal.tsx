@@ -124,6 +124,17 @@ export function ProductionReportModal({ show, onHide }: ProductionReportModalPro
 
     return (
       <>
+        <div className="botao-margin">
+          <Button
+            style={{ borderRadius: '3px' }}
+            onClick={handleDownloadPdf}
+            disabled={reportData.length === 0}
+            className="relatorio-button"
+          >
+            Baixar PDF
+          </Button>
+        </div>
+
         <Table bordered hover className="fix-table">
           <thead>
             <tr>
@@ -155,18 +166,6 @@ export function ProductionReportModal({ show, onHide }: ProductionReportModalPro
             </tr>
           </tbody>
         </Table>
-
-        <div className="d-flex justify-content-end botao-margin">
-          <Button
-            style={{ borderRadius: '3px' }}
-            variant="primary"
-            onClick={handleDownloadPdf}
-            disabled={reportData.length === 0}
-            className="relatorio-button"
-          >
-            Baixar PDF
-          </Button>
-        </div>
       </>
     );
   };

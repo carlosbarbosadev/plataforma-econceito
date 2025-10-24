@@ -16,6 +16,7 @@ import api from 'src/services/api';
 import { KanbanCard } from './kanbancard';
 import { PedidoDetalhesModal } from './pedidodetalhesmodal';
 import { ProductionReportModal } from './productionreportmodal';
+import { StockDemandReportModal } from './stockdemandreportmodal';
 import { KanbanColumn as KanbanColumnComponent } from './kanbancolumn';
 
 type Pedido = {
@@ -64,6 +65,8 @@ export default function ShipmentPage() {
   const [selectedPedido, setSelectedPedido] = useState<Pedido | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showProductionReportModal, setShowProductionReportModal] = useState(false);
+  const [showStockReportModal, setShowStockReportModal] = useState(false);
 
   const scrollToTop = () => {
     scrollableContainerRef.current?.scrollTo({
@@ -277,6 +280,19 @@ export default function ShipmentPage() {
     );
   };
 
+  if (loading) {
+    return (
+      <Container
+        className="d-flex justify-content-center align-items-center"
+        style={{ minHeight: 'calc(100vh - 200px)' }}
+      >
+        <Spinner animation="border" role="status">
+          <span className="visually-hidden">Carregando expedição...</span>
+        </Spinner>
+      </Container>
+    );
+  }
+
   if (loading) return <Spinner animation="border" />;
   if (error) return <Alert variant="danger">{error}</Alert>;
 
@@ -299,9 +315,15 @@ export default function ShipmentPage() {
           />
         </Form.Group>
 
-        <Button onClick={() => setShowReportModal(true)} className="relatorio-button">
-          Relatório de produção
-        </Button>
+        <div className="d-flex gap-2">
+          <Button onClick={() => setShowReportModal(true)} className="relatorio-button">
+            Relatório produção
+          </Button>
+
+          <Button onClick={() => setShowStockReportModal(true)} className="relatorio-button">
+            Relatório estoque
+          </Button>
+        </div>
       </div>
 
       <div
@@ -358,6 +380,11 @@ export default function ShipmentPage() {
       </Button>
 
       <ProductionReportModal show={showReportModal} onHide={() => setShowReportModal(false)} />
+
+      <StockDemandReportModal
+        show={showStockReportModal}
+        onHide={() => setShowStockReportModal(false)}
+      />
     </Container>
   );
 }
