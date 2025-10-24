@@ -28,10 +28,7 @@ type Props = CardProps & {
 export function AnalyticsWebsiteVisits({ title, subheader, chart, sx, ...other }: Props) {
   const theme = useTheme();
 
-  const chartColors = chart.colors ?? [
-    theme.palette.primary.dark,
-    theme.palette.warning.main,
-  ];
+  const chartColors = chart.colors ?? [theme.palette.primary.dark, theme.palette.warning.main];
 
   const chartOptions = useChart({
     colors: chartColors,
@@ -70,7 +67,13 @@ export function AnalyticsWebsiteVisits({ title, subheader, chart, sx, ...other }
   });
 
   return (
-    <Card sx={sx} {...other}>
+    <Card
+      sx={{
+        borderRadius: '4px', // <-- ADD THIS LINE (adjust '8px' as needed)
+        ...sx, // Keep passing down other styles from the parent
+      }}
+      {...other}
+    >
       <CardHeader title={title} subheader={subheader} />
 
       <Chart

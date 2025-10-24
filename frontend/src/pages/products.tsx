@@ -922,7 +922,7 @@ export default function ProductsPage() {
                             borderColor: '#4CAF50',
                           }}
                         >
-                          Adicionar ao pedido
+                          Adicionar ao p/
                         </Button>
                       </td>
                     </tr>

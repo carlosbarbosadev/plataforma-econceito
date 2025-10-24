@@ -1,24 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import Box from '@mui/material/Box';
 import { Paper } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
 
 import api from 'src/services/api';
 import { DashboardContent } from 'src/layouts/dashboard';
-import { _posts, _tasks, _traffic, _timeline } from 'src/_mock';
 
-import { AnalyticsNews } from '../analytics-news';
-import { AnalyticsTasks } from '../analytics-tasks';
 import { AnalyticsCurrentVisits } from '../analytics-current-visits';
-import { AnalyticsOrderTimeline } from '../analytics-order-timeline';
 import { AnalyticsWebsiteVisits } from '../analytics-website-visits';
 import { AnalyticsWidgetSummary } from '../analytics-widget-summary';
-import { AnalyticsTrafficBySite } from '../analytics-traffic-by-site';
-import { AnalyticsCurrentSubject } from '../analytics-current-subject';
-import { AnalyticsConversionRates } from '../analytics-conversion-rates';
 
 // ----------------------------------------------------------------------
 
@@ -95,26 +87,7 @@ export function OverviewAnalyticsView() {
   console.log('Dados para o gráfico de pizza:', produtosMaisVendidos);
 
   return (
-    <DashboardContent maxWidth="xl" sx={{ px: 5 }}>
-      <Paper
-        elevation={4}
-        sx={{
-          p: 3,
-          mt: 5,
-          mb: 5,
-          maxWidth: '500px',
-          borderRadius: '16px',
-          background: 'linear-gradient(135deg, #2453dc 0%, #577CFF 100%)',
-        }}
-      >
-        <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'white' }}>
-          {`${saudacao}, ${primeiroNome}`}
-        </Typography>
-        <Typography variant="subtitle1" sx={{ mt: 0.5, color: 'white' }}>
-          {textoDaData}
-        </Typography>
-      </Paper>
-
+    <DashboardContent className="mt-5" maxWidth="xl" sx={{ px: 5 }}>
       <Grid container spacing={3}>
         <Grid size={{ xs: 12 }}>
           <Grid container spacing={3}>

@@ -98,9 +98,9 @@ export function DashboardLayout({
             <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }} disableRipple>
               <Avatar
                 sx={{
-                  bgcolor: '#577CFF',
+                  bgcolor: '#bbbec5ff',
                   border: '2px solid',
-                  borderColor: '#f3f3f5',
+                  borderColor: '#bbbec5ff',
                 }}
               >
                 {getInitials(primeiroNome)}

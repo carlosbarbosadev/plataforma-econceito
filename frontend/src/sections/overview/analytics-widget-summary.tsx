@@ -2,18 +2,15 @@ import type { CardProps } from '@mui/material/Card';
 import type { PaletteColorKey } from 'src/theme/core';
 import type { ChartOptions } from 'src/components/chart';
 
-import { varAlpha } from 'minimal-shared/utils';
-
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import { useTheme } from '@mui/material/styles';
 
-import { useCountUp } from "src/routes/hooks/use-count-up"
+import { useCountUp } from 'src/routes/hooks/use-count-up';
 
 import { fNumber, fPercent } from 'src/utils/format-number';
 
 import { Iconify } from 'src/components/iconify';
-import { SvgColor } from 'src/components/svg-color';
 import { Chart, useChart } from 'src/components/chart';
 
 // ----------------------------------------------------------------------
@@ -85,7 +82,7 @@ export function AnalyticsWidgetSummary({
     </Box>
   );
 
-  const countUp = useCountUp(total)
+  const countUp = useCountUp(total);
 
   return (
     <Card
@@ -93,7 +90,8 @@ export function AnalyticsWidgetSummary({
         () => ({
           p: 3,
           position: 'relative',
-          backgroundColor: "ffffff",
+          backgroundColor: 'ffffff',
+          borderRadius: '4px',
           boxShadow: theme.shadows[2],
           color: theme.palette.text.primary,
           transition: theme.transitions.create('box-shadow', {
@@ -126,7 +124,7 @@ export function AnalyticsWidgetSummary({
         </Box>
 
         <Chart
-          type='line'
+          type="line"
           series={[{ data: chart.series }]}
           options={chartOptions}
           sx={{ width: 84, height: 56 }}

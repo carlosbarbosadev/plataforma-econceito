@@ -43,17 +43,23 @@ export function AnalyticsCurrentVisits({ title, subheader, chart, sx, ...other }
     stroke: { width: 0 },
     dataLabels: { enabled: true, dropShadow: { enabled: false } },
     tooltip: {
-        y: {
-          formatter: (value: number) => fNumber(value),
-          title: { formatter: (seriesName: string) => `${seriesName}` },
-        },
+      y: {
+        formatter: (value: number) => fNumber(value),
+        title: { formatter: (seriesName: string) => `${seriesName}` },
+      },
     },
     plotOptions: { pie: { donut: { labels: { show: false } } } },
-    ...chart.options, 
+    ...chart.options,
   });
 
   return (
-    <Card sx={sx} {...other}>
+    <Card
+      sx={{
+        borderRadius: '4px',
+        ...sx,
+      }}
+      {...other}
+    >
       <CardHeader title={title} subheader={subheader} />
 
       <Chart
