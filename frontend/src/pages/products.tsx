@@ -499,7 +499,7 @@ export default function ProductsPage() {
         style={{ minHeight: 'calc(100vh - 200px)' }}
       >
         <Spinner animation="border" role="status">
-          <span className="visually-hidden">Carregando Dados da Página...</span>
+          <span className="visually-hidden">Carregando...</span>
         </Spinner>
       </Container>
     );

@@ -573,14 +573,14 @@ export default function PedidosView() {
 
   if (loading) {
     return (
-      <div
+      <Container
         className="d-flex justify-content-center align-items-center"
-        style={{ minHeight: '200px' }}
+        style={{ minHeight: 'calc(100vh - 200px)' }}
       >
         <Spinner animation="border" role="status">
-          <span className="visually-hidden">Carregando Pedidos...</span>
+          <span className="visually-hidden">Carregando...</span>
         </Spinner>
-      </div>
+      </Container>
     );
   }
 

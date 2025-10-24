@@ -3,6 +3,7 @@ import './i18n';
 
 import { StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
+import { Container, Spinner } from 'react-bootstrap';
 import { Outlet, RouterProvider, createBrowserRouter } from 'react-router';
 
 import App from './app';
@@ -27,8 +28,19 @@ const root = createRoot(document.getElementById('root')!);
 
 root.render(
   <StrictMode>
-    <Suspense fallback={<div>Carregando idioma...</div>}>
-    <RouterProvider router={router} />
+    <Suspense
+      fallback={
+        <Container
+          className="d-flex justify-content-center align-items-center"
+          style={{ minHeight: '100vh' }}
+        >
+          <Spinner animation="border" role="status">
+            <span className="visually-hidden">Carregando...</span>
+          </Spinner>
+        </Container>
+      }
+    >
+      <RouterProvider router={router} />
     </Suspense>
   </StrictMode>
 );

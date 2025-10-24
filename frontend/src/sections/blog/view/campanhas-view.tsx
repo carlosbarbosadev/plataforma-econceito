@@ -262,8 +262,20 @@ export function CampanhasView() {
     }
   };
 
-  const pageTitle = 'Campanhas';
+  if (loading) {
+    return (
+      <Container
+        className="d-flex justify-content-center align-items-center"
+        style={{ minHeight: 'calc(100vh - 200px)' }}
+      >
+        <Spinner animation="border" role="status">
+          <span className="visually-hidden">Carregando...</span>
+        </Spinner>
+      </Container>
+    );
+  }
 
+  const pageTitle = 'Campanhas';
   const vendasAtuais = 17000;
 
   let progressoPercentual = 0;
@@ -315,24 +327,13 @@ export function CampanhasView() {
             </Col>
           </Row>
 
-          {loading && (
-            <div
-              className="d-flex justify-content-center align-items-center"
-              style={{ minHeight: '200px' }}
-            >
-              <Spinner animation="border" role="status">
-                <span className="visually-hidden">Carregando...</span>
-              </Spinner>
-            </div>
-          )}
-
           {error && (
             <Alert severity="error" className="mt-4">
               Erro ao carregar campanhas: {error}
             </Alert>
           )}
 
-          {!loading && !error && (
+          {!error && (
             <Row
               xs={1}
               md={2}
