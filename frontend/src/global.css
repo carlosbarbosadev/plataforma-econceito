@@ -398,6 +398,10 @@ body.modal-open .desktop-sidebar {
   font-size: 0.9rem;
 }
 
+.stock-table {
+  font-size: 0.9rem;
+}
+
 .product-table-quantity {
   width: 60px;
   font-size: 0.9rem;
@@ -411,7 +415,7 @@ body.modal-open .desktop-sidebar {
 }
 
 .botao-margin {
-  margin-top: 43px;
+  margin-bottom: 20px;
 }
 
 .badge-novo {
@@ -421,5 +425,10 @@ body.modal-open .desktop-sidebar {
 
 .badge-atualizado {
   background-color: #f8ae00 !important;
+  color: white !important;
+}
+
+.badge-faltando {
+  background-color: #df322c !important;
   color: white !important;
 }
