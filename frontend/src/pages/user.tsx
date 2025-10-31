@@ -286,7 +286,7 @@ export default function ClientesPage() {
               variant="primary"
               onClick={handleShowCreateModal}
               style={{
-                borderRadius: '5px',
+                borderRadius: '4px',
                 backgroundColor: '#4CAF50',
                 borderColor: '#4CAF50',
               }}
@@ -619,17 +619,13 @@ export default function ClientesPage() {
           </Modal.Body>
           <Modal.Footer>
             <Button
-              className="btn-custom-cancelar fw-bold"
+              className="cancel-button"
               onClick={handleCloseCreateModal}
               disabled={isCreating}
             >
               Cancelar
             </Button>
-            <Button
-              className="btn-custom-salvar fw-bold"
-              onClick={handleCreateClient}
-              disabled={isCreating}
-            >
+            <Button className="save-button" onClick={handleCreateClient} disabled={isCreating}>
               {isCreating ? <Spinner as="span" animation="border" size="sm" /> : 'Salvar'}
             </Button>
           </Modal.Footer>

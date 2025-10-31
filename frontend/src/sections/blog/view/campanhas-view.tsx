@@ -93,7 +93,7 @@ export function CampanhasView() {
     setLoadingBusca(true);
     const timer = setTimeout(async () => {
       try {
-        const res = await api.get('/api/produtos/search-for-campaign', {
+        const res = await api.get('/api/produtos/search', {
           params: { search: termoBuscaProduto },
         });
         const novosResultados = res.data.filter(
@@ -319,7 +319,6 @@ export function CampanhasView() {
                     backgroundColor: '#4CAF50',
                     borderColor: '#4CAF50',
                   }}
-                  className="rounded-3"
                 >
                   Criar campanha
                 </Button>
@@ -608,11 +607,11 @@ export function CampanhasView() {
             </div>
           </Modal.Body>
           <Modal.Footer>
-            <Button onClick={handleCloseCreateModal} className="btn-custom-cancelar fw-bold">
-              <small>Cancelar</small>
+            <Button onClick={handleCloseCreateModal} className="cancel-button">
+              Cancelar
             </Button>
-            <Button type="submit" className="btn-custom-salvar fw-bold">
-              <small>Salvar</small>
+            <Button type="submit" className="save-button">
+              Salvar
             </Button>
           </Modal.Footer>
         </Form>
@@ -807,10 +806,7 @@ export function CampanhasView() {
           )}
         </Modal.Body>
         <Modal.Footer>
-          <Button
-            onClick={() => setShowDetalhesModal(false)}
-            className="btn-custom-cancelar fw-bold"
-          >
+          <Button onClick={() => setShowDetalhesModal(false)} className="cancel-button">
             Fechar
           </Button>
         </Modal.Footer>

@@ -794,12 +794,12 @@ export default function ProductsPage() {
             />
           </Form.Group>
           <div className="d-flex justify-content-end gap-2 mt-3">
-            <Button className="btn-custom-cancelar fw-bold" onClick={handleCancelarPedido}>
+            <Button className="cancel-button" onClick={handleCancelarPedido}>
               Cancelar
             </Button>
 
             <Button
-              className="btn-custom-salvar fw-bold"
+              className="save-button"
               onClick={handleFinalizarPedido}
               disabled={
                 submittingOrder ||

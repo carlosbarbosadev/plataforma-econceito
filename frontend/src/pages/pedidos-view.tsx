@@ -1414,15 +1414,15 @@ export default function PedidosView() {
           <Modal.Footer>
             {isOrderEditable ? (
               <>
-                <Button onClick={handleAttemptClose} className="btn-custom-cancelar fw-bold">
+                <Button onClick={handleAttemptClose} className="cancel-button">
                   Cancelar
                 </Button>
-                <Button onClick={handleSaveChanges} className="btn-custom-salvar fw-bold">
+                <Button onClick={handleSaveChanges} className="save-button">
                   Salvar
                 </Button>
               </>
             ) : (
-              <Button onClick={handleCloseModal} className="btn-custom-cancelar fw-bold">
+              <Button onClick={handleCloseModal} className="cancel-button">
                 Fechar
               </Button>
             )}

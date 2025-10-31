@@ -432,3 +432,43 @@ body.modal-open .desktop-sidebar {
   background-color: #df322c !important;
   color: white !important;
 }
+
+.save-button{
+  background-color: #1868db; /* Cor padrão */
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 550;
+  border-radius: 4px;
+  color: white; 
+  padding: 9px 14px;
+  transition: background-color 0.2s ease-in-out;
+  width: 120px;
+}
+
+.save-button:hover {
+  background-color: #1558bc; 
+}
+
+.save-button:active {
+  background-color: #123263 !important;
+}
+
+.cancel-button{
+  background-color: #b3b9c4; /* Cor padrão */
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 550;
+  border-radius: 4px;
+  color: white; 
+  padding: 9px 14px;
+  transition: background-color 0.2s ease-in-out;
+  width: 120px;
+}
+
+.cancel-button:hover {
+  background-color: #838992; 
+}
+
+.cancel-button:active {
+  background-color: #545658 !important;
+}
