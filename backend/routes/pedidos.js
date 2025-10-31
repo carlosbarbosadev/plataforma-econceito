@@ -380,6 +380,35 @@ router.put('/:id', autenticarToken, async (req, res) => {
     ];
     await db.query(upsertQuery, params);
 
+    const deleteQuery = 'DELETE FROM cache_pedido_itens WHERE pedido_id = $1';
+    await db.query(deleteQuery, [pedidoId]);
+
+    if (pedidoDetalhado.itens && pedidoDetalhado.itens.length > 0) {
+        const insertQuery = `
+            INSERT INTO cache_pedido_itens (
+                pedido_id, item_id, produto_id, produto_codigo, produto_nome,
+                quantidade, valor_unitario, valor_total
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
+        `;
+
+        const insertPromises = pedidoDetalhado.itens.map(item => {
+            const itemParams = [
+                pedidoId,
+                item.id,
+                item.produto.id,
+                item.codigo,
+                item.descricao,
+                item.quantidade,
+                item.valor,
+                (item.quantidade * item.valor)
+            ];
+            return db.query(insertQuery, itemParams);
+        });
+
+        await Promise.all(insertPromises);
+    } else {
+    }
+
     res.json(resultadoBling);
 
   } catch (error) {
