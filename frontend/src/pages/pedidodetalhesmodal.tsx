@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Modal,
   Button,
@@ -14,8 +14,11 @@ import {
 
 import api from 'src/services/api';
 
+import { useDebounce } from '../hooks/useDebounce';
+
 type Item = {
   id: string | number;
+  produto: { id: string | number };
   descricao: string;
   quantidade: number;
   valor: number;
@@ -79,6 +82,88 @@ export function PedidoDetalhesModal({
   const [isUpdating, setIsUpdating] = useState(false);
   const [isAcknowledging, setIsAcknowledging] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [editedItems, setEditedItems] = useState<Item[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [quantityToAdd, setQuantityToAdd] = useState<number>(1);
+  const [isSearching, setIsSearching] = useState(false);
+  const quantityInputsRef = useRef<{ [key: string]: HTMLInputElement | null }>({});
+
+  const debouncedSearchTerm = useDebounce(searchTerm, 400);
+
+  useEffect(() => {
+    if (debouncedSearchTerm.trim().length >= 2) {
+      handleSearchProducts(debouncedSearchTerm);
+    } else {
+      setSearchResults([]);
+    }
+  }, [debouncedSearchTerm]);
+
+  const handleSearchProducts = async (termToSearch: string) => {
+    setIsSearching(true);
+    try {
+      const response = await api.get('/api/produtos/search', { params: { search: termToSearch } });
+      setSearchResults(response.data);
+    } catch {
+      console.error('Erro na busca de produtos:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleAddItem = (product: any) => {
+    const itemExists = editedItems.some((item) => item.codigo === product.codigo);
+    if (itemExists) {
+      alert('Este produto já está no pedido');
+      return;
+    }
+
+    const newItem: Item = {
+      id: Date.now() * -1,
+      produto: { id: product.id },
+      codigo: product.codigo,
+      descricao: product.nome,
+      quantidade: 1,
+      valor: parseFloat(product.preco) || 0,
+      isForProduction: false,
+      estoqueDisponivel: parseFloat(product.estoque) || 0,
+    };
+
+    setEditedItems((prevItems) => [...prevItems, newItem]);
+
+    setTimeout(() => {
+      quantityInputsRef.current[newItem.id]?.focus();
+      quantityInputsRef.current[newItem.id]?.select();
+    }, 0);
+
+    setSearchTerm('');
+    setSearchResults([]);
+    setQuantityToAdd(1);
+  };
+
+  const handleSaveChanges = async () => {
+    if (!detalhes || !pedido) return;
+    setIsSaving(true);
+
+    const payload = {
+      ...detalhes,
+      itens: editedItems,
+    };
+
+    try {
+      await api.put(`/api/pedidos/${pedido.id}`, payload);
+      console.log('Alterações nos itens salvas com sucesso!');
+      onHide();
+      window.location.reload();
+    } catch (err) {
+      console.error('Falha ao salvar alterações do pedido:', err);
+      alert('Ocorreu um erro ao salvar as alterações. Tente novamente.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleItemSelection = (itemCode: string, quantity: number, isSelected: boolean) => {
     setSelectedItems((prevSelected) => {
@@ -143,6 +228,7 @@ export function PedidoDetalhesModal({
         try {
           const response = await api.get(`/api/pedidos/${pedido.id}`);
           setDetalhes(response.data);
+          setEditedItems(response.data.itens || []);
           setEditedObservacoes(response.data.observacoes_expedicao || '');
 
           const initialSelected = new Set<string>();
@@ -202,6 +288,35 @@ export function PedidoDetalhesModal({
       alert('Não foi possível salvar as observações.');
       setEditedObservacoes(detalhes.observacoes_expedicao);
     }
+  };
+
+  const handleRemoveItem = (itemIdToRemove: string | number) => {
+    setEditedItems((prevItems) => prevItems.filter((item) => item.id !== itemIdToRemove));
+  };
+
+  const handleQuantityChange = (itemIdToChange: string | number, valueAsString: string) => {
+    const quantity = parseInt(valueAsString, 10);
+
+    setEditedItems((prevItems) =>
+      prevItems.map((item) =>
+        item.id === itemIdToChange
+          ? { ...item, quantidade: isNaN(quantity) && valueAsString === '' ? NaN : quantity }
+          : item
+      )
+    );
+  };
+
+  const handleQuantityBlur = (itemIdToChange: string | number) => {
+    setEditedItems((prevItems) =>
+      prevItems.map((item) => {
+        if (item.id === itemIdToChange) {
+          const finalQuantity =
+            isNaN(item.quantidade) || item.quantidade <= 0 ? 1 : item.quantidade;
+          return { ...item, quantidade: finalQuantity };
+        }
+        return item;
+      })
+    );
   };
 
   const renderContent = () => {
@@ -280,7 +395,6 @@ export function PedidoDetalhesModal({
             </Button>
           )}
         </div>
-
         <Row className="mb-4">
           {' '}
           <Col md={4}>
@@ -306,15 +420,14 @@ export function PedidoDetalhesModal({
             </div>
           </Col>
         </Row>
-
-        <Row className="mb-5">
+        <Row className="mb-3">
           <Col>
             <div className="info-block mb-2">
               <small>Produtos</small>
             </div>
             {detalhes.itens && detalhes.itens.length > 0 ? (
               <Row className="g-3">
-                {detalhes.itens.map((item, index) => {
+                {editedItems.map((item, index) => {
                   const estoqueDisponivel = item.estoqueDisponivel ?? 0;
                   const isOutOfStock = item.quantidade > estoqueDisponivel;
 
@@ -335,7 +448,6 @@ export function PedidoDetalhesModal({
                             <small>Descrição</small>
                             <p>{item.descricao}</p>
                           </div>
-
                           {isForProductionColumn && (
                             <Form.Check
                               type="checkbox"
@@ -354,24 +466,79 @@ export function PedidoDetalhesModal({
                           )}
                         </div>
 
-                        <Row className="mt-3">
+                        <Row className="mt-3 align">
                           <Col xs={4}>
                             <small>Código</small>
                             <p>{item.codigo}</p>
                           </Col>
                           <Col xs={4}>
                             <small>Qtd.</small>
-                            <p>{item.quantidade}</p>
+                            <Form.Control
+                              type="number"
+                              className="input-foco-azul"
+                              size="sm"
+                              value={isNaN(item.quantidade) ? '' : item.quantidade}
+                              onChange={(e) => handleQuantityChange(item.id, e.target.value)}
+                              onBlur={() => handleQuantityBlur(item.id)}
+                              style={{ maxWidth: '50px', borderRadius: '4px' }}
+                              ref={(el) => {
+                                quantityInputsRef.current[item.id] = el;
+                              }}
+                            />
                           </Col>
                         </Row>
 
-                        <Badge
-                          bg="secondary"
-                          className="product-number-badge"
-                          style={{ borderRadius: '2px' }}
+                        <div
+                          style={{
+                            marginLeft: '10px',
+                            position: 'absolute',
+                            bottom: '8px',
+                            right: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
                         >
-                          {index + 1}
-                        </Badge>
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            onClick={() => handleRemoveItem(item.id)}
+                            className="p-0 d-flex justify-content-center align-items-center"
+                            style={{
+                              width: '24px',
+                              height: '24px',
+                              borderRadius: '2px',
+                              color: 'white',
+                              fontSize: '0.8rem',
+                              fontWeight: 'bold',
+                              border: 'none',
+                              position: 'relative',
+                            }}
+                            title="Remover item"
+                          >
+                            X
+                          </Button>
+
+                          <Badge
+                            bg="secondary"
+                            className="product-number-badge"
+                            style={{
+                              marginTop: '19.9px',
+                              marginLeft: '15px',
+                              height: '24px',
+                              minWidth: '24px',
+                              padding: '0 0.6em',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              borderRadius: '2px',
+                              fontSize: '0.8rem',
+                              position: 'relative',
+                            }}
+                          >
+                            {index + 1}
+                          </Badge>
+                        </div>
                       </div>
                     </Col>
                   );
@@ -379,6 +546,61 @@ export function PedidoDetalhesModal({
               </Row>
             ) : (
               <p className="text-muted">Nenhum item encontrado.</p>
+            )}
+          </Col>
+        </Row>
+
+        <Row className="mb-5 align-items-end g-2">
+          <Col md={7} style={{ position: 'relative' }}>
+            <Form.Group>
+              <Form.Label style={{ fontWeight: 800, color: '#439746' }}>
+                <small>Adicionar produto</small>
+              </Form.Label>
+              <Form.Control
+                style={{ borderRadius: '4px' }}
+                type="text"
+                size="sm"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSearchProducts(searchTerm);
+                }}
+                placeholder="Pesquisar por código ou descrição"
+                className="input-foco-azul"
+              />
+            </Form.Group>
+
+            {searchResults.length > 0 && searchTerm.trim().length >= 2 && (
+              <div
+                className="list-group"
+                style={{
+                  position: 'absolute',
+                  zIndex: 1050,
+                  width: '100%',
+                  maxHeight: '200px',
+                  overflowY: 'auto',
+                  borderRadius: '0.25rem',
+                  backgroundColor: 'white',
+                  boxShadow: '0 0.5rem 1rem rgba(0, 0, 0, 0.15)',
+                  marginTop: '2px',
+                }}
+              >
+                {searchResults.map((product) => (
+                  <div
+                    key={product.id}
+                    className="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3"
+                    onClick={() => handleAddItem(product)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <div style={{ fontSize: '0.9rem' }}>
+                      <span className="fw-bold">{product.codigo}</span> - {product.nome}
+                      <small className="text-muted d-block">
+                        R$ {(parseFloat(product.preco) || 0).toFixed(2)}
+                      </small>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </Col>
         </Row>
@@ -418,6 +640,19 @@ export function PedidoDetalhesModal({
         <Modal.Title>Detalhes do Pedido {pedido?.numero || pedido?.id}</Modal.Title>
       </Modal.Header>
       <Modal.Body>{renderContent()}</Modal.Body>
+      <Modal.Footer>
+        <Button variant="secondary" onClick={onHide} disabled={isSaving} className="cancel-button">
+          Cancelar
+        </Button>
+        <Button
+          variant="primary"
+          onClick={handleSaveChanges}
+          disabled={isSaving}
+          className="save-button"
+        >
+          {isSaving ? <Spinner animation="border" size="sm" /> : 'Salvar'}
+        </Button>
+      </Modal.Footer>
     </Modal>
   );
 }
