@@ -108,7 +108,7 @@ router.get('/', autenticarToken, async (req, res) => {
   }
 });
 
-router.get('/search-for-campaign', autenticarToken, async (req, res) => {
+router.get('/search', autenticarToken, async (req, res) => {
     const termoDeBusca = req.query.search || '';
 
     if (termoDeBusca.trim().length < 2) {
@@ -118,7 +118,7 @@ router.get('/search-for-campaign', autenticarToken, async (req, res) => {
     console.log(`Buscando produtos para campanha com o termo: ${termoDeBusca}`);
     try {
         const query = `
-            SELECT id, nome, codigo, preco
+            SELECT id, nome, codigo, preco, estoque_saldo_virtual
             FROM cache_produtos
             WHERE (nome ILIKE $1 OR codigo ILIKE $1)
             ORDER BY nome ASC
@@ -130,13 +130,14 @@ router.get('/search-for-campaign', autenticarToken, async (req, res) => {
             id: p.id,
             nome: p.nome,
             codigo: p.codigo,
-            preco: parseFloat(p.preco) || 0
+            preco: parseFloat(p.preco) || 0,
+            estoque: parseFloat(p.estoque_saldo_virtual) || 0
         }));
 
         res.json(produtosFormatados);
 
     } catch (error) {
-        console.error(`Erro na rota /api/produtos/search-for-campaign:`, error.message);
+        console.error(`Erro na rota /api/produtos/search:`, error.message);
         res.status(500).json({ mensagem: `Falha ao buscar produtos para campanha: ${error.message}` });
     }
 });
