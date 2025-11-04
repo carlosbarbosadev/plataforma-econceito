@@ -311,15 +311,7 @@ export function CampanhasView() {
           <Row className="mb-4">
             <Col className="d-flex justify-content-end">
               {isAdmin && (
-                <Button
-                  variant="primary"
-                  onClick={handleOpenCreateModal}
-                  style={{
-                    borderRadius: '4px',
-                    backgroundColor: '#4CAF50',
-                    borderColor: '#4CAF50',
-                  }}
-                >
+                <Button variant="primary" onClick={handleOpenCreateModal} className="create-button">
                   Criar campanha
                 </Button>
               )}

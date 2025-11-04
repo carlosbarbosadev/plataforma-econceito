@@ -823,7 +823,7 @@ export default function ProductsPage() {
           )}
 
           {produtos.length > 0 && !loadingProdutos && (
-            <Table hover responsive className=" align-middle">
+            <Table hover responsive className="align-middle table-style">
               <thead>
                 <tr>
                   <th className="fw-normal text-muted" style={{ fontSize: '0.8em' }}>

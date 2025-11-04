@@ -148,9 +148,10 @@ const mapSituacaoPedido = (idSituacao?: number): string => {
 
 const getSituacaoBadgeStyle = (idSituacao?: number): React.CSSProperties => {
   const baseStyle: React.CSSProperties = {
-    fontSize: '0.78em',
+    fontSize: '0.8em',
     padding: '0.5em 0.75em',
     color: '#fff',
+    fontWeight: 600,
   };
 
   switch (idSituacao) {
@@ -644,7 +645,7 @@ export default function PedidosView() {
                 placeholder="Pesquisar por nome ou n° do pedido"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="input-foco-azul"
+                className="input-foco-azul form-style"
                 style={{ borderRadius: '5px' }}
               />
             </Form.Group>
@@ -654,7 +655,7 @@ export default function PedidosView() {
               <Form.Select
                 style={{ borderRadius: '5px' }}
                 value={statusFilter}
-                className="input-foco-azul"
+                className="input-foco-azul form-style"
                 onChange={(e) => {
                   setCurrentPage(1);
                   setStatusFilter(e.target.value);
@@ -678,7 +679,7 @@ export default function PedidosView() {
       )}
 
       {pedidos.length > 0 && (
-        <Table striped hover responsive>
+        <Table striped hover responsive className="table-style">
           <thead>
             <tr>
               {/* <th>{headerId}</th> Removido */}
