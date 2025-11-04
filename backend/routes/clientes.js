@@ -4,6 +4,8 @@ const db = require('../db');
 const { autenticarToken } = require('../middlewares/authMiddleware');
 const { criarClienteBling, fetchDetalhesContato } = require('../services/bling');
 
+const { parseBlingError } = require('../services/blingErrorHandler');
+
 router.get('/', autenticarToken, async (req, res) => {
     console.log(`Rota GET /api/clientes (CACHE) acessada por: ${req.usuario.email}`);
 
@@ -91,8 +93,20 @@ router.post('/', autenticarToken, async (req, res) => {
         res.status(201).json(clienteDetalhado);
 
     } catch (error) {
-        console.error('Erro na rota POST /api/clientes:', error.message);
-        res.status(500).json({ mensagem: error.message || 'Falha ao criar novo cliente.' });
+        if (error.response) {
+            const status = error.response.status;
+            const blingErrorData = error.response.data;
+
+            console.error(`Erro da API Bling (Status ${status}):`, JSON.stringify(blingErrorData));
+
+            const formattedError = parseBlingError(blingErrorData);
+
+            res.status(status).json(formattedError);
+
+        } else {
+            console.error('Erro interno na rota POST /api/clientes:', error.message);
+            res.status(500).json({ message: error.message || 'Falha ao criar novo cliente.' });
+        }
     }
 });
 
