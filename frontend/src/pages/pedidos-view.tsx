@@ -646,14 +646,12 @@ export default function PedidosView() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="input-foco-azul form-style"
-                style={{ borderRadius: '5px' }}
               />
             </Form.Group>
           </Col>
           <Col md={2} className="text-end">
             <Form.Group className="mb-4">
               <Form.Select
-                style={{ borderRadius: '5px' }}
                 value={statusFilter}
                 className="input-foco-azul form-style"
                 onChange={(e) => {

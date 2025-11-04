@@ -293,7 +293,6 @@ export default function ClientesPage() {
           <Col md={5}>
             <Form.Group>
               <Form.Control
-                style={{ borderRadius: '5px' }}
                 className="input-foco-azul form-style"
                 type="text"
                 placeholder={searchPlaceholder}

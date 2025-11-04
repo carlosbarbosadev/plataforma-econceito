@@ -133,9 +133,9 @@ body.modal-open .desktop-sidebar {
   box-shadow: 0 0 0.2rem rgba(36, 83, 220, 0.25) !important;
 }
 .select-padrao__control {
-  border-radius: 5px !important;
-
+  border-radius: 4px !important;
   min-height: 38px;
+  font-size: 1.0em;
 }
 .rodape-busca-fixo {
   position: fixed;
@@ -370,11 +370,11 @@ body.modal-open .desktop-sidebar {
 }
 
 .relatorio-button:hover {
-  background-color: #1558bc; 
+  background-color: #124ba0; 
 }
 
 .relatorio-button:active {
-  background-color: #123263 !important;
+  background-color: #124ba0 !important;
 }
 
 .custom-checkbox-producao .form-check-input {
@@ -446,11 +446,11 @@ body.modal-open .desktop-sidebar {
 }
 
 .save-button:hover {
-  background-color: #1558bc; 
+  background-color: #124ba0; 
 }
 
 .save-button:active {
-  background-color: #123263 !important;
+  background-color: #124ba0 !important;
 }
 
 .cancel-button{
@@ -470,5 +470,50 @@ body.modal-open .desktop-sidebar {
 }
 
 .cancel-button:active {
-  background-color: #545658 !important;
+  background-color: #838992 !important;
+}
+
+.create-button {
+  background-color: #4CAF50;
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 550;
+  border-radius: 4px;
+  color: white;
+  padding: 9px 14px;
+  transition: background-color 0.2s ease-in-out;
+  width: 150px;
+}
+
+.create-button:hover {
+  background-color: #3c8a3f;
+}
+
+.create-button:active {
+  background-color: #3c8a3f !important;
+}
+
+.alert-heading {
+  font-weight: 800;
+  font-size: 20px;
+  color: #713f12
+}
+
+.form-control-warning {
+  border-color: #e4ad07;
+}
+
+.form-control-warning:focus {
+  border-color: #e4ad07;
+  box-shadow: 0 0 0 0.25rem rgba(255, 193, 7, 0.25);
+}
+
+.table-style {
+  font-size: 1.0rem;
+
+}
+
+.form-style {
+  font-size: 1.0rem;
+  border-radius: 4px;
 }

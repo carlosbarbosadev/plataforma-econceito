@@ -557,16 +557,14 @@ export function PedidoDetalhesModal({
                 <small>Adicionar produto</small>
               </Form.Label>
               <Form.Control
-                style={{ borderRadius: '4px' }}
                 type="text"
-                size="sm"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleSearchProducts(searchTerm);
                 }}
                 placeholder="Pesquisar por código ou descrição"
-                className="input-foco-azul"
+                className="input-foco-azul form-style"
               />
             </Form.Group>
 
