@@ -33,7 +33,7 @@ const initialNewClientState = {
   fantasia: '',
   ie: '',
   isentoIE: false,
-  numeroDocumento: '',
+  documento: '',
   tipo: 'F',
   // Endereço
   cep: '',
@@ -61,7 +61,8 @@ export default function ClientesPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newClient, setNewClient] = useState(initialNewClientState);
   const [isCreating, setIsCreating] = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
+  const [errorMessages, setErrorMessages] = useState<string[]>([]);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const fetchClients = () => {
     setLoading(true);
@@ -98,7 +99,8 @@ export default function ClientesPage() {
   const handleCloseCreateModal = () => {
     setShowCreateModal(false);
     setNewClient(initialNewClientState);
-    setCreateError(null);
+    setErrorMessages([]);
+    setFormErrors({});
   };
 
   const handleShowCreateModal = () => setShowCreateModal(true);
@@ -121,18 +123,20 @@ export default function ClientesPage() {
 
   const handleCreateClient = () => {
     if (!newClient.nome || !newClient.tipo) {
-      setCreateError('O campo "Nome" e "Tipo de pessoa" são obrigatórios.');
+      setErrorMessages(['O campo "Nome" e "Tipo de pessoa" são obrigatórios.']);
+      setIsCreating(false);
       return;
     }
     setIsCreating(true);
-    setCreateError(null);
+    setErrorMessages([]);
+    setFormErrors({});
 
     const {
       nome,
       fantasia,
       ie,
       isentoIE,
-      numeroDocumento,
+      documento,
       tipo,
       cep,
       uf,
@@ -159,7 +163,7 @@ export default function ClientesPage() {
       nome,
       fantasia,
       tipo,
-      numeroDocumento,
+      numeroDocumento: documento,
       ie: isentoIE ? 'ISENTO' : ie,
       indicadorIe: isentoIE ? 2 : 1,
       situacao: 'A',
@@ -189,11 +193,28 @@ export default function ClientesPage() {
       })
       .catch((err) => {
         console.error('ERRO ao criar cliente:', err);
-        const errorMessage =
-          err.response?.data?.mensagem ||
-          err.message ||
-          'Falha ao criar cliente. Verifique os dados.';
-        setCreateError(errorMessage);
+        if (err.response && err.response.data) {
+          const { message, errors } = err.response.data;
+
+          if (errors) {
+            const allErrors = [
+              'Não conseguimos salvar o cadastro',
+              'Verifique os campos destacados abaixo.',
+            ];
+
+            Object.values(errors).forEach((msg) => allErrors.push(msg as string));
+
+            setErrorMessages(allErrors);
+
+            setFormErrors(errors);
+          } else {
+            setErrorMessages([message || 'Falha ao criar cliente.']);
+            setFormErrors({});
+          }
+        } else {
+          setErrorMessages([err.message || 'Falha ao criar cliente...']);
+          setFormErrors({});
+        }
       })
       .finally(() => {
         setIsCreating(false);
@@ -273,7 +294,7 @@ export default function ClientesPage() {
             <Form.Group>
               <Form.Control
                 style={{ borderRadius: '5px' }}
-                className="input-foco-azul"
+                className="input-foco-azul form-style"
                 type="text"
                 placeholder={searchPlaceholder}
                 value={searchTerm}
@@ -282,15 +303,7 @@ export default function ClientesPage() {
             </Form.Group>
           </Col>
           <Col className="d-flex justify-content-end">
-            <Button
-              variant="primary"
-              onClick={handleShowCreateModal}
-              style={{
-                borderRadius: '4px',
-                backgroundColor: '#4CAF50',
-                borderColor: '#4CAF50',
-              }}
-            >
+            <Button variant="primary" onClick={handleShowCreateModal} className="create-button">
               Cadastrar cliente
             </Button>
           </Col>
@@ -303,15 +316,9 @@ export default function ClientesPage() {
           <Alert variant="info">{`Nenhum cliente encontrado para o termo "${searchTerm}".`}</Alert>
         )}
         {data.length > 0 && (
-          <Table striped hover>
+          <Table striped hover className="table-style">
             <thead>
               <tr>
-                <th
-                  className="text-muted"
-                  style={{ width: '10%', fontSize: '0.8em', fontWeight: 'normal' }}
-                >
-                  {headerIdCliente}
-                </th>
                 <th
                   className="text-muted"
                   style={{ width: '45%', fontSize: '0.8em', fontWeight: 'normal' }}
@@ -341,7 +348,6 @@ export default function ClientesPage() {
             <tbody>
               {filteredClients.map((c) => (
                 <tr key={c.id}>
-                  <td style={{ fontSize: '0.9em' }}>{c.id}</td>
                   <td style={{ fontSize: '0.9em' }}>{c.nome}</td>
                   <td style={{ fontSize: '0.9em' }}>{c.numeroDocumento || '-'}</td>
                   <td style={{ fontSize: '0.9em' }}>{c.endereco?.geral?.municipio || '-'}</td>
@@ -362,7 +368,23 @@ export default function ClientesPage() {
             <Modal.Title className="fw-bold">Cadastrar novo cliente</Modal.Title>
           </Modal.Header>
           <Modal.Body className="modal-form-sm">
-            {createError && <Alert variant="danger">{createError}</Alert>}
+            {errorMessages.length > 0 && (
+              <Alert variant="warning">
+                <Alert.Heading className="alert-heading">Atenção</Alert.Heading>
+                <p className="mb-1" style={{ fontSize: '0.9em', color: '#a16207' }}>
+                  {errorMessages[0]}
+                </p>
+                <p style={{ fontSize: '0.9em', color: '#a16207' }}>{errorMessages[1]}</p>
+
+                {errorMessages.length > 2 && (
+                  <ul className="mb-0" style={{ fontSize: '0.9em', color: '#a16207' }}>
+                    {errorMessages.slice(2).map((msg, index) => (
+                      <li key={index}>{msg}</li>
+                    ))}
+                  </ul>
+                )}
+              </Alert>
+            )}
             <Form>
               <div className="mb-4 mt-4 form-pequeno">
                 <p className="fw-bold">Dados cadastrais</p>
@@ -394,9 +416,10 @@ export default function ClientesPage() {
                       <Form.Label style={{ fontSize: '0.8rem' }}>CPF/CNPJ</Form.Label>
                       <Form.Control
                         type="text"
-                        name="numeroDocumento"
-                        value={newClient.numeroDocumento}
+                        name="documento"
+                        value={newClient.documento}
                         onChange={handleNewClientChange}
+                        className={formErrors.documento ? 'form-control-warning' : ''}
                       />
                     </Form.Group>
                   </Col>
@@ -424,6 +447,7 @@ export default function ClientesPage() {
                         value={newClient.ie}
                         onChange={handleNewClientChange}
                         disabled={newClient.isentoIE}
+                        className={formErrors.ie ? 'form-control-warning' : ''}
                       />
                     </Form.Group>
                   </Col>
@@ -436,6 +460,7 @@ export default function ClientesPage() {
                         label="Isento"
                         checked={newClient.isentoIE}
                         onChange={handleIsentoChange}
+                        className="custom-checkbox-producao"
                       />
                     </Form.Group>
                   </Col>
@@ -453,6 +478,7 @@ export default function ClientesPage() {
                         name="cep"
                         value={newClient.cep}
                         onChange={handleNewClientChange}
+                        className={formErrors.cep ? 'form-control-warning' : ''}
                       />
                     </Form.Group>
                   </Col>
