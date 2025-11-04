@@ -60,7 +60,7 @@ router.get('/', autenticarToken, async (req, res) => {
       'CB6A', 'CB6C', 'CB6E', 'CB6R', 'CB6S', 'CBO6A', 'CBO6S', 'PCIC', 'CICXBC', 'CICXBE', 'CICXBR', 'CIEA', 'CIES', 'CISRA', 'CISRS',
       'CISQA', 'CISQS', 'GRFJQ', 'MCAC', 'MCCC', 'MCRC', 'MCTC', 'PLFJ01', 'PLFJ02', 'SPB', 'SPG', 'SPF', 'SGPA', 'SMPA', 'SPD', 'SMPS', 'SQA',
       'SQC', 'SQE', 'SQR', 'SQS', 'TPB', 'TAG01', 'TAG02', 'TPC', 'TPD', 'TPE', 'TPF', 'TPG', 'TMPA', 'TMPS', 'TKP01', 'TKP02', 'TKP03', 'TKP04',
-      'TKP05', 'PC01', 'TPR', 'TRPS', 'TRPA', 'TDFJA', 'PCCS', 'PC250', 'PC500', 'PC100', 'CXBB1210', 'CXBB1231', 'CFJ03', 'CXBB1232',];
+      'TKP05', 'PC01', 'TPR', 'TRPS', 'TRPA', 'TDFJA', 'PCCS', 'PC250', 'PC500', 'PC100', 'CXBB1210', 'CXBB1231', 'CFJ03', 'CXBB1232', 'BECM'];
 
     const queryParams = [];
     let paramIndex = 1;
