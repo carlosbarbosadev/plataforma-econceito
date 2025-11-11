@@ -171,6 +171,16 @@ async function criarClienteBling(dadosCliente) {
     return response.data;
 }
 
+async function atualizarClienteBling(contatoId, dadosCliente) {
+    const response = await blingApiCall({
+        method: 'put',
+        url: `${BLING_API_V3_URL}/contatos/${contatoId}`,
+        data: dadosCliente,
+        headers: { 'Content-Type': 'application/json' }
+    });
+    return response.data.data;
+}
+
 async function fetchPedidosVendas(idVendedorParaFiltrar = null) {
     const todosOsPedidos = [];
     let pagina = 1;
@@ -348,5 +358,6 @@ module.exports = {
     criarPedidoVenda,
     atualizarPedidoNoBling,
     fetchFormasPagamento,
-    alterarSituacaoPedidoBling
+    alterarSituacaoPedidoBling,
+    atualizarClienteBling
 };
