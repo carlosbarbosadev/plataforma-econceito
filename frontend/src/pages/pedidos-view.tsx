@@ -774,12 +774,11 @@ export default function PedidosView() {
         <Modal
           show={showDetalhesModal}
           onHide={handleAttemptClose}
-          dialogClassName="modal-largo"
-          contentClassName="modal-com-bordas-destacadas"
+          dialogClassName="meu-modal-custom2"
           centered
           style={{ fontSize: '0.90rem' }}
         >
-          <Modal.Header closeButton closeVariant="white">
+          <Modal.Header closeButton>
             <Modal.Title id="pedido-detalhes-modal-title" style={{ fontWeight: 'bold' }}>
               Pedido de venda - {selectedPedidoDetalhes.numero || selectedPedidoDetalhes.id}
             </Modal.Title>

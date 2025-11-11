@@ -610,7 +610,7 @@ export function PedidoDetalhesModal({
                 <small>Observações da expedição</small>
               </Form.Label>
               <Form.Control
-                style={{ fontSize: '0.9rem', borderRadius: '4px' }}
+                style={{ borderRadius: '4px' }}
                 className="input-foco-azul"
                 as="textarea"
                 rows={4}

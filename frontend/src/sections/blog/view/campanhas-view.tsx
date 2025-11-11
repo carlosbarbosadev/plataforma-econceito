@@ -440,8 +440,7 @@ export function CampanhasView() {
         onHide={handleCloseCreateModal}
         size="lg"
         centered
-        dialogClassName="modal-margin-top"
-        contentClassName="modal-com-bordas-destacadas"
+        dialogClassName="meu-modal-custom"
       >
         <Form onSubmit={handleSaveCampaign}>
           <Modal.Header closeButton closeVariant="white">
@@ -450,17 +449,34 @@ export function CampanhasView() {
             </Modal.Title>
           </Modal.Header>
           <Modal.Body className="modal-form-sm form-pequeno">
-            <Form.Group className="mb-3">
-              <Form.Label style={{ fontSize: '0.8rem' }}>Nome da campanha</Form.Label>
-              <Form.Control
-                type="text"
-                name="nome"
-                value={novaCampanha.nome}
-                onChange={handleFormChange}
-                required
-                autoFocus
-              />
-            </Form.Group>
+            <Row>
+              <Col md={6}>
+                <Form.Group className="mb-3">
+                  <Form.Label style={{ fontSize: '0.8rem' }}>Nome da campanha</Form.Label>
+                  <Form.Control
+                    type="text"
+                    name="nome"
+                    value={novaCampanha.nome}
+                    onChange={handleFormChange}
+                    required
+                    autoFocus
+                  />
+                </Form.Group>
+              </Col>
+
+              <Col md={6}>
+                <Form.Group className="mb-3">
+                  <Form.Label style={{ fontSize: '0.8rem' }}>Meta de Vendas (R$)</Form.Label>
+                  <Form.Control
+                    type="number"
+                    step="0.01"
+                    name="meta_vendas"
+                    value={novaCampanha.meta_vendas}
+                    onChange={handleFormChange}
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
 
             <Form.Group className="mb-3">
               <Form.Label style={{ fontSize: '0.8rem' }}>Descrição</Form.Label>
@@ -500,77 +516,72 @@ export function CampanhasView() {
               </Col>
             </Row>
 
-            <Form.Group className="mb-3">
-              <Form.Label style={{ fontSize: '0.8rem' }}>Meta de Vendas (R$)</Form.Label>
-              <Form.Control
-                type="number"
-                step="0.01"
-                name="meta_vendas"
-                value={novaCampanha.meta_vendas}
-                onChange={handleFormChange}
-              />
-            </Form.Group>
-
-            <Form.Group className="mb-3">
-              <Form.Label style={{ fontSize: '0.8rem' }}>Condições da campanha</Form.Label>
-              <Form.Control
-                type="text"
-                className="mb-2"
-                value={novaCampanha.condicoes[0]}
-                onChange={(e) => handleCondicaoChange(0, e.target.value)}
-              />
-              <Form.Control
-                type="text"
-                className="mb-2"
-                value={novaCampanha.condicoes[1]}
-                onChange={(e) => handleCondicaoChange(1, e.target.value)}
-              />
-              <Form.Control
-                type="text"
-                className="mb-2"
-                value={novaCampanha.condicoes[2]}
-                onChange={(e) => handleCondicaoChange(2, e.target.value)}
-              />
-            </Form.Group>
-
-            <Form.Group className="mb-3 position-relative">
-              <Form.Label style={{ fontSize: '0.8rem' }}>Produtos da campanha</Form.Label>
-              <InputGroup>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label style={{ fontSize: '0.8rem' }}>Condições da campanha</Form.Label>
                 <Form.Control
                   type="text"
-                  placeholder="Pesquise por código ou descrição"
-                  value={termoBuscaProduto}
-                  onChange={(e) => setTermoBuscaProduto(e.target.value)}
+                  className="mb-2"
+                  value={novaCampanha.condicoes[0]}
+                  onChange={(e) => handleCondicaoChange(0, e.target.value)}
                 />
-                {loadingBusca && (
-                  <InputGroup.Text>
-                    <Spinner animation="border" size="sm" />
-                  </InputGroup.Text>
-                )}
-              </InputGroup>
+                <Form.Control
+                  type="text"
+                  className="mb-2"
+                  value={novaCampanha.condicoes[1]}
+                  onChange={(e) => handleCondicaoChange(1, e.target.value)}
+                />
+                <Form.Control
+                  type="text"
+                  className="mb-2"
+                  value={novaCampanha.condicoes[2]}
+                  onChange={(e) => handleCondicaoChange(2, e.target.value)}
+                />
+              </Form.Group>
+            </Col>
 
-              {resultadosBusca.length > 0 && (
-                <ListGroup
-                  className="mt-1 shadow-sm"
-                  style={{
-                    position: 'absolute',
-                    zIndex: 10,
-                    width: '100%',
-                    maxHeight: '200px',
-                    overflowY: 'auto',
-                  }}
-                >
-                  {resultadosBusca.map((p) => (
-                    <ListGroup.Item action key={p.id} onClick={() => handleSelecionarProduto(p)}>
-                      {p.nome} <small className="text-muted">({p.codigo})</small>
-                    </ListGroup.Item>
-                  ))}
-                </ListGroup>
-              )}
-            </Form.Group>
+            <Col md={6}>
+              <Form.Group className="mb-3 position-relative">
+                <Form.Label style={{ fontSize: '0.8rem' }}>Produtos da campanha</Form.Label>
+                <InputGroup>
+                  <Form.Control
+                    type="text"
+                    placeholder="Pesquise por código ou descrição"
+                    value={termoBuscaProduto}
+                    onChange={(e) => setTermoBuscaProduto(e.target.value)}
+                  />
+                  {loadingBusca && (
+                    <InputGroup.Text>
+                      <Spinner animation="border" size="sm" />
+                    </InputGroup.Text>
+                  )}
+                </InputGroup>
+
+                {resultadosBusca.length > 0 && (
+                  <ListGroup
+                    className="mt-1 shadow-sm"
+                    style={{
+                      position: 'absolute',
+                      zIndex: 10,
+                      width: '100%',
+                      maxHeight: '200px',
+                      overflowY: 'auto',
+                    }}
+                  >
+                    {resultadosBusca.map((p) => (
+                      <ListGroup.Item action key={p.id} onClick={() => handleSelecionarProduto(p)}>
+                        {p.nome} <small className="text-muted">({p.codigo})</small>
+                      </ListGroup.Item>
+                    ))}
+                  </ListGroup>
+                )}
+              </Form.Group>
+            </Col>
 
             <div className="mt-3">
-              <h6>Produtos Selecionados ({produtosSelecionados.length}):</h6>
+              <h6 style={{ fontWeight: 580 }}>
+                Produtos selecionados ({produtosSelecionados.length}):
+              </h6>
               {produtosSelecionados.length > 0 ? (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', paddingTop: '8px' }}>
                   {produtosSelecionados.map((p) => (
@@ -614,8 +625,7 @@ export function CampanhasView() {
         onHide={() => setShowDetalhesModal(false)}
         size="lg"
         centered
-        dialogClassName="modal-margin-top"
-        contentClassName="modal-com-bordas-destacadas"
+        dialogClassName="meu-modal-custom"
       >
         <Modal.Header closeButton closeVariant="white">
           <Modal.Title className="fw-bold">{campanhaSelecionada?.nome}</Modal.Title>
