@@ -3,6 +3,9 @@ import { Table, Spinner, Alert, Form, Row, Col, Button, Modal, Container } from 
 
 import api from 'src/services/api';
 
+import ModalEditClient from 'src/components/modals/ModalEditClient';
+import ModalCreateClient from 'src/components/modals/ModalCreateClient';
+
 type Cliente = {
   id: number;
   nome: string;
@@ -15,54 +18,13 @@ type Cliente = {
   };
 };
 
-const TIPOS_DE_CONTATO = [
-  { id: 14570411837, descricao: 'Cliente' },
-  { id: 14578457075, descricao: 'Desenvolvedor' },
-  { id: 14570411838, descricao: 'Fornecedor' },
-  { id: 14570411840, descricao: 'Técnico' },
-  { id: 14570411836, descricao: 'Transportador' },
-  { id: 14571576008, descricao: 'Clientes E-commerce' },
-  { id: 14570468838, descricao: 'Colaborador' },
-  { id: 14570472984, descricao: 'Contador' },
-  { id: 14570473096, descricao: 'Prestador de Serviços' },
-];
-
-const initialNewClientState = {
-  // Dados cadastrais
-  nome: '',
-  fantasia: '',
-  ie: '',
-  isentoIE: false,
-  documento: '',
-  tipo: 'F',
-  // Endereço
-  cep: '',
-  uf: '',
-  municipio: '',
-  bairro: '',
-  endereco: '',
-  numero: '',
-  complemento: '',
-  // Contato
-  contato: '',
-  telefone: '',
-  celular: '',
-  email: '',
-  // Dados adicionais
-  tipoContato: '14570411837',
-  obs: '',
-};
-
 export default function ClientesPage() {
   const [data, setData] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newClient, setNewClient] = useState(initialNewClientState);
-  const [isCreating, setIsCreating] = useState(false);
-  const [errorMessages, setErrorMessages] = useState<string[]>([]);
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [viewingClientId, setViewingClientId] = useState<number | null>(null);
 
   const fetchClients = () => {
     setLoading(true);
@@ -98,127 +60,26 @@ export default function ClientesPage() {
 
   const handleCloseCreateModal = () => {
     setShowCreateModal(false);
-    setNewClient(initialNewClientState);
-    setErrorMessages([]);
-    setFormErrors({});
   };
 
   const handleShowCreateModal = () => setShowCreateModal(true);
 
-  const handleNewClientChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
-    const { name, value } = e.target;
-    setNewClient((prevState) => ({ ...prevState, [name]: value }));
+  const handleClientCreated = (newClientFromModal: Cliente) => {
+    setData((currentData) => [newClientFromModal, ...currentData]);
   };
 
-  const handleIsentoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const isChecked = e.target.checked;
-    setNewClient((prevState) => ({
-      ...prevState,
-      isentoIE: isChecked,
-      ie: isChecked ? '' : prevState.ie,
-    }));
+  const handleShowViewModal = (clientId: number) => {
+    setViewingClientId(clientId);
   };
 
-  const handleCreateClient = () => {
-    if (!newClient.nome || !newClient.tipo) {
-      setErrorMessages(['O campo "Nome" e "Tipo de pessoa" são obrigatórios.']);
-      setIsCreating(false);
-      return;
-    }
-    setIsCreating(true);
-    setErrorMessages([]);
-    setFormErrors({});
+  const handleCloseViewModal = () => {
+    setViewingClientId(null);
+  };
 
-    const {
-      nome,
-      fantasia,
-      ie,
-      isentoIE,
-      documento,
-      tipo,
-      cep,
-      uf,
-      municipio,
-      bairro,
-      endereco,
-      numero,
-      complemento,
-      contato,
-      telefone,
-      celular,
-      email,
-      tipoContato,
-      obs,
-    } = newClient;
-
-    const tipoContatoSelecionado = TIPOS_DE_CONTATO.find(
-      (item) => item.id.toString() === newClient.tipoContato
+  const handleClientUpdated = (updatedClient: Cliente) => {
+    setData((currentData) =>
+      currentData.map((client) => (client.id === updatedClient.id ? updatedClient : client))
     );
-
-    const obsCompleta = [contato, obs].filter(Boolean).join(' - ');
-
-    const payload = {
-      nome,
-      fantasia,
-      tipo,
-      numeroDocumento: documento,
-      ie: isentoIE ? 'ISENTO' : ie,
-      indicadorIe: isentoIE ? 2 : 1,
-      situacao: 'A',
-      email,
-      telefone,
-      celular,
-      observacoes: obsCompleta,
-      endereco: {
-        geral: {
-          endereco,
-          numero,
-          complemento,
-          bairro,
-          cep,
-          municipio,
-          uf,
-        },
-      },
-      tiposContato: tipoContatoSelecionado ? [tipoContatoSelecionado] : [],
-    };
-
-    api
-      .post('/api/clientes', payload)
-      .then((res) => {
-        setData((currentData) => [res.data, ...currentData]);
-        handleCloseCreateModal();
-      })
-      .catch((err) => {
-        console.error('ERRO ao criar cliente:', err);
-        if (err.response && err.response.data) {
-          const { message, errors } = err.response.data;
-
-          if (errors) {
-            const allErrors = [
-              'Não conseguimos salvar o cadastro',
-              'Verifique os campos destacados abaixo.',
-            ];
-
-            Object.values(errors).forEach((msg) => allErrors.push(msg as string));
-
-            setErrorMessages(allErrors);
-
-            setFormErrors(errors);
-          } else {
-            setErrorMessages([message || 'Falha ao criar cliente.']);
-            setFormErrors({});
-          }
-        } else {
-          setErrorMessages([err.message || 'Falha ao criar cliente...']);
-          setFormErrors({});
-        }
-      })
-      .finally(() => {
-        setIsCreating(false);
-      });
   };
 
   const filteredClients = data.filter((client) => {
@@ -346,7 +207,11 @@ export default function ClientesPage() {
             </thead>
             <tbody>
               {filteredClients.map((c) => (
-                <tr key={c.id}>
+                <tr
+                  key={c.id}
+                  onClick={() => handleShowViewModal(c.id)}
+                  style={{ cursor: 'pointer' }}
+                >
                   <td style={{ fontSize: '0.9em' }}>{c.nome}</td>
                   <td style={{ fontSize: '0.9em' }}>{c.numeroDocumento || '-'}</td>
                   <td style={{ fontSize: '0.9em' }}>{c.endereco?.geral?.municipio || '-'}</td>
@@ -357,304 +222,18 @@ export default function ClientesPage() {
           </Table>
         )}
 
-        <Modal
+        <ModalCreateClient
           show={showCreateModal}
           onHide={handleCloseCreateModal}
-          dialogClassName="modal-largo"
-          contentClassName="modal-com-bordas-destacadas"
-        >
-          <Modal.Header closeButton closeVariant="white">
-            <Modal.Title className="fw-bold">Cadastrar novo cliente</Modal.Title>
-          </Modal.Header>
-          <Modal.Body className="modal-form-sm">
-            {errorMessages.length > 0 && (
-              <Alert variant="warning">
-                <Alert.Heading className="alert-heading">Atenção</Alert.Heading>
-                <p className="mb-1" style={{ fontSize: '0.9em', color: '#a16207' }}>
-                  {errorMessages[0]}
-                </p>
-                <p style={{ fontSize: '0.9em', color: '#a16207' }}>{errorMessages[1]}</p>
+          onClientCreated={handleClientCreated}
+        />
 
-                {errorMessages.length > 2 && (
-                  <ul className="mb-0" style={{ fontSize: '0.9em', color: '#a16207' }}>
-                    {errorMessages.slice(2).map((msg, index) => (
-                      <li key={index}>{msg}</li>
-                    ))}
-                  </ul>
-                )}
-              </Alert>
-            )}
-            <Form>
-              <div className="mb-4 mt-4 form-pequeno">
-                <p className="fw-bold">Dados cadastrais</p>
-                <Row>
-                  <Col md={4}>
-                    <Form.Group className="mb-3">
-                      <Form.Label style={{ fontSize: '0.8rem' }}>Nome*</Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="nome"
-                        value={newClient.nome}
-                        onChange={handleNewClientChange}
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={4}>
-                    <Form.Group className="mb-3">
-                      <Form.Label style={{ fontSize: '0.8rem' }}>Fantasia</Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="fantasia"
-                        value={newClient.fantasia}
-                        onChange={handleNewClientChange}
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={4}>
-                    <Form.Group className="mb-3">
-                      <Form.Label style={{ fontSize: '0.8rem' }}>CPF/CNPJ</Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="documento"
-                        value={newClient.documento}
-                        onChange={handleNewClientChange}
-                        className={formErrors.documento ? 'form-control-warning' : ''}
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-                <Row>
-                  <Col md={4}>
-                    <Form.Group className="mb-3">
-                      <Form.Label style={{ fontSize: '0.8rem' }}>Tipo de pessoa*</Form.Label>
-                      <Form.Select
-                        name="tipo"
-                        value={newClient.tipo}
-                        onChange={handleNewClientChange}
-                      >
-                        <option value="F">Pessoa Física</option>
-                        <option value="J">Pessoa Jurídica</option>
-                      </Form.Select>
-                    </Form.Group>
-                  </Col>
-                  <Col md={4}>
-                    <Form.Group className="mb-3">
-                      <Form.Label style={{ fontSize: '0.8rem' }}>Inscrição Estadual</Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="ie"
-                        value={newClient.ie}
-                        onChange={handleNewClientChange}
-                        disabled={newClient.isentoIE}
-                        className={formErrors.ie ? 'form-control-warning' : ''}
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={4} className="d-flex align-items-center pt-3">
-                    <Form.Group className="mb-3">
-                      <Form.Check
-                        style={{ fontSize: '0.9rem' }}
-                        type="checkbox"
-                        name="isentoIE"
-                        label="Isento"
-                        checked={newClient.isentoIE}
-                        onChange={handleIsentoChange}
-                        className="custom-checkbox-producao"
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-              </div>
-
-              <div className="mb-4 form-pequeno">
-                <p className="fw-bold">Endereço</p>
-                <Row>
-                  <Col md={2}>
-                    <Form.Group className="mb-3">
-                      <Form.Label style={{ fontSize: '0.8rem' }}>CEP</Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="cep"
-                        value={newClient.cep}
-                        onChange={handleNewClientChange}
-                        className={formErrors.cep ? 'form-control-warning' : ''}
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label style={{ fontSize: '0.8rem' }}>Rua</Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="endereco"
-                        value={newClient.endereco}
-                        onChange={handleNewClientChange}
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={2}>
-                    <Form.Group className="mb-3">
-                      <Form.Label style={{ fontSize: '0.8rem' }}>Número</Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="numero"
-                        value={newClient.numero}
-                        onChange={handleNewClientChange}
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-                <Row>
-                  <Col md={4}>
-                    <Form.Group className="mb-3">
-                      <Form.Label style={{ fontSize: '0.8rem' }}>Bairro</Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="bairro"
-                        value={newClient.bairro}
-                        onChange={handleNewClientChange}
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={4}>
-                    <Form.Group className="mb-3">
-                      <Form.Label style={{ fontSize: '0.8rem' }}>Complemento</Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="complemento"
-                        value={newClient.complemento}
-                        onChange={handleNewClientChange}
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={3}>
-                    <Form.Group className="mb-3">
-                      <Form.Label style={{ fontSize: '0.8rem' }}>Cidade</Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="municipio"
-                        value={newClient.municipio}
-                        onChange={handleNewClientChange}
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={1}>
-                    <Form.Group className="mb-3">
-                      <Form.Label style={{ fontSize: '0.8rem' }}>UF</Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="uf"
-                        value={newClient.uf}
-                        onChange={handleNewClientChange}
-                        maxLength={2}
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-              </div>
-
-              <div className="mb-4 form-pequeno">
-                <p className="fw-bold">Contato</p>
-                <Row>
-                  <Col md={4}>
-                    <Form.Group className="mb-3">
-                      <Form.Label style={{ fontSize: '0.8rem' }}>Informação do contato</Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="contato"
-                        value={newClient.contato}
-                        onChange={handleNewClientChange}
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={4}>
-                    <Form.Group className="mb-3">
-                      <Form.Label style={{ fontSize: '0.8rem' }}>Email</Form.Label>
-                      <Form.Control
-                        type="email"
-                        name="email"
-                        value={newClient.email}
-                        onChange={handleNewClientChange}
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-                <Row>
-                  <Col md={2}>
-                    <Form.Group className="mb-3">
-                      <Form.Label style={{ fontSize: '0.8rem' }}>Telefone</Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="telefone"
-                        value={newClient.telefone}
-                        onChange={handleNewClientChange}
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={2}>
-                    <Form.Group className="mb-3">
-                      <Form.Label style={{ fontSize: '0.8rem' }}>Celular</Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="celular"
-                        value={newClient.celular}
-                        onChange={handleNewClientChange}
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-              </div>
-
-              <div className="mb-4 form-pequeno">
-                <p className="fw-bold">Dados adicionais</p>
-                <Row>
-                  <Col md={2}>
-                    <Form.Group className="mb-3">
-                      <Form.Label style={{ fontSize: '0.8rem' }}>Tipo de contato</Form.Label>
-                      <Form.Select
-                        name="tipoContato"
-                        value={newClient.tipoContato}
-                        onChange={handleNewClientChange}
-                      >
-                        {TIPOS_DE_CONTATO.map((tipo) => (
-                          <option key={tipo.id} value={tipo.id}>
-                            {tipo.descricao}
-                          </option>
-                        ))}
-                      </Form.Select>
-                    </Form.Group>
-                  </Col>
-                </Row>
-                <Row>
-                  <Col>
-                    <Form.Group className="mb-3">
-                      <Form.Label style={{ fontSize: '0.8rem' }}>Observações</Form.Label>
-                      <Form.Control
-                        as="textarea"
-                        rows={3}
-                        name="obs"
-                        value={newClient.obs}
-                        onChange={handleNewClientChange}
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-              </div>
-            </Form>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button
-              className="cancel-button"
-              onClick={handleCloseCreateModal}
-              disabled={isCreating}
-            >
-              Cancelar
-            </Button>
-            <Button className="save-button" onClick={handleCreateClient} disabled={isCreating}>
-              {isCreating ? <Spinner as="span" animation="border" size="sm" /> : 'Salvar'}
-            </Button>
-          </Modal.Footer>
-        </Modal>
+        <ModalEditClient
+          show={!!viewingClientId}
+          onHide={handleCloseViewModal}
+          clientId={viewingClientId}
+          onClientUpdated={handleClientUpdated}
+        />
       </div>
     </Container>
   );
