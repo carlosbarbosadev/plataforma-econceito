@@ -35,15 +35,14 @@ router.get('/pedidos-para-envio', autenticarToken, async (req, res) => {
                 
                 (
                     SELECT 
-                        -- Conta quantos itens têm quantidade maior que o estoque
                         COUNT(*) FILTER (WHERE item.quantidade > COALESCE(prod.estoque_saldo_virtual, 0)) AS out_of_stock_count
-                    FROM jsonb_to_recordset(cp.dados_completos_json->'itens') AS item(codigo text, quantidade integer)
+                    FROM jsonb_to_recordset(cp.dados_completos_json->'itens') AS item(codigo text, quantidade numeric)
                     LEFT JOIN cache_produtos prod ON prod.codigo = item.codigo
                 ) AS out_of_stock_count,
                 
                 (
                     (SELECT COUNT(*) FILTER (WHERE item.quantidade > COALESCE(prod.estoque_saldo_virtual, 0))
-                     FROM jsonb_to_recordset(cp.dados_completos_json->'itens') AS item(codigo text, quantidade integer)
+                     FROM jsonb_to_recordset(cp.dados_completos_json->'itens') AS item(codigo text, quantidade numeric)
                      LEFT JOIN cache_produtos prod ON prod.codigo = item.codigo) = 0
                 ) AS is_fully_in_stock
 
