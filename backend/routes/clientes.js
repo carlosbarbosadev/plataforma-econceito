@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { autenticarToken } = require('../middlewares/authMiddleware');
-const { criarClienteBling, fetchDetalhesContato } = require('../services/bling');
+const { criarClienteBling, fetchDetalhesContato, atualizarClienteBling } = require('../services/bling');
 
 const { parseBlingError } = require('../services/blingErrorHandler');
 
@@ -49,16 +49,59 @@ router.get('/', autenticarToken, async (req, res) => {
     }   
 });
 
+router.get('/:id', autenticarToken, async (req, res) => {
+    const { id } = req.params;
+    const { id_vendedor_bling: idVendedorBling, tipo: tipoUsuario } = req.usuario
+
+    console.log(`Rota GET /api/clientes/${id} acessada por: ${req.usuario.email}`);
+
+    try {
+        const queryPermissao = "SELECT vendedor_id, data_cadastro, infocontato, observacoes FROM cache_clientes WHERE id = $1";
+        const { rows } = await db.query(queryPermissao, [id]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ mensagem: 'Cliente não encontrado.' })
+        }
+
+        const clienteDoCache = rows[0];
+
+        if (tipoUsuario !== 'admin' && clienteDoCache.vendedor_id !== idVendedorBling) {
+            return res.status(403).json({ mensagem: 'Você não tem permissão para ver este cliente.' });
+        }
+
+        const clienteDetalhado = await fetchDetalhesContato(id)
+        
+        const clienteCompleto = {
+            ...clienteDetalhado,
+            data_cadastro: clienteDoCache.data_cadastro,
+            infocontato: clienteDoCache.infocontato,
+            observacoes: clienteDoCache.observacoes
+        };
+
+        res.json(clienteCompleto);
+
+    } catch (error) {
+        console.error(`Falha crítica na rota GET /api/clientes/${id}:`, error.message);
+
+        if (error.response) {
+            return res.status(error.response.status).json(error.response.data);
+        }
+
+        if (!res.headersSent) {
+            res.status(500).json({ mensagem: `Falha ao buscar detalhes do cliente: ${error.message}` });
+        }
+    }
+});
+
 router.post('/', autenticarToken, async (req, res) => {
     console.log('Rota POST /api/clientes recebida.');
     try {
         const dadosDoFormulario = req.body;
         const idVendedorBling = req.usuario.id_vendedor_bling;
 
-        const payloadParaBling = {
-            ...dadosDoFormulario,
-            vendedor: { id: idVendedorBling }
-        };
+        const { infocontato, ...payloadParaBling } = dadosDoFormulario;
+
+        payloadParaBling.vendedor = { id: idVendedorBling };
 
         const respostaCriacao = await criarClienteBling(payloadParaBling);
         const novoId = respostaCriacao.data.id;
@@ -70,12 +113,15 @@ router.post('/', autenticarToken, async (req, res) => {
 
         const clienteDetalhado = await fetchDetalhesContato(novoId);
 
+        const dataDeCadastro = new Date();
+
         const queryInsertCache = `
-            INSERT INTO cache_clientes (id, nome, tipo_pessoa, documento, email, vendedor_id, fone, cidade)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            INSERT INTO cache_clientes (id, nome, tipo_pessoa, documento, email, vendedor_id, fone, cidade, data_cadastro, infocontato, observacoes)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
             ON CONFLICT (id) DO UPDATE SET
                 nome = EXCLUDED.nome, tipo_pessoa = EXCLUDED.tipo_pessoa, documento = EXCLUDED.documento,
-                email = EXCLUDED.email, vendedor_id = EXCLUDED.vendedor_id, fone = EXCLUDED.fone, cidade = EXCLUDED.cidade, updated_at = NOW()
+                email = EXCLUDED.email, vendedor_id = EXCLUDED.vendedor_id, fone = EXCLUDED.fone, cidade = EXCLUDED.cidade,
+                data_cadastro = EXCLUDED.data_cadastro, infocontato = EXCLUDED.infocontato, observacoes = EXCLUDED.observacoes, updated_at = NOW()
         `;
         const params = [
             clienteDetalhado.id,
@@ -85,7 +131,10 @@ router.post('/', autenticarToken, async (req, res) => {
             clienteDetalhado.email,
             clienteDetalhado.vendedor?.id || idVendedorBling,
             clienteDetalhado.telefone || clienteDetalhado.celular || null,
-            clienteDetalhado.endereco?.geral?.municipio || null
+            clienteDetalhado.endereco?.geral?.municipio || null,
+            dataDeCadastro,
+            dadosDoFormulario.infocontato || null,
+            dadosDoFormulario.observacoes || null
         ];
         await db.query(queryInsertCache, params);
         console.log(`Cache local atualizado com o novo cliente ID: ${clienteDetalhado.id}`);
@@ -106,6 +155,82 @@ router.post('/', autenticarToken, async (req, res) => {
         } else {
             console.error('Erro interno na rota POST /api/clientes:', error.message);
             res.status(500).json({ message: error.message || 'Falha ao criar novo cliente.' });
+        }
+    }
+});
+
+router.put('/:id', autenticarToken, async (req, res) => {
+    const { id } = req.params;
+    const dadosDoFormulario = req.body;
+    const { id_vendedor_bling: idVendedorBling, tipo: tipoUsuario } = req.usuario;
+
+    try {
+        const {
+            infocontato,
+            observacoes,
+            data_cadastro,
+            id: idDoCorpo,
+            ...payloadParaBling
+        } = dadosDoFormulario;
+        
+        await atualizarClienteBling(id, payloadParaBling);
+
+        const dadosDoBling = {
+            nome: payloadParaBling.nome,
+            tipo_pessoa: payloadParaBling.tipo,
+            documento: payloadParaBling.numeroDocumento,
+            email: payloadParaBling.email,
+            fone: payloadParaBling.telefone || payloadParaBling.celular || null,
+            cidade: payloadParaBling.endereco?.geral?.municipio || null
+        };
+
+        const dadosInternos = {
+            infocontato: infocontato,
+            observacoes: observacoes
+        };
+
+        const queryUpdateCache = `
+            UPDATE cache_clientes SET
+                nome = $1, tipo_pessoa = $2, documento = $3, email = $4,
+                fone = $5, cidade = $6, infocontato = $7, observacoes = $8,
+                updated_at = NOW()
+            WHERE id= $9
+        `;
+
+        const params = [
+            dadosDoBling.nome,
+            dadosDoBling.tipo_pessoa,
+            dadosDoBling.documento,
+            dadosDoBling.email,
+            dadosDoBling.fone,
+            dadosDoBling.cidade,
+            dadosInternos.infocontato,
+            dadosInternos.observacoes,
+            id
+        ];
+
+        await db.query(queryUpdateCache, params);
+
+        const clienteCompleto = {
+            ...payloadParaBling,
+            id: id,
+            infocontato: dadosInternos.infocontato,
+            observacoes: dadosInternos.observacoes,
+            data_cadastro: data_cadastro
+    };
+
+        res.json(clienteCompleto);
+
+    } catch (error) {
+        if (error.response && error.response.data) {
+            console.error(`Erro da API Bling (PUT ${id}):`, JSON.stringify(error.response.data));
+            const formattedError = parseBlingError(error.response.data);
+            return res.status(error.response.status).json(formattedError);
+        }
+        
+        console.error(`Falha crítica na rota PUT /api/clientes/${id}:`, error.message);
+        if (!res.headersSent) {
+            res.status(500).json({ mensagem: `Falha ao atualizar cliente: ${error.message}` });
         }
     }
 });
