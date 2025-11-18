@@ -294,6 +294,8 @@ export default function ModalEditClient({
                   />
                 </Form.Group>
               </Col>
+            </Row>
+            <Row>
               <Col md={1}>
                 <Form.Group className="mb-3">
                   <Form.Label style={{ fontSize: '0.8rem' }}>Cliente Desde</Form.Label>
@@ -427,7 +429,7 @@ export default function ModalEditClient({
                   <Form.Control
                     type="text"
                     name="telefone"
-                    value={formData.telefone}
+                    value={formData.telefone || ''}
                     onChange={handleChange}
                   />
                 </Form.Group>
@@ -438,7 +440,7 @@ export default function ModalEditClient({
                   <Form.Control
                     type="text"
                     name="celular"
-                    value={formData.celular}
+                    value={formData.celular || ''}
                     onChange={handleChange}
                   />
                 </Form.Group>
