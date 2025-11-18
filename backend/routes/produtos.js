@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { autenticarToken } = require('../middlewares/authMiddleware');
 const db = require('../db');
+const { sincronizarProdutos } = require('../services/blingSyncService');
 
 async function getIdsProdutosEmCampanhaAtiva() {
   try {
@@ -39,38 +40,22 @@ router.get('/', autenticarToken, async (req, res) => {
     const limit = 100;
     const offset = (page - 1) * limit;
 
-    const codigosParaExcluir = 
-      ['AC01', 'BAN0501', 'CRTAB2', 'CRTAB3', 'CRTAB1', 'CRTAK2', 'CRTAK3', 'CRTAK1', '90121084', '3424',
-      'CXECOMK', 'CDB3', 'CDK3', 'CDG3', 'CD3P', '01062023', 'PCBW', 'PER', 'CBPDQC32', 'CBPRQ32', 'CAMP',
-      'CAGP', 'CAGGP', 'CMNPX', 'CIEC', '09911', 'FPG100', 'FPG12', 'FPG50', 'FPM100', 'FPM12', 'FPM50', 'FPP100',
-      'FPP12', 'FPP50', 'FPV12', 'Kit01', 'SCPZ', 'SCB1', 'TMF', '40002003', '400002015', '40002027', 'BLD1', 'BLD12', 'BLD2',
-      'BLD3', 'BLD5', 'BLD7', 'BLDR', 'BONI-FD02', 'CPBLV02', 'CPBL03', 'CPBLV01', 'CFJ02', 'CFJ01', 'C4OCA', 'C4OCS', 'C5M02',
-      'C5MOB', 'C5MOC', 'C5MOE', 'C5MOF', 'C5MOG', 'C5M01', 'C5MOR', 'CBVPA', 'CBVPS', 'CC1', 'CSP', 'CCD', 'CCPS', 'CCLA',
-      'CCLS', 'CCVPA', 'CCVPS', 'CLHP2', 'CLHP1', 'CMXP01', 'CMXP03', 'CM3OA', 'CM3OB', 'CM3OK', 'CM3OS', 'CMCP', 'CMCA',
-      'CMCS', 'CMSA', 'CMSS', 'CXMC', 'CXMR', 'CXMC30', 'CXMC09', 'CXMC07', 'CXMC06', 'CXMC08', 'CXMC05', 'CXMC02', 'CXMC10',
-      'COBR08', 'COCBA', 'COBB1', 'COBC', 'COBD', 'COBE', 'COBF', 'COBK05', 'COBR', 'COCBS', 'COBA06', 'CGU02', 'CGU01', 'CGU01', 'COP008',
-      'COP005', 'COP012', 'COP010', 'COP013', 'COP006', 'COGK250', 'COBS', 'CXBB1238', 'CXBB1233', 'CXBB1209', 'CXBB1219', 'CXBB0215',
-      'CXBB0210', 'CXBB0209', 'CXBB0214', 'CXBB0420', 'CXBB0413', 'CXVB0401', 'CXBB0411', 'CXBB0412', 'PCX4', 'CXBB0419', 'CXBB0649',
-      'CXBB0673', 'CXBB0657', 'CXBB0607', 'CXBB0669', 'CXBB0658', 'CXBB0668', 'CXBB0659', 'PCX6', 'CXBB0631', 'CXBB0650', 'CXBB0672',
-      'CXBB0637', 'CBCP04', 'CBCP03', 'CBCP01', 'CBWA', 'CBWB', 'CBWS', 'COC6E', 'COC6R', 'CXOPA', 'CXOPB', 'CXOPK', 'CXOPS', 'CPFJA',
-      'CPFJE', 'CPFJQ', 'unid', 'COBR09', 'CTOA', 'COBB01', 'CTOC', 'CTOBF', 'COBK04', 'CTOR', 'CTOS', 'COBA07', 'COGB04', 'COGK04',
-      'COP016', 'COP009', 'COP004', 'COP011', 'COP015', 'COP014', 'COP007', 'CBSA', 'CBSS', 'APA', 'APB', 'A002', 'A001', 'APD', 'APG',
-      'AFJR', 'APS', 'CBMPA', 'CMPB', 'CPM01', 'CMPD', 'CMPG', 'CBMPS', 'CPF1', 'CPF2', 'CPP02', 'CC02', 'CC01', 'CB1A', 'CB1CA', 'CB1CL',
-      'CB1CR', 'CB1C', 'CB1E', 'CB1R', 'CB1S', 'CB12C', 'CB12E', 'CB12R', 'CBO3A', 'CBO3S', 'CB4A', 'CB4C', 'CB4C', 'CB4E', 'CB4R', 'CB4S',
-      'CB6A', 'CB6C', 'CB6E', 'CB6R', 'CB6S', 'CBO6A', 'CBO6S', 'PCIC', 'CICXBC', 'CICXBE', 'CICXBR', 'CIEA', 'CIES', 'CISRA', 'CISRS',
-      'CISQA', 'CISQS', 'GRFJQ', 'MCAC', 'MCCC', 'MCRC', 'MCTC', 'PLFJ01', 'PLFJ02', 'SPB', 'SPG', 'SPF', 'SGPA', 'SMPA', 'SPD', 'SMPS', 'SQA',
-      'SQC', 'SQE', 'SQR', 'SQS', 'TPB', 'TAG01', 'TAG02', 'TPC', 'TPD', 'TPE', 'TPF', 'TPG', 'TMPA', 'TMPS', 'TKP01', 'TKP02', 'TKP03', 'TKP04',
-      'TKP05', 'PC01', 'TPR', 'TRPS', 'TRPA', 'TDFJA', 'PCCS', 'PC250', 'PC500', 'PC100', 'CXBB1210', 'CXBB1231', 'CFJ03', 'CXBB1232', 'BECM'];
+    const filtroTema = req.query.tema || '';
 
     const queryParams = [];
     let paramIndex = 1;
 
-    let whereClause = `WHERE codigo IS NOT NULL AND codigo <> '' AND codigo <> ALL($${paramIndex++})`;
-    queryParams.push(codigosParaExcluir);
+    let whereClause = `WHERE situacao = 'A'`;
     
     if (termoDeBusca.trim().length >= 2) {
       whereClause += ` AND (nome ILIKE $${paramIndex} OR codigo ILIKE $${paramIndex})`;
       queryParams.push(`%${termoDeBusca}%`);
+      paramIndex++;
+    }
+
+    if (filtroTema) {
+      whereClause += ` AND (dados_completos_json->>'descricaoCurta') ILIKE $${paramIndex}`;
+      queryParams.push(`%[TEMA: ${filtroTema}]%`);
       paramIndex++;
     }
 
@@ -82,7 +67,7 @@ router.get('/', autenticarToken, async (req, res) => {
     const produtosQuery = `
       SELECT * FROM cache_produtos
       ${whereClause}
-      ORDER BY nome ASC
+      ORDER BY id DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
       `;
     const { rows: produtosDaPagina } = await db.query(produtosQuery, queryParams);

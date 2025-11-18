@@ -95,20 +95,30 @@ async function blingApiCall(requestConfig) {
     }
 }
 
-async function fetchProdutos() {
-    console.log('Iniciando busca completa de produtos do Bling para o cache...');
-    const todosOsProdutos = [];
+async function fetchProdutosPorSituacao(criterio) {
+    console.log(`Buscando produtos com situacao [${criterio}]...`);
+    const produtos = [];
     let pagina = 1;
     while (true) {
         try {
+            const params = {
+                pagina: pagina,
+                limite: 100,
+                criterio: criterio
+            };
+
+            if (criterio === 2) {
+                params.estoque = 'S';
+            }
+
             const response = await blingApiCall({
                 method: 'get',
                 url: `${BLING_API_V3_URL}/produtos`,
-                params: { pagina, limite: 100, estoque: 'S' }
+                params: params
             });
             const produtosDaPagina = response.data.data;
             if (produtosDaPagina && produtosDaPagina.length > 0) {
-                todosOsProdutos.push(...produtosDaPagina);
+                produtos.push(...produtosDaPagina);
                 if (produtosDaPagina.length < 100) break;
                 pagina++;
                 await new Promise(resolve => setTimeout(resolve, 350));
@@ -116,11 +126,24 @@ async function fetchProdutos() {
                 break;
             }
         } catch (error) {
-            console.error(`Erro ao buscar produtos do Bling na página ${pagina}:`, error.response?.data || error.message);
-            throw new Error("Falha na comunicação com a API do Bling ao buscar produtos.");
+            console.error(`Erro ao buscar produtos (${criterio}) do Bling na página ${pagina}:`, error.response?.data || error.message);
+            throw new Error(`Falha na API do Bling ao buscar produtos ${criterio}.`);
         }
     }
-    console.log(`Busca de produtos finalizada. Total de ${todosOsProdutos.length} produtos encontrados.`);
+    console.log(`Busca (${criterio}) finalizada. Total de ${produtos.length} produtos.`);
+    return produtos;
+}
+
+async function fetchProdutos() {
+    console.log('Iniciando busca completa de produtos do Bling para o cache...');
+    
+    const produtosAtivos = await fetchProdutosPorSituacao('2');
+    
+    const produtosInativos = await fetchProdutosPorSituacao('3');
+
+    const todosOsProdutos = [...produtosAtivos, ...produtosInativos];
+
+    console.log(`Busca de produtos finalizada. Total de ${todosOsProdutos.length} produtos encontrados (Ativos: ${produtosAtivos.length}, Inativos: ${produtosInativos.length}).`);
     return todosOsProdutos;
 }
 
@@ -350,6 +373,7 @@ async function alterarSituacaoPedidoBling(pedidoId, statusId) {
 module.exports = {
     refreshBlingAccessToken,
     fetchProdutos,
+    fetchProdutosPorSituacao,
     fetchTodosOsContatos,
     fetchDetalhesContato,
     criarClienteBling,
