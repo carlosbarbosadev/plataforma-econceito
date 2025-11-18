@@ -1167,13 +1167,13 @@ export default function PedidosView() {
                     <Button
                       variant="link"
                       size="sm"
-                      className="text-success fw-bold p-0 text-decoration-none"
-                      style={{ color: '#198754' }}
+                      className="fw-bold p-0 text-decoration-none"
+                      style={{ color: '#439746' }}
                       onClick={async () => {
                         setIsAddingItem(true);
                       }}
                     >
-                      Adicionar item
+                      Adicionar produto
                     </Button>
                   </div>
                 )}
