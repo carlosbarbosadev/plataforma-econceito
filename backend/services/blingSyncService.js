@@ -1,7 +1,13 @@
 const db = require('../db');
-const { fetchPedidosVendas, refreshBlingAccessToken, fetchTodosOsContatos, fetchDetalhesContato, fetchDetalhesPedidoVenda } = require('./bling');
+const {
+    fetchPedidosVendas,
+    refreshBlingAccessToken,
+    fetchTodosOsContatos,
+    fetchDetalhesContato,
+    fetchDetalhesPedidoVenda,
+    fetchProdutos
+} = require('./bling');
 const axios = require('axios');
-const { fetchProdutos } = require('./bling');
 
 const MEIA_HORA_EM_MS = 30 * 60 * 1000;
 
@@ -336,5 +342,6 @@ function iniciarSincronizacaoAgendada() {
 
 module.exports = {
     iniciarSincronizacaoGeral,
-    iniciarSincronizacaoAgendada
+    iniciarSincronizacaoAgendada,
+    sincronizarProdutos
 };
