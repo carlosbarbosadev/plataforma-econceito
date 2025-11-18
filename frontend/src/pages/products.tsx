@@ -58,6 +58,20 @@ type CampanhaBanner = {
   imagem_url: string | null;
 };
 
+const TEMAS_FILTRO = ['Natal'];
+
+const TAGS_FILTRO = [
+  'Kraft',
+  'Branca',
+  'Cake Board',
+  'Cake Box',
+  'Presente',
+  'Oitavada',
+  'Sacola',
+  'Forminha',
+  'Tag',
+];
+
 export default function ProductsPage() {
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [loadingProdutos, setLoadingProdutos] = useState(true);
@@ -90,6 +104,7 @@ export default function ProductsPage() {
   const [campanhaBanner, setCampanhaBanner] = useState<CampanhaBanner | null>(null);
   const [filtroCampanhaAtivo, setFiltroCampanhaAtivo] = useState(false);
   const [produtosFiltrados, setProdutosFiltrados] = useState<Produto[] | null>(null);
+  const [filtroTema, setFiltroTema] = useState<string>('');
 
   // Buscar Clientes
   useEffect(() => {
@@ -151,11 +166,19 @@ export default function ProductsPage() {
     }
   }, [loadingClientes, errorClientes]);
 
-  const fetchProdutos = (page = 1, search = '') => {
+  const fetchProdutos = (page = 1, search = '', temaFiltro = '') => {
     setLoadingProdutos(true);
     setErrorProdutos(null);
 
-    const params = { page, search };
+    const params = { page, search, tema: temaFiltro };
+
+    if (search) {
+      params.search = search;
+    }
+
+    if (temaFiltro) {
+      params.tema = temaFiltro;
+    }
 
     api
       .get('/api/produtos', { params })
@@ -183,9 +206,19 @@ export default function ProductsPage() {
 
   useEffect(() => {
     if (!filtroCampanhaAtivo) {
-      fetchProdutos(currentPage, submittedSearchTerm);
+      fetchProdutos(currentPage, submittedSearchTerm, filtroTema);
     }
-  }, [currentPage, submittedSearchTerm, filtroCampanhaAtivo]);
+  }, [currentPage, submittedSearchTerm, filtroCampanhaAtivo, filtroTema]);
+
+  const handleFiltroClick = (tema: string) => {
+    setFiltroTema((filtroAtual) => {
+      if (filtroAtual === tema) {
+        return '';
+      }
+      return tema;
+    });
+    setSearchTerm('');
+  };
 
   // Buscar banner da campanha mais recente
   useEffect(() => {
@@ -423,10 +456,9 @@ export default function ProductsPage() {
     }
   };
 
-  const handlePredefinedSearch = (term: string) => {
-    setSearchTerm(term);
-    setSubmittedSearchTerm(term);
-    setCurrentPage(1);
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setFiltroTema('');
   };
 
   const handleCancelarPedido = () => {
@@ -635,88 +667,53 @@ export default function ProductsPage() {
         </Col>
       </Row>
 
-      <Stack direction="horizontal" gap={2} className="mt-5 mb-5">
-        <Button
-          variant="outline-secondary"
-          size="sm"
-          className="flex-fill"
-          onClick={() => handlePredefinedSearch('Kraft')}
-        >
-          Kraft
-        </Button>
-        <Button
-          variant="outline-secondary"
-          size="sm"
-          className="flex-fill"
-          onClick={() => handlePredefinedSearch('Branca')}
-        >
-          Branca
-        </Button>
-        <Button
-          variant="outline-secondary"
-          size="sm"
-          className="flex-fill"
-          onClick={() => handlePredefinedSearch('Cake Board')}
-        >
-          Cake Board
-        </Button>
-        <Button
-          variant="outline-secondary"
-          size="sm"
-          className="flex-fill"
-          onClick={() => handlePredefinedSearch('Cake Box')}
-        >
-          Cake Box
-        </Button>
-        <Button
-          variant="outline-secondary"
-          size="sm"
-          className="flex-fill"
-          onClick={() => handlePredefinedSearch('Presente')}
-        >
-          Presente
-        </Button>
-        <Button
-          variant="outline-secondary"
-          size="sm"
-          className="flex-fill"
-          onClick={() => handlePredefinedSearch('Oitavada')}
-        >
-          Oitavada
-        </Button>
-        <Button
-          variant="outline-secondary"
-          size="sm"
-          className="flex-fill"
-          onClick={() => handlePredefinedSearch('Sacola')}
-        >
-          Sacola
-        </Button>
-        <Button
-          variant="outline-secondary"
-          size="sm"
-          className="flex-fill"
-          onClick={() => handlePredefinedSearch('Forminha')}
-        >
-          Forminha
-        </Button>
-        <Button
-          variant="outline-secondary"
-          size="sm"
-          className="flex-fill"
-          onClick={() => handlePredefinedSearch('Tag')}
-        >
-          Tag
-        </Button>
-        <Button
-          style={{ backgroundColor: '#DC3545', borderColor: '#DC3545', color: '#ffffff' }}
-          size="sm"
-          className="flex-fill"
-          onClick={() => handlePredefinedSearch('')}
-        >
-          Limpar busca
-        </Button>
-      </Stack>
+      <Row className="mt-3 mb-5 align-items-end" gap={2}>
+        <Col md={3}>
+          <Form.Group controlId="filtroTag">
+            <Form.Label className="text-muted" style={{ fontSize: '13px' }}>
+              Pesquisas rápidas
+            </Form.Label>
+            <Form.Select
+              value={searchTerm}
+              onChange={(e) => {
+                const novoTermo = e.target.value;
+                setSearchTerm(novoTermo);
+                setSubmittedSearchTerm(novoTermo);
+              }}
+              className="input-foco-azul"
+              style={{ borderRadius: '4px' }}
+            >
+              <option value="">Todas</option>
+              {TAGS_FILTRO.map((tag) => (
+                <option key={tag} value={tag}>
+                  {tag}
+                </option>
+              ))}
+            </Form.Select>
+          </Form.Group>
+        </Col>
+
+        <Col md={3}>
+          <Form.Group controlId="filtroTema">
+            <Form.Label className="text-muted" style={{ fontSize: '13px' }}>
+              Categorias
+            </Form.Label>
+            <Form.Select
+              value={filtroTema}
+              onChange={(e) => setFiltroTema(e.target.value)}
+              className="input-foco-azul"
+              style={{ borderRadius: '4px' }}
+            >
+              <option value="">Todos</option>
+              {TEMAS_FILTRO.map((tema) => (
+                <option key={tema} value={tema}>
+                  {tema}
+                </option>
+              ))}
+            </Form.Select>
+          </Form.Group>
+        </Col>
+      </Row>
 
       {itensDoPedidoAtual.length > 0 && selectedClientId && selectedFormaPagamentoId && (
         <Alert variant="light" className="mb-4 mt-4 pedido-atual-painel">
@@ -829,17 +826,14 @@ export default function ProductsPage() {
                   <th className="fw-normal text-muted" style={{ fontSize: '0.8em' }}>
                     Imagem
                   </th>
-                  <th className="fw-normal text-muted" style={{ width: '35%', fontSize: '0.8em' }}>
+                  <th className="fw-normal text-muted" style={{ width: '40%', fontSize: '0.8em' }}>
                     Descrição
                   </th>
-                  <th className="fw-normal text-muted" style={{ width: '11%', fontSize: '0.8em' }}>
+                  <th className="fw-normal text-muted" style={{ width: '13%', fontSize: '0.8em' }}>
                     Código
                   </th>
-                  <th className="fw-normal text-muted" style={{ width: '11%', fontSize: '0.8em' }}>
+                  <th className="fw-normal text-muted" style={{ width: '13%', fontSize: '0.8em' }}>
                     Preço
-                  </th>
-                  <th className="fw-normal text-muted" style={{ width: '15%', fontSize: '0.8em' }}>
-                    Estoque
                   </th>
                   <th className="fw-normal text-muted" style={{ width: '5%', fontSize: '0.8em' }}>
                     Quantidade
@@ -882,18 +876,6 @@ export default function ProductsPage() {
                               currency: 'BRL',
                             })
                           : '-'}
-                      </td>
-
-                      <td style={{ fontSize: '0.9em' }}>
-                        {(produto.estoque?.saldoVirtualTotal ?? 0) > 0 ? (
-                          <Badge bg="success-subtle" text="success-emphasis" pill>
-                            Disponível
-                          </Badge>
-                        ) : (
-                          <Badge bg="danger-subtle" text="danger-emphasis" pill>
-                            Indisponível
-                          </Badge>
-                        )}
                       </td>
 
                       <td>
