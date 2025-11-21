@@ -445,7 +445,7 @@ export function CampanhasView() {
         <Form onSubmit={handleSaveCampaign}>
           <Modal.Header closeButton closeVariant="white">
             <Modal.Title className="fw-bold">
-              {campanhaEmEdicao ? 'Editar Campanha' : 'Criar Campanha'}
+              {campanhaEmEdicao ? 'Editar campanha' : 'Criar campanha'}
             </Modal.Title>
           </Modal.Header>
           <Modal.Body className="modal-form-sm form-pequeno">
