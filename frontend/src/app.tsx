@@ -2,14 +2,11 @@ import 'src/global.css';
 
 import { useEffect } from 'react';
 
-import Fab from '@mui/material/Fab';
 import { CssBaseline } from '@mui/material';
 
 import { usePathname } from 'src/routes/hooks';
 
 import { ThemeProvider } from 'src/theme/theme-provider';
-
-import { Iconify } from 'src/components/iconify';
 
 // ----------------------------------------------------------------------
 
@@ -19,6 +16,19 @@ type AppProps = {
 
 export default function App({ children }: AppProps) {
   useScrollToTop();
+
+  useEffect(() => {
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'authToken' && event.newValue === null) {
+        window.location.href = '/sign-in';
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   return (
     <ThemeProvider>
