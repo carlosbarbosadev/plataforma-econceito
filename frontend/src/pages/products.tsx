@@ -239,6 +239,7 @@ export default function ProductsPage() {
       listaDeClientes.map((cliente) => ({
         value: cliente.id.toString(),
         label: cliente.nome,
+        documento: cliente.numeroDocumento || '',
       })),
     [listaDeClientes]
   );
@@ -293,6 +294,19 @@ export default function ProductsPage() {
         label: forma.descricao,
       }));
   }, [listaFormasPagamento]);
+
+  const filterOption = (option: any, inputValue: string) => {
+    const { label, data } = option;
+    const inputLower = inputValue.toLowerCase();
+    const docLimpo = (data.documento || '').replace(/\D/g, '');
+    const inputLimpo = inputValue.replace(/\D/g, '');
+
+    if (label.toLowerCase().includes(inputLower)) return true;
+
+    if (inputLimpo.length > 2 && docLimpo.includes(inputLimpo)) return true;
+
+    return false;
+  };
 
   const handleClienteSelectChange = (selectedOptions: any) => {
     setSelectedClientId(selectedOptions ? selectedOptions.value : '');
@@ -586,6 +600,7 @@ export default function ProductsPage() {
               placeholder="Selecione ou digite para buscar um cliente"
               isLoading={loadingClientes}
               isClearable
+              filterOption={filterOption}
               noOptionsMessage={() => 'Nenhum cliente encontrado.'}
               classNamePrefix="select-padrao"
             />
