@@ -17,12 +17,35 @@ router.get('/', autenticarToken, async (req, res) => {
         let queryText;
         const queryParams = [];
 
+        const termoGeral = `%${searchTerm}%`;
+
+        const apenasNumeros = searchTerm.replace(/\D/g, '');
+
+        const termoParaDocumento = apenasNumeros.length > 0 ? `%${apenasNumeros}%` : termoGeral;
+
         if (tipoUsuario === 'admin') {
-            queryText = "SELECT * FROM cache_clientes WHERE (nome ILIKE $1 OR documento ILIKE $1) ORDER BY nome ASC";
-            queryParams.push(`%${searchTerm}%`);
+            queryText = `
+                SELECT * FROM cache_clientes
+                WHERE (
+                    nome ILIKE $1 OR
+                    documento ILIKE $1 OR
+                    documento ILIKE $2
+                )
+                ORDER BY nome ASC
+            `;
+            queryParams.push(termoGeral, termoParaDocumento);
         } else {
-            queryText = "SELECT * FROM cache_clientes WHERE vendedor_id = $1 AND (nome ILIKE $2 OR documento ILIKE $2) ORDER BY nome ASC";
-            queryParams.push(idVendedorBling, `%${searchTerm}%`);
+            queryText = `
+                SELECT * FROM cache_clientes
+                WHERE vendedor_id = $1
+                AND (
+                    nome ILIKE $2 OR
+                    documento ILIKE $2 OR
+                    documento ILIKE $3
+                )
+                ORDER BY nome ASC
+            `;
+            queryParams.push(idVendedorBling, termoGeral, termoParaDocumento);
         }
 
         const { rows: clientesDoBanco } = await db.query(queryText, queryParams);
