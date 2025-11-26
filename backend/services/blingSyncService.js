@@ -1,7 +1,6 @@
 const db = require('../db');
 const {
     fetchPedidosVendas,
-    refreshBlingAccessToken,
     fetchTodosOsContatos,
     fetchDetalhesContato,
     fetchDetalhesPedidoVenda,
@@ -24,7 +23,6 @@ async function sincronizarClientes() {
 
         console.log(`[GERAL] Total de ${listaDeContatosBasicos.length} clientes encontrados. Buscando detalhes e salvando...`);
 
-        await db.query('TRUNCATE TABLE cache_clientes RESTART IDENTITY');
         let clientesSalvos = 0;
 
         for (const contatoBasico of listaDeContatosBasicos) {
@@ -78,9 +76,25 @@ async function sincronizarClientes() {
         }
         console.log(`[GERAL] Sincronizados ${clientesSalvos} de ${listaDeContatosBasicos.length} clientes com sucesso.`);
 
+        const idsNoBling = listaDeContatosBasicos.map(c => c.id);
+
+        if (idsNoBling.length > 0) {
+            const deleteQuery = `
+                DELETE FROM cache_clientes
+                WHERE id <> ALL($1)
+            `;
+            const resultDelete = await db.query(deleteQuery, [idsNoBling]);
+
+            if (resultDelete.rowCount > 0) {
+                console.log(`[GERAL] Limpeza concluída: ${resultDelete.rowCount} clientes antigos foram removidos do sistema.`);
+            } else {
+                console.log('[GERAL] Limpeza concluída: Nenhum cliente precisou ser removido.');
+            }
+        }
+
     } catch (error) {
         console.error(`[GERAL] Erro grave ao sincronizar clientes:`, error.message);
-    } 
+    }
 }
 
 async function atualizarMetricas() {
@@ -343,5 +357,6 @@ function iniciarSincronizacaoAgendada() {
 module.exports = {
     iniciarSincronizacaoGeral,
     iniciarSincronizacaoAgendada,
-    sincronizarProdutos
+    sincronizarProdutos,
+    sincronizarClientes,
 };
