@@ -1,62 +1,48 @@
-import Box from '@mui/material/Box';
-
-import { Label } from 'src/components/label';
-import { Iconify } from 'src/components/iconify';
-import { SvgColor } from 'src/components/svg-color';
-
-// ----------------------------------------------------------------------
-
-const icon = (name: string) => <SvgColor src={`/assets/icons/navbar/${name}.svg`} />;
-
 export type NavItem = {
   title: string;
   path: string;
   icon: React.ReactNode;
   bgcolor?: string;
   info?: React.ReactNode;
+  roles?: string[];
 };
 
 export const navData: NavItem[] = [
   {
     title: 'DASHBOARD',
     path: '/',
-    icon: <Iconify icon="uil:home-alt" sx={{ color: 'white' }} />,
+    icon: <img src="/assets/icons/glass/dashboard.svg" width="24" alt="Dashboard" />,
     bgcolor: '#2453dc',
   },
   {
     title: 'CLIENTES',
     path: '/clientes',
-    icon: <Iconify icon="uil:user" sx={{ color: 'white' }} />,
+    icon: <img src="/assets/icons/glass/client.svg" width="24" alt="Clientes" />,
     bgcolor: '#28b463',
   },
   {
     title: 'PEDIDOS',
     path: '/pedidos',
-    icon: (
-      <Iconify
-        icon="mdi:file-document-box-multiple-outline"
-        sx={{ color: 'white', width: '40', height: '40' }}
-      />
-    ),
+    icon: <img src="/assets/icons/glass/orders.svg" width="24" alt="Pedidos" />,
     bgcolor: '#FFC300',
   },
   {
     title: 'PRODUTOS',
     path: '/produtos',
-    icon: <Iconify icon="uil:archive-alt" sx={{ color: 'white' }} />,
+    icon: <img src="/assets/icons/glass/products.svg" width="24" alt="Produtos" />,
     bgcolor: '#9b1dda',
   },
   {
     title: 'CAMPANHAS',
     path: '/campanhas',
-    icon: <Iconify icon="material-symbols:bid-landscape-outline" sx={{ color: 'white' }} />,
+    icon: <img src="/assets/icons/glass/campaign.svg" width="24" alt="Campanhas" />,
     bgcolor: '#f66c1d',
   },
+  {
+    title: 'EXPEDIÇÃO',
+    path: '/expedicao',
+    icon: <img src="/assets/icons/glass/shipment.svg" width="24" alt="Expedição" />,
+    bgcolor: '#00BCD4',
+    roles: ['admin'],
+  },
 ];
-
-export const logoutItem: NavItem = {
-  title: 'Sair',
-  path: '/login',
-  icon: <Iconify icon="material-symbols:logout-rounded" sx={{ color: 'white' }} />,
-  bgcolor: '#D32F2F',
-};
