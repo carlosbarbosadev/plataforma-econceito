@@ -4,7 +4,24 @@ const db = require('../db');
 const { autenticarToken } = require('../middlewares/authMiddleware');
 
 router.get('/pedidos-para-envio', autenticarToken, async (req, res) => {
-    console.log(`Rota GET api/expedicao/pedidos-para-envio acessada por: ${req.usuario.email}`);
+
+    const cleanupQuery = `
+        DELETE FROM shipment_status
+        WHERE order_id IN (
+            SELECT id FROM cache_pedidos
+            WHERE status_id NOT IN (6, 464197)
+        )
+    `;
+    await db.query(cleanupQuery);
+
+    const cleanupProductionQuery = `
+        DELETE FROM production_items
+        WHERE order_id NOT IN (
+            SELECT order_id FROM shipment_status
+        )
+    `;
+    await db.query(cleanupProductionQuery)
+    
     try {
         const termoBusca = req.query.search || '';
         const queryParams = [];
@@ -139,7 +156,6 @@ router.put('/status/:orderId', autenticarToken, async (req, res) => {
         }
 
         if (newColumn && newColumn !== 'em-producao') {
-            console.log(`Limpando itens de produção para o pedido ${orderId}...`);
             const deleteQuery = 'DELETE FROM production_items WHERE order_id = $1';
             await db.query(deleteQuery, [orderId]);
         }
