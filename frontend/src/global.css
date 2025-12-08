@@ -502,6 +502,46 @@ body.modal-open .desktop-sidebar {
   background-color: #3c8a3f !important;
 }
 
+.import-button {
+  background-color: #1f7246;
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 550;
+  border-radius: 4px;
+  color: white;
+  padding: 9px 14px;
+  transition: background-color 0.2s ease-in-out;
+  width: 150px;
+}
+
+.import-button:hover {
+  background-color: #1b5e3a;
+}
+
+.import-button:active {
+  background-color: #1b5e3a !important;
+}
+
+.upload-button {
+  background-color: #1868db;
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 550;
+  border-radius: 4px;
+  color: white;
+  padding: 9px 14px;
+  transition: background-color 0.2s ease-in-out;
+  width: 150px;
+}
+
+.upload-button:hover {
+  background-color: #124ba0;
+}
+
+.upload-button:active {
+  background-color: #124ba0 !important;
+}
+
 /* ######## MODALS ######## */
 .meu-modal-custom {
   max-width: 1000px;
@@ -531,6 +571,21 @@ body.modal-open .desktop-sidebar {
   font-weight: 700;
 }
 .meu-modal-custom2 .modal-header {
+  padding-top: 25px; 
+  border-bottom: none;
+}
+
+.meu-modal-custom3 {
+  max-width: 1000px;
+}
+.meu-modal-custom3 .modal-content {
+  border-radius: 5px;
+}
+.meu-modal-custom3 .modal-title {
+  color: #282829;
+  font-weight: 700;
+}
+.meu-modal-custom3 .modal-header {
   padding-top: 25px; 
   border-bottom: none;
 }
