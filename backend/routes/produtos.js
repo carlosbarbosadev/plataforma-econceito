@@ -171,4 +171,41 @@ router.get('/por-campanha/:id', autenticarToken, async (req, res) => {
   }
 });
 
+router.post('/validar-importacao', autenticarToken, async (req, res) => {
+  try {
+    const { codigos } = req.body;
+
+    if (!codigos || !Array.isArray(codigos) || codigos.length === 0 ) {
+      return res.json([]);
+    }
+
+    const codigosLimpos = codigos.filter(c => c).map(c => String(c).trim());
+
+    const query = `
+      SELECT id, nome, codigo, preco, estoque_saldo_virtual
+      FROM cache_produtos
+      WHERE UPPER(codigo) = ANY($1::text[])
+      AND situacao = 'A'
+    `;
+
+    const codigosUpper = codigosLimpos.map(c => c.toUpperCase());
+
+    const { rows } = await db.query(query, [codigosUpper]);
+
+    const produtosEncontrados = rows.map(p => ({
+      id: p.id,
+      nome: p.nome,
+      codigo: p.codigo,
+      preco: parseFloat(p.preco) || 0,
+      estoque: parseFloat(p.estoque_saldo_virtual) || 0
+    }));
+
+    res.json(produtosEncontrados);
+
+  } catch (error) {
+    console.error('Erro na rota /api/produtos/validar-importacao:', error.message);
+    res.status(500).json({ mensagem: 'Falha ao validar produtos.' });
+  }
+});
+
 module.exports = router;
