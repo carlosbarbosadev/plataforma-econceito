@@ -163,7 +163,7 @@ export default function ClientesPage() {
             </Form.Group>
           </Col>
           <Col className="d-flex justify-content-end">
-            <Button variant="primary" onClick={handleShowCreateModal} className="create-button">
+            <Button onClick={handleShowCreateModal} className="create-button">
               Cadastrar cliente
             </Button>
           </Col>
