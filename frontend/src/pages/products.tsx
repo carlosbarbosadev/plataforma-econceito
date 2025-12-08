@@ -18,6 +18,8 @@ import {
 
 import api from 'src/services/api';
 
+import ModalImportOrder from 'src/components/modals/ModalImportOrder';
+
 type Produto = {
   id: number;
   nome: string;
@@ -105,6 +107,7 @@ export default function ProductsPage() {
   const [filtroCampanhaAtivo, setFiltroCampanhaAtivo] = useState(false);
   const [produtosFiltrados, setProdutosFiltrados] = useState<Produto[] | null>(null);
   const [filtroTema, setFiltroTema] = useState<string>('');
+  const [showImportModal, setShowImportModal] = useState(false);
 
   // Buscar Clientes
   useEffect(() => {
@@ -571,6 +574,30 @@ export default function ProductsPage() {
     );
   }
 
+  const handleImportItems = (itemsImportados: any[]) => {
+    setItensDoPedidoAtual((itensAnteriores) => {
+      const novoCarrinho = [...itensAnteriores];
+
+      itemsImportados.forEach((novoItem) => {
+        const indexExistente = novoCarrinho.findIndex(
+          (item) => item.idProduto === novoItem.idProduto
+        );
+
+        if (indexExistente >= 0) {
+          novoCarrinho[indexExistente] = {
+            ...novoCarrinho[indexExistente],
+            quantidade:
+              Number(novoCarrinho[indexExistente].quantidade) + Number(novoItem.quantidade),
+          };
+        } else {
+          novoCarrinho.push(novoItem);
+        }
+      });
+
+      return novoCarrinho;
+    });
+  };
+
   return (
     <Container fluid className="mb-4">
       <Row>
@@ -682,7 +709,7 @@ export default function ProductsPage() {
         </Col>
       </Row>
 
-      <Row className="mt-3 mb-5 align-items-end" gap={2}>
+      <Row className="mt-3 align-items-end" gap={2}>
         <Col md={3}>
           <Form.Group controlId="filtroTag">
             <Form.Label className="text-muted" style={{ fontSize: '13px' }}>
@@ -730,8 +757,14 @@ export default function ProductsPage() {
         </Col>
       </Row>
 
+      <div className="d-flex justify-content-end">
+        <Button className="mb-4 import-button" onClick={() => setShowImportModal(true)}>
+          Importar pedido
+        </Button>
+      </div>
+
       {itensDoPedidoAtual.length > 0 && selectedClientId && selectedFormaPagamentoId && (
-        <Alert variant="light" className="mb-4 mt-4 pedido-atual-painel">
+        <Alert variant="light" className="mb-4 pedido-atual-painel">
           <h5>
             <strong>Pedido atual ({itensDoPedidoAtual.length} itens)</strong>
           </h5>
@@ -968,7 +1001,11 @@ export default function ProductsPage() {
           )}
         </>
       )}
-      {/* Mensagem se cliente ou forma de pagamento não selecionados e produtos não estão carregando */}
+      <ModalImportOrder
+        show={showImportModal}
+        onHide={() => setShowImportModal(false)}
+        onImportItems={handleImportItems}
+      />
     </Container>
   );
 }
