@@ -22,6 +22,7 @@ export const ProductsPage = lazy(() => import('src/pages/products'));
 export const Page404 = lazy(() => import('src/pages/page-not-found'));
 export const PedidosView = lazy(() => import('src/pages/pedidos-view'));
 export const ShipmentPage = lazy(() => import('src/pages/shipment'));
+export const CRMPage = lazy(() => import('src/pages/crm'));
 
 const renderFallback = () => (
   <Box
@@ -61,6 +62,7 @@ export const routesSection: RouteObject[] = [
       { path: 'pedidos', element: <PedidosView /> },
       { path: 'campanhas', element: <BlogPage /> },
       { path: 'expedicao', element: <ShipmentPage /> },
+      { path: 'crm', element: <CRMPage /> },
     ],
   },
   {
