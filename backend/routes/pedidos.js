@@ -120,9 +120,6 @@ router.post('/', autenticarToken, async (req, res) => {
     console.log(`Rota POST /api/pedidos (Dual Write) acessada por: ${req.usuario.email}`);
 
     try {
-        // ==============================================================================
-        // 1. CONFIGURAÇÃO DE VENDEDORES (PREENCHA AQUI!)
-        // ==============================================================================
         const MAPA_VENDEDORES = {
             "15596296612": "15596336667", // Diogo Silva Guimarães
             "15596375075": "15596429451", // Rosana de Almeira Tavares
@@ -149,7 +146,6 @@ router.post('/', autenticarToken, async (req, res) => {
             "15596598445": "15596704721", // José Nairton
             "15596582390": "15596840466", // João de Oliveira
         };
-        // ==============================================================================
 
         const {
             idClienteBling,
@@ -201,9 +197,6 @@ router.post('/', autenticarToken, async (req, res) => {
 
         let pedidoDetalhado = null;
 
-        // =================================================================================
-        // ETAPA 1, 2 e 3: PEDIDO NA CONTA PRINCIPAL (CONCEITOFESTAS)
-        // =================================================================================
         console.log("--> Enviando para CONCEITOFESTAS...");
         let resultadoBlingPrincipal;
         
@@ -248,12 +241,8 @@ router.post('/', autenticarToken, async (req, res) => {
             throw error; 
         }
         
-        console.log("⏳ Aguardando 2 segundos para respeitar o Rate Limit do Bling...");
         await sleep(2000);
 
-        // =================================================================================
-        // ETAPA 4: ENVIO PARA CONCEPT (DUAL WRITE)
-        // =================================================================================
         console.log("--> Enviando para CONCEPT...");
         
         try {
@@ -264,11 +253,9 @@ router.post('/', autenticarToken, async (req, res) => {
             const pedidoSecundario = JSON.parse(JSON.stringify(pedidoBase));
             const contatoResumido = pedidoDetalhado.contato;
             
-            // --- A. RESOLUÇÃO INTELIGENTE DO CLIENTE (DB FIRST + ROBUSTEZ) ---
             
             let docCliente = contatoResumido.numeroDocumento;
             
-            // Busca completo se necessário
             let clienteCompletoOrigem = null;
             if (!docCliente) {
                  clienteCompletoOrigem = await blingService.fetchDetalhesContato(contatoResumido.id, 'conceitofestas');
@@ -281,19 +268,16 @@ router.post('/', autenticarToken, async (req, res) => {
                 throw new Error(`Cliente ${contatoResumido.nome} não possui CPF/CNPJ. Sincronização cancelada.`);
             }
 
-            // 1. BUSCA NO DB LOCAL
-            console.log(`🔍 Buscando cliente (Doc: ${docLimpo}) no banco local...`);
+            console.log(`Buscando cliente (Doc: ${docLimpo}) no banco local...`);
             const buscaDb = await db.query('SELECT id_concept FROM map_clientes_concept WHERE documento = $1', [docLimpo]);
 
             if (buscaDb.rows.length > 0) {
-                // -> ENCONTRADO NO BANCO
                 const idEncontrado = buscaDb.rows[0].id_concept;
-                console.log(`✅ Cliente encontrado no CACHE LOCAL (DB). ID: ${idEncontrado}`);
+                console.log(`Cliente encontrado no CACHE LOCAL (DB). ID: ${idEncontrado}`);
                 pedidoSecundario.contato.id = idEncontrado;
             
             } else {
-                // -> NÃO ENCONTRADO (Tenta Criar ou Recuperar)
-                console.log(`⚠️ Cliente não encontrado no DB Local. Iniciando cadastro na Concept...`);
+                console.log(`Cliente não encontrado no DB Local. Iniciando cadastro na Concept...`);
                 
                 if (!clienteCompletoOrigem) {
                     clienteCompletoOrigem = await blingService.fetchDetalhesContato(contatoResumido.id, 'conceitofestas');
@@ -302,24 +286,22 @@ router.post('/', autenticarToken, async (req, res) => {
                 const dadosParaCriacao = { ...clienteCompletoOrigem };
                 delete dadosParaCriacao.id; 
                 delete dadosParaCriacao.codigo; 
-                delete dadosParaCriacao.vendedor; // Não vincula vendedor no cadastro do cliente, apenas no pedido
+                delete dadosParaCriacao.vendedor;
 
                 let novoId = null;
 
                 try {
-                    // Tenta Criar
-                    console.log(`📝 Tentando criar cliente na Concept...`);
+                    console.log(`Tentando criar cliente na Concept...`);
                     const respostaCriacao = await blingService.criarClienteBling(dadosParaCriacao, 'concept');
                     novoId = respostaCriacao.data?.id || respostaCriacao.id;
-                    console.log(`🆕 Cliente criado com sucesso! ID: ${novoId}`);
+                    console.log(`Cliente criado com sucesso! ID: ${novoId}`);
 
                 } catch (erroCriacao) {
-                    // Trata Duplicidade (Plano C)
                     const msgErro = JSON.stringify(erroCriacao.response?.data || erroCriacao.message);
                     const erroDuplicidade = msgErro.includes("já existe") || msgErro.includes("cadastrado") || erroCriacao.response?.status === 422;
 
                     if (erroDuplicidade) {
-                        console.log(`🔁 Cliente já existe na Concept. Tentando recuperar ID na força bruta (Axios)...`);
+                        console.log(`Cliente já existe na Concept. Tentando recuperar ID.`);
                         try {
                             const axios = require('axios');
                             const tokenConcept = await blingService.getAccessToken('concept');
@@ -330,13 +312,13 @@ router.post('/', autenticarToken, async (req, res) => {
 
                             if (respBusca.data?.data?.length > 0) {
                                 novoId = respBusca.data.data[0].id;
-                                console.log(`✅ ID Recuperado via busca direta: ${novoId}`);
+                                console.log(`ID Recuperado via busca direta: ${novoId}`);
                             } else {
                                 throw new Error("Cliente existe mas API não retornou ID na busca.");
                             }
                         } catch (e) {
-                             console.error("❌ Falha na recuperação:", e.message);
-                             throw erroCriacao; // Se não conseguiu recuperar, falha o pedido
+                             console.error("Falha na recuperação:", e.message);
+                             throw erroCriacao;
                         }
                     } else {
                         throw erroCriacao;
@@ -345,7 +327,6 @@ router.post('/', autenticarToken, async (req, res) => {
 
                 if (novoId) {
                     pedidoSecundario.contato.id = novoId;
-                    // Salva no Banco
                     try {
                         await db.query(`
                             INSERT INTO map_clientes_concept (documento, id_concept, nome)
@@ -356,22 +337,18 @@ router.post('/', autenticarToken, async (req, res) => {
                 }
             }
 
-            // --- B. AJUSTES FINAIS DO PEDIDO (AQUI ENTRA O VENDEDOR!) ---
-            
-            // 1. Mapeamento de Vendedor (APLICAÇÃO CORRETA)
             const idVendedorOrigem = String(req.usuario.id_vendedor_bling);
             
             if (idVendedorOrigem && MAPA_VENDEDORES[idVendedorOrigem]) {
-                console.log(`👤 Vendedor Traduzido: ${idVendedorOrigem} -> ${MAPA_VENDEDORES[idVendedorOrigem]}`);
+                console.log(`Vendedor Traduzido: ${idVendedorOrigem} -> ${MAPA_VENDEDORES[idVendedorOrigem]}`);
                 pedidoSecundario.vendedor = { 
                     id: Number(MAPA_VENDEDORES[idVendedorOrigem]) 
                 };
             } else {
-                console.log(`⚠️ Vendedor ID ${idVendedorOrigem} sem mapeamento. Enviando sem vendedor.`);
+                console.log(`Vendedor ID ${idVendedorOrigem} sem mapeamento. Enviando sem vendedor.`);
                 delete pedidoSecundario.vendedor;
             }
 
-            // 2. Outros ajustes
             delete pedidoSecundario.situacao;
 
             const ID_FORMA_PAGAMENTO_CONCEPT = 3514084; 
@@ -380,8 +357,7 @@ router.post('/', autenticarToken, async (req, res) => {
                 formaPagamento: { id: ID_FORMA_PAGAMENTO_CONCEPT } 
             }));
 
-            // ATUALIZAÇÃO: CORREÇÃO DO VÍNCULO DE PRODUTOS
-            console.log("--- Iniciando Tradução de Produtos (SKU -> ID) ---");
+            console.log("Iniciando Tradução de Produtos (SKU -> ID)");
             
             const itensTraduzidos = [];
 
@@ -394,14 +370,12 @@ router.post('/', autenticarToken, async (req, res) => {
                     throw new Error(`Produto "${itemReal.descricao}" sem SKU na origem. Impossível sincronizar.`);
                 }
 
-                console.log(`🔎 Buscando ID na Concept para SKU: "${sku}"...`);
+                console.log(`Buscando ID na Concept para SKU: "${sku}"...`);
 
-                // AQUI ESTÁ A MUDANÇA: Chamamos a função blindada do service
-                // Ela já trata token expirado e renova sozinha
                 const idProdutoConcept = await blingService.buscarIdProdutoPorSku(sku, 'concept');
 
                 if (idProdutoConcept) {
-                    console.log(`   ✅ Encontrado! SKU "${sku}" = ID Concept ${idProdutoConcept}`);
+                    console.log(`Encontrado! SKU "${sku}" = ID Concept ${idProdutoConcept}`);
                     
                     itensTraduzidos.push({
                         produto: { id: idProdutoConcept },
@@ -416,19 +390,16 @@ router.post('/', autenticarToken, async (req, res) => {
                     throw new Error(`O produto SKU "${sku}" (${itemReal.descricao}) não foi encontrado na conta Concept. Cadastre-o lá com o mesmo código.`);
                 }
                 
-                // Pequeno delay para aliviar a API
                 await new Promise(r => setTimeout(r, 200)); 
             }
 
-            // Substitui a lista de itens pela lista traduzida com IDs
             pedidoSecundario.itens = itensTraduzidos;
 
-            // Envio Final
             const resultadoBlingSecundario = await blingService.criarPedidoVenda(pedidoSecundario, 'concept');
             
             statusEnvio.concept.sucesso = true;
             statusEnvio.concept.id = resultadoBlingSecundario.data?.id;
-            console.log('🚀 SUCESSO ABSOLUTO na Concept! Pedido ID:', statusEnvio.concept.id);
+            console.log('Sucesso na Concept! ID:', statusEnvio.concept.id);
 
         } catch (error) {
             console.error('ALERTA: Falha na Concept:', error.message);

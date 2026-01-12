@@ -246,9 +246,8 @@ async function buscarContatoPorDocumento(documento, nomeConta = 'conceitofestas'
             
             response.data.data.forEach(c => {
                 const docBling = c.numeroDocumento ? c.numeroDocumento.replace(/\D/g, '') : 'SEM DOC';
-                console.log(`🕵️ Comparando: Buscado(${documentoLimpo}) vs Bling(${docBling}) - Nome: ${c.nome}`);
+                console.log(`Comparando: Buscado(${documentoLimpo}) vs Bling(${docBling}) - Nome: ${c.nome}`);
             });
-            // -------------------------
 
             const contatoCerto = response.data.data.find(c => {
                 const docDoBling = c.numeroDocumento ? c.numeroDocumento.replace(/\D/g, '') : '';
@@ -449,13 +448,12 @@ async function buscarIdProdutoPorSku(sku, nomeConta = 'concept') {
     if (!skuLimpo) return null;
 
     try {
-        // Usa blingApiCall para garantir renovação de token automática
         const response = await blingApiCall({
             method: 'get',
             url: `${BLING_API_V3_URL}/produtos`,
             params: {
                 codigo: skuLimpo,
-                limite: 1 // Só precisamos de 1 para pegar o ID
+                limite: 1
             }
         }, nomeConta);
 
@@ -467,7 +465,7 @@ async function buscarIdProdutoPorSku(sku, nomeConta = 'concept') {
 
     } catch (error) {
         console.error(`[blingService] Erro ao buscar ID do SKU ${skuLimpo} na conta ${nomeConta}:`, error.message);
-        return null; // Retorna null para o sistema saber que não achou e tratar
+        return null;
     }
 }
 
