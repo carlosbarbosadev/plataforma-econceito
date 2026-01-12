@@ -3,6 +3,7 @@ const router = express.Router();
 const { autenticarToken } = require('../middlewares/authMiddleware');
 const blingService = require('../services/bling')
 const db = require('../db');
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 const { formatInTimeZone } = require('date-fns-tz');
 
@@ -115,11 +116,41 @@ router.get('/', autenticarToken, async (req, res) => {
     }
 });
 
-
 router.post('/', autenticarToken, async (req, res) => {
-    console.log(`Rota POST /api/pedidos (criar) acessada por: ${req.usuario.email} (Tipo: ${req.usuario.tipo})`);
+    console.log(`Rota POST /api/pedidos (Dual Write) acessada por: ${req.usuario.email}`);
 
     try {
+        // ==============================================================================
+        // 1. CONFIGURAÇÃO DE VENDEDORES (PREENCHA AQUI!)
+        // ==============================================================================
+        const MAPA_VENDEDORES = {
+            "15596296612": "15596336667", // Diogo Silva Guimarães
+            "15596375075": "15596429451", // Rosana de Almeira Tavares
+            "15596444660": "15596460068", // Rita de Cássia
+            "15596444658": "15596459962", // Jean Charles
+            "15596432168": "15596538397", // Aquila Cardoso
+            "15596381239": "15596429455", // Maycon Junior
+            "15596366972": "15596429449", // Rogério Aparecido
+            "15596349291": "15596349303", // Rodrigo Pavan
+            "15596335316": "15596337054", // Gircelio Tomas
+            "15596297654": "15596337046", // Anderson Lima
+            "15596224985": "15596227824", // Vera Lucia
+            "15596092270": "15596200017", // José Ricardo
+            "15596092267": "15596200019", // Rogério Ribeiro
+            "15596046115": "15596200021", // Anselmo Ribeiro
+            "15294368112": "15596200022", // Eduardo Safar
+            "15259226712": "15596200023", // João Glauddios
+            "15224192591": "15596200026", // Marijo Rodrigues
+            "15224097835": "15596200034", // Sidma Regina
+            "15224084996": "15596200043", // Carlos Eduardo
+            "15218883077": "15596200045", // Mauricio
+            "15218872916": "15596200048", // Pedro Magno
+            "15218866887": "15596200050", // Marcelo Peixoto
+            "15596598445": "15596704721", // José Nairton
+            "15596582390": "15596840466", // João de Oliveira
+        };
+        // ==============================================================================
+
         const {
             idClienteBling,
             itensPedido,
@@ -131,27 +162,23 @@ router.post('/', autenticarToken, async (req, res) => {
         } = req.body;
 
         if (!idClienteBling || !itensPedido || !Array.isArray(itensPedido) || itensPedido.length === 0) {
-        return res.status(400).json({ mensagem: "ID do cliente e pelo menos um item são obrigatórios." });
+            return res.status(400).json({ mensagem: "ID do cliente e pelo menos um item são obrigatórios." });
         }
-        if (!idFormaPagamentoBling || (valorTotalPedido === undefined || valorTotalPedido === null) ) {
-        return res.status(400).json({ mensagem: "Forma de pagamento e valor total para parcela são obrigatórios." });
+        if (!idFormaPagamentoBling || (valorTotalPedido === undefined || valorTotalPedido === null)) {
+            return res.status(400).json({ mensagem: "Forma de pagamento e valor total são obrigatórios." });
         }
         if (!req.usuario.id_vendedor_bling && req.usuario.tipo === 'vendedor') {
-        return res.status(403).json({ mensagem: 'ID de vendedor do Bling não configurado para este usuário. Não é possível criar o pedido.' });
+            return res.status(403).json({ mensagem: 'ID de vendedor não configurado. Não é possível criar o pedido.' });
         }
 
         const parcelasParaBling = calcularParcelas(idFormaPagamentoBling, valorTotalPedido);
-
         const hoje = new Date().toISOString().split('T')[0];
-        const pedidoParaBling = {
+        
+        const pedidoBase = {
             data: dataPedido || hoje,
             dataSaida: dataPedido || hoje,
-            contato: {
-                id: Number(idClienteBling)
-            },
-            situacao: {
-                id: 47722
-            },
+            contato: { id: Number(idClienteBling) },
+            situacao: { id: 47722 },
             itens: itensPedido.map(item => ({
                 produto: { id: Number(item.idProdutoBling) },
                 quantidade: Number(item.quantidade),
@@ -161,29 +188,42 @@ router.post('/', autenticarToken, async (req, res) => {
             })),
             parcelas: parcelasParaBling,
             ...(req.usuario.id_vendedor_bling && {
-                vendedor: {
-                    id: Number(req.usuario.id_vendedor_bling)
-                }
+                vendedor: { id: Number(req.usuario.id_vendedor_bling) }
             }),
             ...(observacoes && { observacoes: observacoes }),
             ...(observacoesInternas && { observacoesInternas: observacoesInternas }),
-            // Outros campos como 'loja', 'numeroPedidoCompra', 'desconto', 'transporte' podem ser adicionados aqui
-            // com base no JSON completo que você viu e na documentação do Bling
         };
 
-        console.log("Enviando para criarPedidoVenda no service o objeto:", JSON.stringify(pedidoParaBling, null, 2));
-        const resultadoBling = await blingService.criarPedidoVenda(pedidoParaBling);
-        console.log('Pedido criado com sucesso no Bling.');
+        const statusEnvio = {
+            conceitofestas: { sucesso: false, id: null, msg: '' },
+            concept: { sucesso: false, id: null, msg: '' }
+        };
 
-        const novoPedidoId = resultadoBling.data?.id;
-        if (novoPedidoId) {
-            console.log(`Atualizando cache local para o novo pedido ID: ${novoPedidoId}`);
-            const pedidoDetalhado = await blingService.fetchDetalhesPedidoVenda(novoPedidoId);
+        let pedidoDetalhado = null;
 
-            const upsertQuery = `
-                INSERT INTO cache_pedidos (
-                    id, numero, data_pedido, data_saida, total, total_produtos, status_id, status_nome,
-                    cliente_id, cliente_nome, cliente_documento, vendedor_id, observacoes, observacoes_internas, updated_at, dados_completos_json
+        // =================================================================================
+        // ETAPA 1, 2 e 3: PEDIDO NA CONTA PRINCIPAL (CONCEITOFESTAS)
+        // =================================================================================
+        console.log("--> Enviando para CONCEITOFESTAS...");
+        let resultadoBlingPrincipal;
+        
+        try {
+            resultadoBlingPrincipal = await blingService.criarPedidoVenda(pedidoBase, 'conceitofestas');
+            
+            statusEnvio.conceitofestas.sucesso = true;
+            statusEnvio.conceitofestas.id = resultadoBlingPrincipal.data?.id;
+            console.log('Sucesso na ConceitoFestas! ID:', statusEnvio.conceitofestas.id);
+
+            if (resultadoBlingPrincipal.data?.id) {
+                const novoPedidoId = resultadoBlingPrincipal.data.id;
+                console.log(`Atualizando cache local...`);
+                
+                pedidoDetalhado = await blingService.fetchDetalhesPedidoVenda(novoPedidoId);
+
+                const upsertQuery = `
+                    INSERT INTO cache_pedidos (
+                        id, numero, data_pedido, data_saida, total, total_produtos, status_id, status_nome,
+                        cliente_id, cliente_nome, cliente_documento, vendedor_id, observacoes, observacoes_internas, updated_at, dados_completos_json
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), $15)
                     ON CONFLICT (id) DO UPDATE SET
                         numero = EXCLUDED.numero, data_pedido = EXCLUDED.data_pedido, data_saida = EXCLUDED.data_saida,
@@ -191,28 +231,224 @@ router.post('/', autenticarToken, async (req, res) => {
                         status_nome = EXCLUDED.status_nome, cliente_id = EXCLUDED.cliente_id, cliente_nome = EXCLUDED.cliente_nome,
                         cliente_documento = EXCLUDED.cliente_documento, vendedor_id = EXCLUDED.vendedor_id,
                         observacoes = EXCLUDED.observacoes, observacoes_internas = EXCLUDED.observacoes_internas, updated_at = NOW(), dados_completos_json = EXCLUDED.dados_completos_json;
-            `;
+                `;
 
-            const params = [
-                pedidoDetalhado.id, pedidoDetalhado.numero, pedidoDetalhado.data, pedidoDetalhado.dataSaida || null,
-                pedidoDetalhado.total, pedidoDetalhado.totalProdutos, pedidoDetalhado.situacao.id, pedidoDetalhado.situacao.valor,
-                pedidoDetalhado.contato.id, pedidoDetalhado.contato.nome, pedidoDetalhado.contato.numeroDocumento || null,
-                pedidoDetalhado.vendedor?.id || null, pedidoDetalhado.observacoes || null, pedidoDetalhado.observacoesInternas || null, pedidoDetalhado
-            ];
+                const params = [
+                    pedidoDetalhado.id, pedidoDetalhado.numero, pedidoDetalhado.data, pedidoDetalhado.dataSaida || null,
+                    pedidoDetalhado.total, pedidoDetalhado.totalProdutos, pedidoDetalhado.situacao.id, pedidoDetalhado.situacao.valor,
+                    pedidoDetalhado.contato.id, pedidoDetalhado.contato.nome, pedidoDetalhado.contato.numeroDocumento || null,
+                    pedidoDetalhado.vendedor?.id || null, pedidoDetalhado.observacoes || null, pedidoDetalhado.observacoesInternas || null, pedidoDetalhado
+                ];
 
-            await db.query(upsertQuery, params);
-            console.log(`Cache local atualizado para o pedido ID: ${novoPedidoId}`);
-        } else {
-            console.warn('Bling criou o pedido, mas não retornou um ID. Cache local não sera atualizado.');
+                await db.query(upsertQuery, params);
+            }
+
+        } catch (error) {
+            console.error('ERRO CRÍTICO na ConceitoFestas:', error.message);
+            throw error; 
+        }
+        
+        console.log("⏳ Aguardando 2 segundos para respeitar o Rate Limit do Bling...");
+        await sleep(2000);
+
+        // =================================================================================
+        // ETAPA 4: ENVIO PARA CONCEPT (DUAL WRITE)
+        // =================================================================================
+        console.log("--> Enviando para CONCEPT...");
+        
+        try {
+            if (!pedidoDetalhado) {
+                 throw new Error("Não foi possível recuperar os detalhes do pedido da conta principal.");
+            }
+
+            const pedidoSecundario = JSON.parse(JSON.stringify(pedidoBase));
+            const contatoResumido = pedidoDetalhado.contato;
+            
+            // --- A. RESOLUÇÃO INTELIGENTE DO CLIENTE (DB FIRST + ROBUSTEZ) ---
+            
+            let docCliente = contatoResumido.numeroDocumento;
+            
+            // Busca completo se necessário
+            let clienteCompletoOrigem = null;
+            if (!docCliente) {
+                 clienteCompletoOrigem = await blingService.fetchDetalhesContato(contatoResumido.id, 'conceitofestas');
+                 docCliente = clienteCompletoOrigem.numeroDocumento;
+            }
+
+            const docLimpo = docCliente ? String(docCliente).replace(/\D/g, '') : null;
+            
+            if (!docLimpo) {
+                throw new Error(`Cliente ${contatoResumido.nome} não possui CPF/CNPJ. Sincronização cancelada.`);
+            }
+
+            // 1. BUSCA NO DB LOCAL
+            console.log(`🔍 Buscando cliente (Doc: ${docLimpo}) no banco local...`);
+            const buscaDb = await db.query('SELECT id_concept FROM map_clientes_concept WHERE documento = $1', [docLimpo]);
+
+            if (buscaDb.rows.length > 0) {
+                // -> ENCONTRADO NO BANCO
+                const idEncontrado = buscaDb.rows[0].id_concept;
+                console.log(`✅ Cliente encontrado no CACHE LOCAL (DB). ID: ${idEncontrado}`);
+                pedidoSecundario.contato.id = idEncontrado;
+            
+            } else {
+                // -> NÃO ENCONTRADO (Tenta Criar ou Recuperar)
+                console.log(`⚠️ Cliente não encontrado no DB Local. Iniciando cadastro na Concept...`);
+                
+                if (!clienteCompletoOrigem) {
+                    clienteCompletoOrigem = await blingService.fetchDetalhesContato(contatoResumido.id, 'conceitofestas');
+                }
+
+                const dadosParaCriacao = { ...clienteCompletoOrigem };
+                delete dadosParaCriacao.id; 
+                delete dadosParaCriacao.codigo; 
+                delete dadosParaCriacao.vendedor; // Não vincula vendedor no cadastro do cliente, apenas no pedido
+
+                let novoId = null;
+
+                try {
+                    // Tenta Criar
+                    console.log(`📝 Tentando criar cliente na Concept...`);
+                    const respostaCriacao = await blingService.criarClienteBling(dadosParaCriacao, 'concept');
+                    novoId = respostaCriacao.data?.id || respostaCriacao.id;
+                    console.log(`🆕 Cliente criado com sucesso! ID: ${novoId}`);
+
+                } catch (erroCriacao) {
+                    // Trata Duplicidade (Plano C)
+                    const msgErro = JSON.stringify(erroCriacao.response?.data || erroCriacao.message);
+                    const erroDuplicidade = msgErro.includes("já existe") || msgErro.includes("cadastrado") || erroCriacao.response?.status === 422;
+
+                    if (erroDuplicidade) {
+                        console.log(`🔁 Cliente já existe na Concept. Tentando recuperar ID na força bruta (Axios)...`);
+                        try {
+                            const axios = require('axios');
+                            const tokenConcept = await blingService.getAccessToken('concept');
+                            const respBusca = await axios.get(`${process.env.BLING_API_V3_URL || 'https://api.bling.com.br/Api/v3'}/contatos`, {
+                                headers: { 'Authorization': `Bearer ${tokenConcept}` },
+                                params: { numero_documento: docLimpo }
+                            });
+
+                            if (respBusca.data?.data?.length > 0) {
+                                novoId = respBusca.data.data[0].id;
+                                console.log(`✅ ID Recuperado via busca direta: ${novoId}`);
+                            } else {
+                                throw new Error("Cliente existe mas API não retornou ID na busca.");
+                            }
+                        } catch (e) {
+                             console.error("❌ Falha na recuperação:", e.message);
+                             throw erroCriacao; // Se não conseguiu recuperar, falha o pedido
+                        }
+                    } else {
+                        throw erroCriacao;
+                    }
+                }
+
+                if (novoId) {
+                    pedidoSecundario.contato.id = novoId;
+                    // Salva no Banco
+                    try {
+                        await db.query(`
+                            INSERT INTO map_clientes_concept (documento, id_concept, nome)
+                            VALUES ($1, $2, $3)
+                            ON CONFLICT (documento) DO UPDATE SET id_concept = EXCLUDED.id_concept;
+                        `, [docLimpo, novoId, clienteCompletoOrigem.nome]);
+                    } catch (dbError) { console.error("Erro cache DB:", dbError.message); }
+                }
+            }
+
+            // --- B. AJUSTES FINAIS DO PEDIDO (AQUI ENTRA O VENDEDOR!) ---
+            
+            // 1. Mapeamento de Vendedor (APLICAÇÃO CORRETA)
+            const idVendedorOrigem = String(req.usuario.id_vendedor_bling);
+            
+            if (idVendedorOrigem && MAPA_VENDEDORES[idVendedorOrigem]) {
+                console.log(`👤 Vendedor Traduzido: ${idVendedorOrigem} -> ${MAPA_VENDEDORES[idVendedorOrigem]}`);
+                pedidoSecundario.vendedor = { 
+                    id: Number(MAPA_VENDEDORES[idVendedorOrigem]) 
+                };
+            } else {
+                console.log(`⚠️ Vendedor ID ${idVendedorOrigem} sem mapeamento. Enviando sem vendedor.`);
+                delete pedidoSecundario.vendedor;
+            }
+
+            // 2. Outros ajustes
+            delete pedidoSecundario.situacao;
+
+            const ID_FORMA_PAGAMENTO_CONCEPT = 3514084; 
+            pedidoSecundario.parcelas = pedidoSecundario.parcelas.map(p => ({
+                ...p,
+                formaPagamento: { id: ID_FORMA_PAGAMENTO_CONCEPT } 
+            }));
+
+            // ATUALIZAÇÃO: CORREÇÃO DO VÍNCULO DE PRODUTOS
+            console.log("--- Iniciando Tradução de Produtos (SKU -> ID) ---");
+            
+            const itensTraduzidos = [];
+
+            for (const itemReal of pedidoDetalhado.itens) {
+                
+                let sku = itemReal.produto?.codigo || itemReal.codigo;
+                if (sku) sku = String(sku).trim();
+
+                if (!sku) {
+                    throw new Error(`Produto "${itemReal.descricao}" sem SKU na origem. Impossível sincronizar.`);
+                }
+
+                console.log(`🔎 Buscando ID na Concept para SKU: "${sku}"...`);
+
+                // AQUI ESTÁ A MUDANÇA: Chamamos a função blindada do service
+                // Ela já trata token expirado e renova sozinha
+                const idProdutoConcept = await blingService.buscarIdProdutoPorSku(sku, 'concept');
+
+                if (idProdutoConcept) {
+                    console.log(`   ✅ Encontrado! SKU "${sku}" = ID Concept ${idProdutoConcept}`);
+                    
+                    itensTraduzidos.push({
+                        produto: { id: idProdutoConcept },
+                        quantidade: Number(itemReal.quantidade),
+                        valor: Number(itemReal.valor),
+                        descricao: itemReal.descricao,
+                        unidade: itemReal.unidade || 'UN',
+                        tipo: 'P'
+                    });
+
+                } else {
+                    throw new Error(`O produto SKU "${sku}" (${itemReal.descricao}) não foi encontrado na conta Concept. Cadastre-o lá com o mesmo código.`);
+                }
+                
+                // Pequeno delay para aliviar a API
+                await new Promise(r => setTimeout(r, 200)); 
+            }
+
+            // Substitui a lista de itens pela lista traduzida com IDs
+            pedidoSecundario.itens = itensTraduzidos;
+
+            // Envio Final
+            const resultadoBlingSecundario = await blingService.criarPedidoVenda(pedidoSecundario, 'concept');
+            
+            statusEnvio.concept.sucesso = true;
+            statusEnvio.concept.id = resultadoBlingSecundario.data?.id;
+            console.log('🚀 SUCESSO ABSOLUTO na Concept! Pedido ID:', statusEnvio.concept.id);
+
+        } catch (error) {
+            console.error('ALERTA: Falha na Concept:', error.message);
+            if (error.response?.data) {
+                console.error("Detalhe:", JSON.stringify(error.response.data, null, 2));
+            }
+            statusEnvio.concept.msg = error.response?.data?.error?.message || error.message;
         }
 
-        res.status(201).json({ mensagem: "Pedido criado com sucesso no Bling!", data: resultadoBling.data });
+        res.status(201).json({ 
+            mensagem: "Processamento concluído.", 
+            status_envio: statusEnvio,
+            data: resultadoBlingPrincipal.data
+        });
 
     } catch (error) {
-        console.error('Erro na rota POST /api/pedidos:', JSON.stringify(error.response?.data, null, 2) || error.message);
+        console.error('Erro na rota POST:', error.message);
         if (!res.headersSent) {
             const status = error.response?.status || 500;
-            res.status(status).json({ mensagem: error.response?.data?.mensagem || error.message || "Erro desconhecido ao criar pedido." });
+            res.status(status).json({ mensagem: error.message || "Erro desconhecido." });
         }
     }
 });
@@ -291,7 +527,6 @@ router.get ('/:idPedidoVenda', autenticarToken, async(req, res) => {
             detalhesDoPedido.observacoes_expedicao = '';
         }
 
-        // Lógica de permissão para verificar se o vendedor pode ver este pedido
         if (req.usuario.tipo === 'vendedor') {
             if (!detalhesDoPedido.vendedor || Number(detalhesDoPedido.vendedor.id) != Number(req.usuario.id_vendedor_bling)) {
                 console.warn(`Vendedor ${req.usuario.email} tentando acessar pedido ${idPedidoVenda} que não lhe pertence ou não tem vendedor definido.`);

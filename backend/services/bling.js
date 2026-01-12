@@ -8,32 +8,61 @@ const BLING_TOKEN_URL = 'https://www.bling.com.br/Api/v3/oauth/token';
 const BLING_API_V3_URL = 'https://api.bling.com.br/Api/v3';
 let isRefreshing = false;
 
-async function getAccessToken() {
-    const { rows } = await db.query('SELECT access_token FROM bling_tokens WHERE id = 1');
+async function getAccessToken(nomeConta = 'conceitofestas') {
+    const { rows } = await db.query(
+        'SELECT access_token FROM bling_tokens WHERE nome_conta = $1',
+        [nomeConta]
+    );
+
     if (rows.length === 0 || !rows[0].access_token) {
-        throw new Error('Access Token não encontrado no banco de dados. Autenticação inicial necessária.');
+        throw new Error(`Access Token da conta '${nomeConta}' não encontrado.`);
     }
+
     return rows[0].access_token;
 }
 
-/**
- * Renova os tokens usando o refresh_token do banco e salva os novos tokens de volta no banco.
- */
-async function refreshBlingAccessToken() {
-    console.log('Tentando renovar o Access Token do Bling...');
-    const { rows } = await db.query('SELECT refresh_token FROM bling_tokens WHERE id = 1');
-    if (rows.length === 0 || !rows[0].refresh_token) {
-        throw new Error('Refresh Token não encontrado no banco de dados.');
+
+async function refreshBlingAccessToken(nomeConta = 'conceitofestas') {
+    console.log(`Tentando renovar o Access Token do Bling para a conta: ${nomeConta}...`);
+
+    let clientId, clientSecret;
+
+    if (nomeConta === 'conceitofestas') {
+        clientId = process.env.BLING_CLIENT_ID;
+        clientSecret = process.env.BLING_CLIENT_SECRET;
+    } else if (nomeConta === 'concept') {
+        clientId = process.env.BLING_CLIENT_ID_CONCEPT;
+        clientSecret = process.env.BLING_CLIENT_SECRET_CONCEPT;
+    } else {
+        throw new Error(`Nome de conta desconhecido: ${nomeConta}`);
     }
+
+    if (!clientId || !clientSecret) {
+        throw new Error(`Credenciais (Client ID/Secret) não configuradas no .env para a conta: ${nomeConta}`);
+    }
+
+    const { rows } = await db.query(
+        'SELECT refresh_token FROM bling_tokens WHERE nome_conta = $1',
+        [nomeConta]
+    );
+
+    if (rows.length === 0 || !rows[0].refresh_token) {
+        throw new Error(`Refresh Token da conta '${nomeConta}' não encontrado no banco.`);
+    }
+
     const currentRefreshToken = rows[0].refresh_token;
 
-    const base64Credentials = Buffer.from(`${BLING_CLIENT_ID}:${BLING_CLIENT_SECRET}`).toString('base64');
+    const base64Credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+
+    console.log(`[DEBUG] Tentando renovar conta: ${nomeConta}`);
+    console.log(`[DEBUG] Usando Client ID final: ...${clientId.slice(-4)}`);
 
     try {
-        const response = await axios.post(BLING_TOKEN_URL, new URLSearchParams({
-            grant_type: 'refresh_token',
-            refresh_token: currentRefreshToken,
-        }), {
+        const response = await axios.post(process.env.BLING_TOKEN_URL || 'https://www.bling.com.br/Api/v3/oauth/token', 
+            new URLSearchParams({
+                grant_type: 'refresh_token',
+                refresh_token: currentRefreshToken,
+            }), {
             headers: {
                 'Authorization': `Basic ${base64Credentials}`,
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -48,24 +77,29 @@ async function refreshBlingAccessToken() {
         }
 
         const updateQuery = `
-            UPDATE bling_tokens SET access_token = $1, refresh_token = $2, updated_at = NOW() WHERE id = 1
+            UPDATE bling_tokens 
+            SET access_token = $1, refresh_token = $2, updated_at = NOW() 
+            WHERE nome_conta = $3
         `;
-        await db.query(updateQuery, [newAccessToken, newRefreshToken || currentRefreshToken]);
-        console.log('Tokens do Bling renovados e salvos no banco de dados com sucesso!');
+        
+        await db.query(updateQuery, [newAccessToken, newRefreshToken || currentRefreshToken, nomeConta]);
+        
+        console.log(`Tokens da conta '${nomeConta}' renovados com sucesso!`);
         return newAccessToken;
 
     } catch (error) {
-        console.error('Erro CRÍTICO ao tentar renovar o Access Token:', error.response?.data || error.message);
-        throw new Error(`Falha CRÍTICA ao renovar token. Reautenticação manual pode ser necessária.`);
+        console.error(`Erro CRÍTICO ao renovar token da conta ${nomeConta}:`, error.response?.data || error.message);
+        throw new Error(`Falha CRÍTICA ao renovar token da conta ${nomeConta}.`);
     }
 }
 
 /**
  * Função central que faz a chamada à API, com renovação automática de token.
  */
-async function blingApiCall(requestConfig) {
+async function blingApiCall(requestConfig, nomeConta = 'conceitofestas') {
     try {
-        const accessToken = await getAccessToken();
+        const accessToken = await getAccessToken(nomeConta);
+        
         requestConfig.headers = {
             ...requestConfig.headers,
             'Authorization': `Bearer ${accessToken}`,
@@ -78,8 +112,10 @@ async function blingApiCall(requestConfig) {
             if (!isRefreshing) {
                 isRefreshing = true;
                 try {
-                    console.warn(`Token expirado. Iniciando rotina de renovação para ${requestConfig.url}...`);
-                    const newAccessToken = await refreshBlingAccessToken();
+                    console.warn(`Token expirado para a conta ${nomeConta}. Iniciando rotina de renovação para ${requestConfig.url}...`);
+                    
+                    const newAccessToken = await refreshBlingAccessToken(nomeConta);
+                    
                     requestConfig.headers['Authorization'] = `Bearer ${newAccessToken}`;
                     return await axios(requestConfig);
                 } finally {
@@ -88,7 +124,8 @@ async function blingApiCall(requestConfig) {
             } else {
                 console.log('Aguardando renovação de token que já está em andamento...');
                 await new Promise(resolve => setTimeout(resolve, 2000));
-                return blingApiCall(requestConfig);
+                
+                return blingApiCall(requestConfig, nomeConta);
             }
         }
         throw error;
@@ -176,22 +213,57 @@ async function fetchTodosOsContatos() {
     return todosOsContatos;
 }
 
-async function fetchDetalhesContato(contatoId) {
+async function fetchDetalhesContato(contatoId, nomeConta = 'conceitofestas') {
     const response = await blingApiCall({
         method: 'get',
         url: `${BLING_API_V3_URL}/contatos/${contatoId}`
-    });
+    }, nomeConta);
     return response.data.data;
 }
 
-async function criarClienteBling(dadosCliente) {
+async function criarClienteBling(dadosCliente, nomeConta = 'conceitofestas') {
     const response = await blingApiCall({
         method: 'post',
         url: `${BLING_API_V3_URL}/contatos`,
         data: dadosCliente,
         headers: { 'Content-Type': 'application/json' }
-    });
+    }, nomeConta);
     return response.data;
+}
+
+async function buscarContatoPorDocumento(documento, nomeConta = 'conceitofestas') {
+    const documentoLimpo = documento.replace(/\D/g, '');
+    if (!documentoLimpo) return null;
+
+    try {
+        const response = await blingApiCall({
+            method: 'get',
+            url: `${process.env.BLING_API_V3_URL || 'https://api.bling.com.br/Api/v3'}/contatos`,
+            params: { numero_documento: documentoLimpo } 
+        }, nomeConta);
+
+        if (response.data && response.data.data && Array.isArray(response.data.data)) {
+            
+            response.data.data.forEach(c => {
+                const docBling = c.numeroDocumento ? c.numeroDocumento.replace(/\D/g, '') : 'SEM DOC';
+                console.log(`🕵️ Comparando: Buscado(${documentoLimpo}) vs Bling(${docBling}) - Nome: ${c.nome}`);
+            });
+            // -------------------------
+
+            const contatoCerto = response.data.data.find(c => {
+                const docDoBling = c.numeroDocumento ? c.numeroDocumento.replace(/\D/g, '') : '';
+                return docDoBling === documentoLimpo;
+            });
+
+            if (contatoCerto) {
+                return contatoCerto;
+            }
+        }
+        
+        return null;
+    } catch (error) {
+        return null;
+    }
 }
 
 async function atualizarClienteBling(contatoId, dadosCliente) {
@@ -244,13 +316,14 @@ async function fetchDetalhesPedidoVenda(idPedido) {
     return response.data.data;
 }
 
-async function criarPedidoVenda(dadosDoPedido) {
+async function criarPedidoVenda(dadosDoPedido, nomeConta = 'conceitofestas') {
     const response = await blingApiCall({
         method: 'post',
         url: `${BLING_API_V3_URL}/pedidos/vendas`,
         data: dadosDoPedido,
         headers: { 'Content-Type': 'application/json' }
-    });
+    }, nomeConta);
+
     return response.data;
 }
 
@@ -370,6 +443,34 @@ async function alterarSituacaoPedidoBling(pedidoId, statusId) {
     return response.data;
 }
 
+async function buscarIdProdutoPorSku(sku, nomeConta = 'concept') {
+    const skuLimpo = String(sku).trim();
+    
+    if (!skuLimpo) return null;
+
+    try {
+        // Usa blingApiCall para garantir renovação de token automática
+        const response = await blingApiCall({
+            method: 'get',
+            url: `${BLING_API_V3_URL}/produtos`,
+            params: {
+                codigo: skuLimpo,
+                limite: 1 // Só precisamos de 1 para pegar o ID
+            }
+        }, nomeConta);
+
+        if (response.data && response.data.data && response.data.data.length > 0) {
+            return response.data.data[0].id;
+        }
+        
+        return null;
+
+    } catch (error) {
+        console.error(`[blingService] Erro ao buscar ID do SKU ${skuLimpo} na conta ${nomeConta}:`, error.message);
+        return null; // Retorna null para o sistema saber que não achou e tratar
+    }
+}
+
 module.exports = {
     refreshBlingAccessToken,
     fetchProdutos,
@@ -383,5 +484,10 @@ module.exports = {
     atualizarPedidoNoBling,
     fetchFormasPagamento,
     alterarSituacaoPedidoBling,
-    atualizarClienteBling
+    atualizarClienteBling,
+    getAccessToken,
+    refreshBlingAccessToken,
+    buscarContatoPorDocumento,
+    blingApiCall,
+    buscarIdProdutoPorSku
 };
