@@ -19,7 +19,8 @@ const cache = apicache.middleware;
 
 const whiteList = [
     'http://localhost:3039',
-    'https://d2euv2imqscvrl.cloudfront.net'
+    'https://d2euv2imqscvrl.cloudfront.net',
+    'https://app.gostratto.com.br'
 ];
 
 const corsOptions = {
