@@ -36,6 +36,7 @@
     "@emotion/styled": "^11.14.0",
     "@fontsource-variable/dm-sans": "^5.2.5",
     "@fontsource/barlow": "^5.2.5",
+    "@hello-pangea/dnd": "^18.0.1",
     "@iconify/react": "^5.2.1",
     "@mui/icons-material": "^7.1.0",
     "@mui/lab": "^7.0.0-beta.10",
