@@ -300,8 +300,14 @@ export default function ShipmentPage() {
   const activeColumn = activeCard ? columns[activeCard.kanban_column] : null;
 
   return (
-    <Container fluid className="mt-4 d-flex flex-column" style={{ height: 'calc(100vh - 100px)' }}>
-      <h3 className=" mt-3 mb-4 fw-bold">Quadro de Expedição</h3>
+    <Container
+      fluid
+      className="mt-4 d-flex flex-column"
+      style={{ height: 'calc(102.1vh - 100px)' }}
+    >
+      <div className="d-flex justify-content-between align-items-center mb-4 mt-4">
+        <h3 className="mb-0 fw-bold">Quadro de expedição</h3>
+      </div>
 
       <div className="d-flex justify-content-between align-items-center mb-4">
         <Form.Group style={{ width: '100%', maxWidth: '500px' }}>
@@ -311,7 +317,7 @@ export default function ShipmentPage() {
             placeholder="Pesquisar por nome, vendedor ou nº do pedido"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ borderRadius: '5px' }}
+            style={{ borderRadius: '4px' }}
           />
         </Form.Group>
 
