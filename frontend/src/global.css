@@ -22,6 +22,45 @@ html {
   height: 100%;
   -webkit-overflow-scrolling: touch;
 }
+
+/* Remove dropdown caret/arrow */
+.dropdown-toggle::after {
+  display: none !important;
+}
+
+/* Remove popover arrow (React Bootstrap) */
+.popover .arrow, .popover .popover-arrow {
+  display: none !important;
+}
+
+/* Dropdown menu styling */
+.dropdown-menu {
+  border-radius: 4px;
+}
+
+/* Column header options - show on hover or when open */
+.column-header .column-options {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.column-header:hover .column-options,
+.column-header .column-options.show {
+  opacity: 1;
+}
+
+/* Remove dropdown item hover/focus highlight */
+.dropdown-item:hover,
+.dropdown-item:focus,
+.dropdown-item:active {
+  background-color: #f5f5f5 !important;
+  color: #212529 !important;
+}
+.dropdown-item.text-danger:hover,
+.dropdown-item.text-danger:focus,
+.dropdown-item.text-danger:active {
+  color: #dc3545 !important;
+}
+
 body,
 #root,
 #root__layout {
@@ -452,6 +491,7 @@ body.modal-open .desktop-sidebar {
   padding: 9px 14px;
   transition: background-color 0.2s ease-in-out;
   width: 120px;
+  height: 38px;
 }
 
 .save-button:hover {
@@ -576,7 +616,7 @@ body.modal-open .desktop-sidebar {
 }
 
 .meu-modal-custom3 {
-  max-width: 1000px;
+  max-width: 1100px;
 }
 .meu-modal-custom3 .modal-content {
   border-radius: 5px;
@@ -588,6 +628,36 @@ body.modal-open .desktop-sidebar {
 .meu-modal-custom3 .modal-header {
   padding-top: 25px; 
   border-bottom: none;
+}
+
+.meu-modal-custom4 {
+  max-width: 500px;
+}
+.meu-modal-custom4 .modal-content {
+  border-radius: 5px;
+}
+.meu-modal-custom4 .modal-title {
+  color: #282829;
+  font-weight: 700;
+}
+.meu-modal-custom4 .modal-header {
+  padding-top: 25px; 
+  border-bottom: none;
+}
+
+.meu-modal-custom5 {
+  max-width: 1080px;
+  margin-top: 120px;
+}
+.meu-modal-custom5 .modal-content {
+  border-radius: 4px;
+}
+.meu-modal-custom5 .modal-title {
+  color: #282829;
+  font-weight: 700;
+}
+.meu-modal-custom5 .modal-header {
+  padding-top: 25px;
 }
 
 /* ######## CEP SEARCH BUTTON ######## */
