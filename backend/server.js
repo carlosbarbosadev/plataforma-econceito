@@ -15,6 +15,7 @@ const webhooksRoutes = require('./routes/webhooks');
 const campanhasRoutes = require('./routes/campanhas');
 const shipmentRoutes = require('./routes/shipment')
 const crmRoutes = require('./routes/crm');
+const checkoutRoutes = require('./routes/checkout');
 const apicache = require('apicache');
 const cache = apicache.middleware;
 
@@ -48,6 +49,7 @@ app.use('/api/webhooks', webhooksRoutes);
 app.use('/api/campanhas', campanhasRoutes);
 app.use('/api/expedicao', shipmentRoutes);
 app.use('/api/crm', crmRoutes);
+app.use('/api/checkout', checkoutRoutes);
 app.use('/api/utils', cache('1 hour', (req, res) => res.statusCode === 200), utilRoutes);
 
 const cron = require('node-cron');
