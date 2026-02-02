@@ -1,5 +1,4 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
-import './i18n';
 
 import { StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';

@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 
 import { Paper } from '@mui/material';
 import Grid from '@mui/material/Grid';
@@ -27,7 +26,6 @@ function getGreeting() {
 }
 
 export function OverviewAnalyticsView() {
-  const { t } = useTranslation();
 
   const saudacao = getGreeting();
   const userDataString = localStorage.getItem('userData');
