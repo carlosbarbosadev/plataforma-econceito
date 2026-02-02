@@ -160,14 +160,14 @@ export default function ShipmentPage() {
         titleColor: '',
         indicatorColor: '#6B778C',
       },
-      natal: {
-        id: 'natal',
-        title: 'NATAL',
+      pascoa: {
+        id: 'pascoa',
+        title: 'PÁSCOA',
         pedidos: [],
-        color: '#f7e8e8ff',
-        titleBgColor: '#c75e68',
+        color: '#e1f7ff',
+        titleBgColor: '#5cd4ff',
         titleColor: '#ffffff',
-        indicatorColor: '#c75e68',
+        indicatorColor: '#5cd4ff',
       },
       'em-producao': {
         id: 'em-producao',
@@ -270,7 +270,7 @@ export default function ShipmentPage() {
         api
           .get<Pedido[]>('/api/expedicao/pedidos-para-envio')
           .then((r) => setPedidos(Array.isArray(r.data) ? r.data : []))
-          .catch(() => {});
+          .catch(() => { });
       });
   }
 
