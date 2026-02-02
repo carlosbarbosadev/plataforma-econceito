@@ -264,6 +264,9 @@ router.get('/production-report', autenticarToken, async (req, res) => {
 
 router.get('/stock-demand-report', autenticarToken, async (req, res) => {
     try {
+        const { pascoa } = req.query;
+        const filtrarPascoa = pascoa === 'true';
+
         const query = `
             WITH ItemsFromOrders AS (
                 SELECT
@@ -296,12 +299,14 @@ router.get('/stock-demand-report', autenticarToken, async (req, res) => {
                 Demand d
             LEFT JOIN
                 cache_produtos prod ON d.produto_codigo = prod.codigo
+            WHERE
+                ($1 = false OR prod.dados_completos_json->>'descricaoCurta' ILIKE '%PASCOA%')
             ORDER BY
                 needed_quantity DESC,
                 product_code ASC;
         `;
 
-        const { rows } = await db.query(query);
+        const { rows } = await db.query(query, [filtrarPascoa]);
         res.json(rows);
 
     } catch (error) {

@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useState, useEffect } from 'react';
-import { Modal, Button, Table, Spinner, Alert } from 'react-bootstrap';
+import { Modal, Button, Table, Spinner, Alert, Form } from 'react-bootstrap';
 
 import api from 'src/services/api';
 
@@ -22,6 +22,7 @@ export function StockDemandReportModal({ show, onHide }: StockDemandReportModalP
   const [reportData, setReportData] = useState<StockReportItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [filtroPascoa, setFiltroPascoa] = useState(false);
 
   useEffect(() => {
     if (show) {
@@ -29,7 +30,9 @@ export function StockDemandReportModal({ show, onHide }: StockDemandReportModalP
         setIsLoading(true);
         setError(null);
         try {
-          const response = await api.get('/api/expedicao/stock-demand-report');
+          const response = await api.get('/api/expedicao/stock-demand-report', {
+            params: { pascoa: filtroPascoa }
+          });
           setReportData(response.data);
         } catch (err) {
           setError('Não foi possível carregar o relatório de estoque.');
@@ -40,7 +43,7 @@ export function StockDemandReportModal({ show, onHide }: StockDemandReportModalP
       };
       fetchStockReport();
     }
-  }, [show]);
+  }, [show, filtroPascoa]);
 
   const handleDownloadPdf = () => {
     if (reportData.length === 0) return;
@@ -108,14 +111,14 @@ export function StockDemandReportModal({ show, onHide }: StockDemandReportModalP
   };
 
   const renderContent = () => {
-    if (isLoading) return <Spinner animation="border" />;
+    if (isLoading) return <div className="text-center py-5"><Spinner animation="border" /></div>;
     if (error) return <Alert variant="danger">{error}</Alert>;
     if (reportData.length === 0)
       return <p>Nenhum item demandado pelos pedidos da expedição no momento.</p>;
 
     return (
       <>
-        <div className="botao-margin">
+        <div className="botao-margin d-flex justify-content-between align-items-center">
           <Button
             style={{ borderRadius: '3px' }}
             className="relatorio-button"
@@ -123,6 +126,13 @@ export function StockDemandReportModal({ show, onHide }: StockDemandReportModalP
           >
             Baixar PDF
           </Button>
+          <Form.Check
+            type="switch"
+            id="filtro-pascoa"
+            label="Filtrar produtos de Páscoa"
+            checked={filtroPascoa}
+            onChange={(e) => setFiltroPascoa(e.target.checked)}
+          />
         </div>
 
         <Table bordered hover className="fix-table">

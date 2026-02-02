@@ -144,7 +144,7 @@ export default function ShipmentPage() {
           return Number(a.acknowledged) - Number(b.acknowledged);
         }
 
-        return 0;
+        return a.outOfStockCount - b.outOfStockCount;
       }),
     [pedidosFiltrados]
   );
