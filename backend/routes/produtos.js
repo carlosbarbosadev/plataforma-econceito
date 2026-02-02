@@ -46,7 +46,7 @@ router.get('/', autenticarToken, async (req, res) => {
     let paramIndex = 1;
 
     let whereClause = `WHERE situacao = 'A'`;
-    
+
     if (termoDeBusca.trim().length >= 2) {
       whereClause += ` AND (nome ILIKE $${paramIndex} OR codigo ILIKE $${paramIndex})`;
       queryParams.push(`%${termoDeBusca}%`);
@@ -76,7 +76,7 @@ router.get('/', autenticarToken, async (req, res) => {
       const emCampanha = idsProdutosEmCampanha.has(p.id);
 
       return {
-      ...p,
+        ...p,
         preco: parseFloat(p.preco) || 0,
         estoque: { saldoVirtualTotal: p.estoque_saldo_virtual },
         imagemURL: p.imagem_url,
@@ -94,61 +94,60 @@ router.get('/', autenticarToken, async (req, res) => {
 });
 
 router.get('/search', autenticarToken, async (req, res) => {
-    const termoDeBusca = req.query.search || '';
+  const termoDeBusca = req.query.search || '';
 
-    if (termoDeBusca.trim().length < 2) {
-        return res.json([]);
-    }
+  if (termoDeBusca.trim().length < 2) {
+    return res.json([]);
+  }
 
-    console.log(`Buscando produtos para campanha com o termo: ${termoDeBusca}`);
-    try {
-        const query = `
+  try {
+    const query = `
             SELECT id, nome, codigo, preco, estoque_saldo_virtual
             FROM cache_produtos
-            WHERE (nome ILIKE $1 OR codigo ILIKE $1)
+            WHERE situacao = 'A' AND (nome ILIKE $1 OR codigo ILIKE $1)
             ORDER BY nome ASC
             LIMIT 20;
         `;
-        const { rows } = await db.query(query, [`%${termoDeBusca}%`]);
+    const { rows } = await db.query(query, [`%${termoDeBusca}%`]);
 
-        const produtosFormatados = rows.map(p => ({
-            id: p.id,
-            nome: p.nome,
-            codigo: p.codigo,
-            preco: parseFloat(p.preco) || 0,
-            estoque: parseFloat(p.estoque_saldo_virtual) || 0
-        }));
+    const produtosFormatados = rows.map(p => ({
+      id: p.id,
+      nome: p.nome,
+      codigo: p.codigo,
+      preco: parseFloat(p.preco) || 0,
+      estoque: parseFloat(p.estoque_saldo_virtual) || 0
+    }));
 
-        res.json(produtosFormatados);
+    res.json(produtosFormatados);
 
-    } catch (error) {
-        console.error(`Erro na rota /api/produtos/search:`, error.message);
-        res.status(500).json({ mensagem: `Falha ao buscar produtos para campanha: ${error.message}` });
-    }
+  } catch (error) {
+    console.error(`Erro na rota /api/produtos/search:`, error.message);
+    res.status(500).json({ mensagem: `Falha ao buscar produtos para campanha: ${error.message}` });
+  }
 });
 
 router.get('/by-ids', autenticarToken, async (req, res) => {
-    const { ids } = req.query;
+  const { ids } = req.query;
 
-    if (!ids || typeof ids !== 'string' || ids.trim() === '') {
-        return res.status(400).json({ mensagem: 'Nenhum ID de produto fornecido.' });
-    }
+  if (!ids || typeof ids !== 'string' || ids.trim() === '') {
+    return res.status(400).json({ mensagem: 'Nenhum ID de produto fornecido.' });
+  }
 
-    const idArray = ids.split(',').map(id => parseInt(id.trim(), 10)).filter(Number.isInteger);
+  const idArray = ids.split(',').map(id => parseInt(id.trim(), 10)).filter(Number.isInteger);
 
-    if (idArray.length === 0) {
-        return res.json([]);
-    }
+  if (idArray.length === 0) {
+    return res.json([]);
+  }
 
-    try {
-        const query = 'SELECT id, nome, codigo, imagem_url FROM cache_produtos WHERE id = ANY($1::bigint[])';
-        const { rows } = await db.query(query, [idArray]);
-        res.json(rows);
+  try {
+    const query = 'SELECT id, nome, codigo, imagem_url FROM cache_produtos WHERE id = ANY($1::bigint[])';
+    const { rows } = await db.query(query, [idArray]);
+    res.json(rows);
 
-    } catch (error) {
-      console.error('Erro ao buscar produtos por IDs:', error);
-      res.status(500).json({ mensagem: 'Erro interno ao buscar produtos.' });
-    }
+  } catch (error) {
+    console.error('Erro ao buscar produtos por IDs:', error);
+    res.status(500).json({ mensagem: 'Erro interno ao buscar produtos.' });
+  }
 });
 
 router.get('/por-campanha/:id', autenticarToken, async (req, res) => {
@@ -166,8 +165,8 @@ router.get('/por-campanha/:id', autenticarToken, async (req, res) => {
     res.json(produtosComFlag)
 
   } catch (error) {
-      console.error(`Erro ao buscar produtos para a campanha ${campanhaId}:`, error);
-      res.status(500).json({ mensagem: 'Erro interno ao buscar produtos da campanha.' });
+    console.error(`Erro ao buscar produtos para a campanha ${campanhaId}:`, error);
+    res.status(500).json({ mensagem: 'Erro interno ao buscar produtos da campanha.' });
   }
 });
 
@@ -175,7 +174,7 @@ router.post('/validar-importacao', autenticarToken, async (req, res) => {
   try {
     const { codigos } = req.body;
 
-    if (!codigos || !Array.isArray(codigos) || codigos.length === 0 ) {
+    if (!codigos || !Array.isArray(codigos) || codigos.length === 0) {
       return res.json([]);
     }
 
