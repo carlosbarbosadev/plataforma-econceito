@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { fetchDetalhesPedidoVenda } = require('../services/bling');
+const axios = require('axios');
+const { fetchDetalhesPedidoVenda, refreshBlingAccessToken, getAccessToken } = require('../services/bling');
 
 router.post('/bling-estoque', async (req, res) => {
-    console.log('--- WEBHOOK DE ESTOQUE DO BLING RECEBIDO! ---');
+    res.status(200).send('Recebido');
 
     try {
         const { data } = req.body;
@@ -33,19 +34,89 @@ router.post('/bling-estoque', async (req, res) => {
         console.error('Erro ao processar webhook de estoque:', error);
     }
 
-    res.status(200).send('Notificação recebida');
+});
+
+router.post('/produtos', async (req, res) => {
+    res.status(200).send('Recebido');
+
+    const { data, eventType } = req.body;
+    const itemWebhook = Array.isArray(data) ? data[0] : data;
+
+    if (!itemWebhook || !itemWebhook.id) return;
+
+    if (eventType === 'delete' || itemWebhook.situacao === 'E') {
+         await db.query('DELETE FROM cache_produtos WHERE id = $1', [itemWebhook.id]);
+         return;
+    }
+
+    try {
+        let token = await getAccessToken(); 
+        
+        if (!token) return console.error('Sem token disponível no banco.');
+
+        let produtoCompleto = null;
+
+        try {
+            const response = await axios.get(`https://www.bling.com.br/Api/v3/produtos/${itemWebhook.id}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            produtoCompleto = response.data.data;
+
+        } catch (error) {
+            if (error.response && error.response.status === 401) {
+                
+                const novoToken = await refreshBlingAccessToken();
+                
+                if (novoToken) {
+                    const retryResponse = await axios.get(`https://www.bling.com.br/Api/v3/produtos/${itemWebhook.id}`, {
+                        headers: { Authorization: `Bearer ${novoToken}` }
+                    });
+                    produtoCompleto = retryResponse.data.data;
+                }
+            } else {
+                throw error;
+            }
+        }
+
+        if (produtoCompleto) {
+            const gtin = produtoCompleto.gtin || produtoCompleto.gtinEmbalagem || '';
+            const query = `
+                INSERT INTO cache_produtos (
+                    id, codigo, nome, preco, gtin, imagem_url, dados_completos_json, atualizado_em
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+                ON CONFLICT (id) DO UPDATE SET
+                    codigo = EXCLUDED.codigo,
+                    nome = EXCLUDED.nome,
+                    preco = EXCLUDED.preco,
+                    gtin = EXCLUDED.gtin,
+                    imagem_url = EXCLUDED.imagem_url,
+                    dados_completos_json = EXCLUDED.dados_completos_json,
+                    atualizado_em = NOW();
+            `;
+            const values = [
+                produtoCompleto.id, produtoCompleto.codigo, produtoCompleto.nome,
+                produtoCompleto.preco, gtin, produtoCompleto.imagemURL || '',
+                JSON.stringify(produtoCompleto)
+            ];
+            await db.query(query, values);
+            console.log(`Produto ${produtoCompleto.codigo} atualizado (ID: ${produtoCompleto.id})`);
+        }
+
+    } catch (error) {
+        console.error(`Erro webhook produto ${itemWebhook.id}:`, error.message);
+    }
 });
 
 router.post('/pedidos', async (req, res) => {
-    console.log('--- WEBHOOK DE PEDIDO V3 RECEBIDO! ---');
+    res.status(200).send('Recebido');
 
     try {
         const { data } = req.body;
         const pedidoId = data?.id;
 
         if (!pedidoId) {
-            console.log('Webhook de pedido recebido, mas não foi possível extrair o ID do pedido de req.body.data');
-            return res.status(200).send('Webhook recebido, mas sem ID.');
+            console.log('Webhook pedido ignorado: Sem ID.');
+            return; 
         }
 
         console.log(`Processando webhook para o Pedido ID: ${pedidoId}`);
@@ -86,11 +157,8 @@ router.post('/pedidos', async (req, res) => {
             console.log(`Pedido ID ${pedidoId} excluído do cache via webhook.`);
         }
 
-        res.status(200).send('Webhook de pedido processado com sucesso.');
-
      } catch (error) {
         console.error(`Erro ao processar webhook de pedido:`, error.message);
-        res.status(200).send('Webhook recebido, mas houve um erro interno no processamento.');
      }
 })
 
