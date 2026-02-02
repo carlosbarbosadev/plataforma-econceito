@@ -58,7 +58,7 @@ async function refreshBlingAccessToken(nomeConta = 'conceitofestas') {
     console.log(`[DEBUG] Usando Client ID final: ...${clientId.slice(-4)}`);
 
     try {
-        const response = await axios.post(process.env.BLING_TOKEN_URL || 'https://www.bling.com.br/Api/v3/oauth/token', 
+        const response = await axios.post(process.env.BLING_TOKEN_URL || 'https://www.bling.com.br/Api/v3/oauth/token',
             new URLSearchParams({
                 grant_type: 'refresh_token',
                 refresh_token: currentRefreshToken,
@@ -81,9 +81,9 @@ async function refreshBlingAccessToken(nomeConta = 'conceitofestas') {
             SET access_token = $1, refresh_token = $2, updated_at = NOW() 
             WHERE nome_conta = $3
         `;
-        
+
         await db.query(updateQuery, [newAccessToken, newRefreshToken || currentRefreshToken, nomeConta]);
-        
+
         console.log(`Tokens da conta '${nomeConta}' renovados com sucesso!`);
         return newAccessToken;
 
@@ -99,7 +99,7 @@ async function refreshBlingAccessToken(nomeConta = 'conceitofestas') {
 async function blingApiCall(requestConfig, nomeConta = 'conceitofestas') {
     try {
         const accessToken = await getAccessToken(nomeConta);
-        
+
         requestConfig.headers = {
             ...requestConfig.headers,
             'Authorization': `Bearer ${accessToken}`,
@@ -113,9 +113,9 @@ async function blingApiCall(requestConfig, nomeConta = 'conceitofestas') {
                 isRefreshing = true;
                 try {
                     console.warn(`Token expirado para a conta ${nomeConta}. Iniciando rotina de renovação para ${requestConfig.url}...`);
-                    
+
                     const newAccessToken = await refreshBlingAccessToken(nomeConta);
-                    
+
                     requestConfig.headers['Authorization'] = `Bearer ${newAccessToken}`;
                     return await axios(requestConfig);
                 } finally {
@@ -124,7 +124,7 @@ async function blingApiCall(requestConfig, nomeConta = 'conceitofestas') {
             } else {
                 console.log('Aguardando renovação de token que já está em andamento...');
                 await new Promise(resolve => setTimeout(resolve, 2000));
-                
+
                 return blingApiCall(requestConfig, nomeConta);
             }
         }
@@ -173,9 +173,9 @@ async function fetchProdutosPorSituacao(criterio) {
 
 async function fetchProdutos() {
     console.log('Iniciando busca completa de produtos do Bling para o cache...');
-    
+
     const produtosAtivos = await fetchProdutosPorSituacao('2');
-    
+
     const produtosInativos = await fetchProdutosPorSituacao('3');
 
     const todosOsProdutos = [...produtosAtivos, ...produtosInativos];
@@ -239,11 +239,11 @@ async function buscarContatoPorDocumento(documento, nomeConta = 'conceitofestas'
         const response = await blingApiCall({
             method: 'get',
             url: `${process.env.BLING_API_V3_URL || 'https://api.bling.com.br/Api/v3'}/contatos`,
-            params: { numero_documento: documentoLimpo } 
+            params: { numero_documento: documentoLimpo }
         }, nomeConta);
 
         if (response.data && response.data.data && Array.isArray(response.data.data)) {
-            
+
             response.data.data.forEach(c => {
                 const docBling = c.numeroDocumento ? c.numeroDocumento.replace(/\D/g, '') : 'SEM DOC';
                 console.log(`Comparando: Buscado(${documentoLimpo}) vs Bling(${docBling}) - Nome: ${c.nome}`);
@@ -258,7 +258,7 @@ async function buscarContatoPorDocumento(documento, nomeConta = 'conceitofestas'
                 return contatoCerto;
             }
         }
-        
+
         return null;
     } catch (error) {
         return null;
@@ -278,7 +278,7 @@ async function atualizarClienteBling(contatoId, dadosCliente) {
 async function fetchPedidosVendas(idVendedorParaFiltrar = null) {
     const todosOsPedidos = [];
     let pagina = 1;
-    while(true) {
+    while (true) {
         try {
             const params = { pagina, limite: 100, composicao: 'true' };
             if (idVendedorParaFiltrar) {
@@ -298,7 +298,7 @@ async function fetchPedidosVendas(idVendedorParaFiltrar = null) {
             } else {
                 break;
             }
-        } catch(error) {
+        } catch (error) {
             console.error(`Erro ao buscar pedidos do Bling na página ${pagina}:`, error.response?.data || error.message);
             throw new Error("Falha na comunicação com a API do Bling ao buscar pedidos.");
         }
@@ -338,7 +338,7 @@ async function atualizarPedidoNoBling(pedidoId, pedidoEditadoDoFrontend) {
             await alterarSituacaoPedidoBling(pedidoId, statusNovo);
         }
 
-        if (pedidoOriginalDoBling.contato.id === pedidoEditadoDoFrontend.contato.id && 
+        if (pedidoOriginalDoBling.contato.id === pedidoEditadoDoFrontend.contato.id &&
             pedidoOriginalDoBling.contato.nome !== pedidoEditadoDoFrontend.contato.nome) {
             const contatoOriginalCompleto = await fetchDetalhesContato(pedidoEditadoDoFrontend.contato.id);
             const payloadContato = { ...contatoOriginalCompleto, nome: pedidoEditadoDoFrontend.contato.nome };
@@ -431,7 +431,7 @@ async function fetchFormasPagamento() {
 
 async function alterarSituacaoPedidoBling(pedidoId, statusId) {
     console.log(`[blingService] Atualizando status do pedido ${pedidoId} para o ID ${statusId}`);
-    
+
     const response = await blingApiCall({
         method: 'patch',
         url: `${BLING_API_V3_URL}/pedidos/vendas/${pedidoId}/situacoes/${statusId}`,
@@ -444,7 +444,7 @@ async function alterarSituacaoPedidoBling(pedidoId, statusId) {
 
 async function buscarIdProdutoPorSku(sku, nomeConta = 'concept') {
     const skuLimpo = String(sku).trim();
-    
+
     if (!skuLimpo) return null;
 
     try {
@@ -460,7 +460,7 @@ async function buscarIdProdutoPorSku(sku, nomeConta = 'concept') {
         if (response.data && response.data.data && response.data.data.length > 0) {
             return response.data.data[0].id;
         }
-        
+
         return null;
 
     } catch (error) {
@@ -484,7 +484,6 @@ module.exports = {
     alterarSituacaoPedidoBling,
     atualizarClienteBling,
     getAccessToken,
-    refreshBlingAccessToken,
     buscarContatoPorDocumento,
     blingApiCall,
     buscarIdProdutoPorSku

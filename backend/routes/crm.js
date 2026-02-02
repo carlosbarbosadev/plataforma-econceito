@@ -96,7 +96,7 @@ router.get('/attachments/:id/download', async (req, res) => {
     const { id } = req.params;
 
     const result = await db.query('SELECT * FROM crm_attachments WHERE id = $1', [id]);
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({ mensagem: 'Anexo não encontrado.' });
     }
@@ -319,7 +319,7 @@ router.put('/deals/:id/move', async (req, res) => {
         `INSERT INTO crm_deals (client_id, column_status, position, user_id, updated_at)
          VALUES ($1, $2, $3, $4, NOW())
          RETURNING *`,
-        [id, column_status, newPosition, req.usuario.id] 
+        [id, column_status, newPosition, req.usuario.id]
       );
 
       await client.query('COMMIT');
@@ -590,13 +590,13 @@ router.put('/deals/:id/description', async (req, res) => {
 });
 
 router.post('/deals/ensure', async (req, res) => {
-  const client = await pool.connect();
+  const client = await db.pool.connect();
   try {
     const { client_id } = req.body;
     const userId = req.usuario.id;
 
     const check = await client.query('SELECT id FROM crm_deals WHERE client_id = $1', [client_id]);
-    
+
     if (check.rows.length > 0) {
       return res.json({ deal_id: check.rows[0].id, is_new: false });
     }
