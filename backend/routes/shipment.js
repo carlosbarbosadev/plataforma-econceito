@@ -9,7 +9,7 @@ router.get('/pedidos-para-envio', autenticarToken, async (req, res) => {
         DELETE FROM shipment_status
         WHERE order_id IN (
             SELECT id FROM cache_pedidos
-            WHERE status_id NOT IN (6, 464197)
+            WHERE status_id NOT IN (6, 710186)
         )
     `;
     await db.query(cleanupQuery);
@@ -21,20 +21,20 @@ router.get('/pedidos-para-envio', autenticarToken, async (req, res) => {
         )
     `;
     await db.query(cleanupProductionQuery)
-    
+
     try {
         const termoBusca = req.query.search || '';
         const queryParams = [];
         let paramIndex = 1;
 
-        let whereClauses = ['cp.status_id IN (6, 464197)'];
+        let whereClauses = ['cp.status_id IN (6, 710186)'];
 
         if (termoBusca.trim()) {
             whereClauses.push(`(cp.cliente_nome ILIKE $${paramIndex} OR cp.numero::text ILIKE $${paramIndex} OR u.nome ILIKE $${paramIndex})`);
             queryParams.push(`%${termoBusca}%`);
             paramIndex++;
         }
-        
+
         const whereString = `WHERE ${whereClauses.join(' AND ')}`;
 
         const query = `
@@ -76,7 +76,7 @@ router.get('/pedidos-para-envio', autenticarToken, async (req, res) => {
         const { rows: pedidosParaEnvio } = await db.query(query, queryParams);
 
         const pedidosFormatados = pedidosParaEnvio.map(p => {
-            let colunaInicial = p.kanban_column || (p.status_id === 464197 ? 'natal' : 'em-aberto');
+            let colunaInicial = p.kanban_column || (p.status_id === 710186 ? 'pascoa' : 'em-aberto');
 
             return {
                 id: p.id,
@@ -141,10 +141,10 @@ router.put('/status/:orderId', autenticarToken, async (req, res) => {
             const statusId = pedidoResult.rows[0].status_id;
 
             let defaultColumn = 'em-aberto';
-            if (statusId === 464197) {
-                defaultColumn = 'natal';
+            if (statusId === 710186) {
+                defaultColumn = 'pascoa';
             }
-            
+
             const finalColumn = newColumn || defaultColumn;
             const finalObservacoes = observacoes || '';
 
@@ -170,7 +170,7 @@ router.put('/status/:orderId', autenticarToken, async (req, res) => {
 
 router.post('/acknowledge/:orderId', autenticarToken, async (req, res) => {
     const { orderId } = req.params;
-    
+
     try {
         const checkQuery = 'SELECT * FROM shipment_status WHERE order_id = $1';
         const { rows } = await db.query(checkQuery, [orderId]);
@@ -189,12 +189,12 @@ router.post('/acknowledge/:orderId', autenticarToken, async (req, res) => {
             if (pedidoResult.rows.length === 0) {
                 return res.status(404).json({ mensagem: 'Pedido não encontrado no cache.' });
             }
-            
+
             const statusId = pedidoResult.rows[0].status_id;
 
             let defaultColumn = 'em-aberto';
-            if (statusId === 464197) {
-                defaultColumn = 'natal';
+            if (statusId === 710186) {
+                defaultColumn = 'pascoa';
             }
 
             const insertQuery = `
@@ -273,7 +273,7 @@ router.get('/stock-demand-report', autenticarToken, async (req, res) => {
                     cache_pedidos cp,
                     jsonb_array_elements(cp.dados_completos_json->'itens') AS item_data
                 WHERE
-                    cp.status_id IN (6, 464197)
+                    cp.status_id IN (6, 710186)
                     AND (item_data->>'codigo') IS NOT NULL
                     AND (item_data->>'codigo') <> ''
             ),
