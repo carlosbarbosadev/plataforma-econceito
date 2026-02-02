@@ -141,6 +141,14 @@ const mapSituacaoPedido = (idSituacao?: number): string => {
       return 'Verificado';
     case 464197:
       return 'Natal 2025';
+    case 710186:
+      return 'Venda Páscoa 2026';
+    case 718171:
+      return 'Checkout incompleto';
+    case 722370:
+      return 'Saldo pendente';
+    case 718183:
+      return 'Checkout completo';
     default:
       return `ID ${idSituacao}`;
   }
@@ -169,6 +177,14 @@ const getSituacaoBadgeStyle = (idSituacao?: number): React.CSSProperties => {
       return { ...baseStyle, backgroundColor: '#35dffd', color: '#000000' };
     case 24:
       return { ...baseStyle, backgroundColor: '#def3fc', color: '#0680c4' };
+    case 710186:
+      return { ...baseStyle, backgroundColor: '#64f2e1', color: '#000029' };
+    case 718171:
+      return { ...baseStyle, backgroundColor: '#72a59f', color: '#ffffff' };
+    case 722370:
+      return { ...baseStyle, backgroundColor: '#ef664e', color: '#fdffff' };
+    case 718183:
+      return { ...baseStyle, backgroundColor: '#edb02c', color: '#ffffff' };
     default:
       return { ...baseStyle, backgroundColor: '#6c757d' };
   }
@@ -600,22 +616,21 @@ export default function PedidosView() {
   const headerTotal = 'Total (R$)';
   const headerSituacao = 'Situação';
 
-  const isOrderEditable =
-    selectedPedidoDetalhes?.situacao.id === 6 || selectedPedidoDetalhes?.situacao.id === 47722;
+  const isOrderEditable = selectedPedidoDetalhes?.situacao.id === 47722;
 
   const totais = editedPedido
     ? {
-        numeroDeItens: editedPedido.itens.length,
-        somaDasQuantidades: editedPedido.itens.reduce((acc, item) => acc + item.quantidade, 0),
-        subtotal: editedPedido.itens.reduce((acc, item) => acc + item.valor * item.quantidade, 0),
-        valorDoDesconto: function () {
-          const percentualDesconto = editedPedido.desconto?.valor || 0;
-          return (this.subtotal * percentualDesconto) / 100;
-        },
-        totalDaVenda: function () {
-          return this.subtotal - this.valorDoDesconto();
-        },
-      }
+      numeroDeItens: editedPedido.itens.length,
+      somaDasQuantidades: editedPedido.itens.reduce((acc, item) => acc + item.quantidade, 0),
+      subtotal: editedPedido.itens.reduce((acc, item) => acc + item.valor * item.quantidade, 0),
+      valorDoDesconto: function () {
+        const percentualDesconto = editedPedido.desconto?.valor || 0;
+        return (this.subtotal * percentualDesconto) / 100;
+      },
+      totalDaVenda: function () {
+        return this.subtotal - this.valorDoDesconto();
+      },
+    }
     : null;
 
   return (
@@ -667,6 +682,7 @@ export default function PedidosView() {
                 <option value="47722">Orçamento</option>
                 <option value="49956">Venda consignada</option>
                 <option value="24">Verificado</option>
+                <option value="710186">Páscoa 2026</option>
               </Form.Select>
             </Form.Group>
           </Col>
@@ -838,8 +854,9 @@ export default function PedidosView() {
                       >
                         <option value="6">Em aberto</option>
                         <option value="47722">Orçamento</option>
+                        <option value="710186">Venda Páscoa 2026</option>
 
-                        {![6, 47722].includes(selectedPedidoDetalhes?.situacao.id || 0) && (
+                        {![6, 47722, 710186].includes(selectedPedidoDetalhes?.situacao.id || 0) && (
                           <option value={selectedPedidoDetalhes?.situacao.id}>
                             {mapSituacaoPedido(selectedPedidoDetalhes?.situacao.id)}
                           </option>
@@ -926,8 +943,8 @@ export default function PedidosView() {
                                           editingQuantities[item.id] !== undefined
                                             ? editingQuantities[item.id]
                                             : displayQuantity.toLocaleString('pt-BR', {
-                                                minimumFractionDigits: 2,
-                                              })
+                                              minimumFractionDigits: 2,
+                                            })
                                         }
                                         onFocus={(e) => {
                                           if (editedItem) {
@@ -1342,8 +1359,8 @@ export default function PedidosView() {
                             value={
                               typeof parcela.valor === 'number'
                                 ? parcela.valor.toLocaleString('pt-BR', {
-                                    minimumFractionDigits: 2,
-                                  })
+                                  minimumFractionDigits: 2,
+                                })
                                 : '0,00'
                             }
                             disabled
