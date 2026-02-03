@@ -6,10 +6,10 @@ const {
     fetchDetalhesPedidoVenda,
     fetchProdutos
 } = require('./bling');
-const axios = require('axios');
 
-const MEIA_HORA_EM_MS = 30 * 60 * 1000;
-
+const meiaHora = 30 * 60 * 1000;
+const delayRequisicoes = 500;
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function sincronizarClientes() {
     console.log(`[GERAL] Iniciando sincronização de todos os clientes...`);
@@ -29,7 +29,7 @@ async function sincronizarClientes() {
             try {
                 const clienteDetalhado = await fetchDetalhesContato(contatoBasico.id);
 
-                await new Promise(resolve => setTimeout(resolve, 500));
+                await delay(delayRequisicoes);
 
                 const insertQuery = `
                     INSERT INTO cache_clientes (
@@ -98,14 +98,14 @@ async function sincronizarClientes() {
 }
 
 async function atualizarMetricas() {
-    console.log('Calculando e atualizando a tabela de métricas (cache_metricas)...');
+    console.log('[GERAL] Calculando e atualizando a tabela de métricas (cache_metricas)...');
 
     const { rows: dadosDaView } = await db.query('SELECT * FROM vw_dashboard_dados');
 
     if (dadosDaView.length === 0) {
-        console.log('Nenhum dado de métrica para atualizar.');
+        console.log('[GERAL] Nenhum dado de métrica para atualizar.');
         return;
-}
+    }
 
     for (const metrica of dadosDaView) {
         const upsertMetricasQuery = `
@@ -137,18 +137,18 @@ async function atualizarMetricas() {
 
         await db.query(upsertMetricasQuery, params);
     }
-    console.log(`Métricas para ${dadosDaView.length} vendedor(es) atualizadas.`);
+    console.log(`[GERAL] Métricas para ${dadosDaView.length} vendedor(es) atualizadas.`);
 }
 
 async function atualizarProdutosMaisVendidos() {
-    console.log('Calculando e atualizando a tabela de produtos mais vendidos...');
+    console.log('[GERAL] Calculando e atualizando a tabela de produtos mais vendidos...');
 
     await db.query('TRUNCATE TABLE cache_produtos_mais_vendidos RESTART IDENTITY');
 
     const { rows: produtosDaView } = await db.query('SELECT * FROM vw_produtos_mais_vendidos');
 
     if (produtosDaView.length === 0) {
-        console.log('Nenhum dado de produto para atualizar.');
+        console.log('[GERAL] Nenhum dado de produto para atualizar.');
         return;
     }
 
@@ -174,7 +174,7 @@ async function atualizarProdutosMaisVendidos() {
         ];
         await db.query(insertQuery, params);
     }
-    console.log(`${produtosDaView.length} produto(s) mais vendido(s) atualizado(s).`);
+    console.log(`[GERAL] ${produtosDaView.length} produto(s) mais vendido(s) atualizado(s).`);
 }
 
 async function sincronizarDadosDeUmVendedor(idVendedor) {
@@ -196,9 +196,30 @@ async function sincronizarDadosDeUmVendedor(idVendedor) {
             for (const pedidoInfo of listaDePedidosBling) {
                 try {
                     const pedidoDetalhado = await fetchDetalhesPedidoVenda(pedidoInfo.id);
-                    await new Promise(resolve => setTimeout(resolve, 500));
+                    await delay(delayRequisicoes);
 
-                    const upsertPedidoQuery = `INSERT INTO cache_pedidos (id, numero, data_pedido, data_saida, total, total_produtos, status_id, status_nome, cliente_id, cliente_nome, cliente_documento, vendedor_id, observacoes, updated_at, dados_completos_json) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), $14) ON CONFLICT (id) DO UPDATE SET numero = EXCLUDED.numero, data_pedido = EXCLUDED.data_pedido, data_saida = EXCLUDED.data_saida, total = EXCLUDED.total, total_produtos = EXCLUDED.total_produtos, status_id = EXCLUDED.status_id, status_nome = EXCLUDED.status_nome, cliente_id = EXCLUDED.cliente_id, cliente_nome = EXCLUDED.cliente_nome, cliente_documento = EXCLUDED.cliente_documento, vendedor_id = EXCLUDED.vendedor_id, observacoes = EXCLUDED.observacoes, updated_at = NOW(), dados_completos_json = EXCLUDED.dados_completos_json;`;
+                    const upsertPedidoQuery = `
+                        INSERT INTO cache_pedidos (
+                            id, numero, data_pedido, data_saida, total, total_produtos,
+                            status_id, status_nome, cliente_id, cliente_nome, cliente_documento,
+                            vendedor_id, observacoes, updated_at, dados_completos_json
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), $14)
+                        ON CONFLICT (id) DO UPDATE SET
+                            numero = EXCLUDED.numero,
+                            data_pedido = EXCLUDED.data_pedido,
+                            data_saida = EXCLUDED.data_saida,
+                            total = EXCLUDED.total,
+                            total_produtos = EXCLUDED.total_produtos,
+                            status_id = EXCLUDED.status_id,
+                            status_nome = EXCLUDED.status_nome,
+                            cliente_id = EXCLUDED.cliente_id,
+                            cliente_nome = EXCLUDED.cliente_nome,
+                            cliente_documento = EXCLUDED.cliente_documento,
+                            vendedor_id = EXCLUDED.vendedor_id,
+                            observacoes = EXCLUDED.observacoes,
+                            updated_at = NOW(),
+                            dados_completos_json = EXCLUDED.dados_completos_json
+                    `;
                     const pedidoParams = [
                         pedidoDetalhado.id,
                         pedidoDetalhado.numero,
@@ -222,7 +243,12 @@ async function sincronizarDadosDeUmVendedor(idVendedor) {
 
                     if (pedidoDetalhado.itens && pedidoDetalhado.itens.length > 0) {
                         for (const item of pedidoDetalhado.itens) {
-                            const insertItemQuery = `INSERT INTO cache_pedido_itens (pedido_id, produto_id, produto_codigo, produto_nome, quantidade, valor_unitario, valor_total) VALUES ($1, $2, $3, $4, $5, $6, $7);`;
+                            const insertItemQuery = `
+                                INSERT INTO cache_pedido_itens (
+                                    pedido_id, produto_id, produto_codigo, produto_nome,
+                                    quantidade, valor_unitario, valor_total
+                                ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                            `;
                             const itemParams = [pedidoDetalhado.id, item.produto.id, item.codigo, item.descricao, item.quantidade, item.valor, (item.quantidade * item.valor)];
                             await db.query(insertItemQuery, itemParams);
                         }
@@ -231,7 +257,7 @@ async function sincronizarDadosDeUmVendedor(idVendedor) {
                 } catch (error) {
                     console.error(`Erro ao processar o pedido ID ${pedidoInfo.id}. Pulando para o próximo. Erro: ${error.message}`);
                 }
-            }    
+            }
         }
         console.log(`[Vendedor ${idVendedor}] ${pedidosSalvos} pedidos inseridos/atualizados no cache.`);
 
@@ -260,7 +286,6 @@ async function sincronizarDadosDeUmVendedor(idVendedor) {
         }
 
         const endTime = new Date();
-        const executionTime = Math.round((endTime - startTime) / 1000);
 
         await db.query(`
             UPDATE cache_sync_control SET last_sync_timestamp = $1 WHERE entity_type = 'pedidos'
@@ -274,7 +299,7 @@ async function sincronizarDadosDeUmVendedor(idVendedor) {
 async function iniciarSincronizacaoGeral() {
     console.log('====================================================');
     console.log('INICIANDO ROTINA GERAL DE SINCRONIZAÇÃO...');
-    
+
     try {
         const { rows: vendedores } = await db.query("SELECT id_vendedor_bling FROM usuarios WHERE tipo_usuario = 'vendedor' AND id_vendedor_bling IS NOT NULL");
         console.log(`Encontrados ${vendedores.length} vendedores para sincronizar.`);
@@ -284,7 +309,6 @@ async function iniciarSincronizacaoGeral() {
         }
 
         await sincronizarClientes();
-
         await atualizarMetricas();
         await atualizarProdutosMaisVendidos();
 
@@ -348,15 +372,11 @@ async function sincronizarProdutos() {
 }
 
 function iniciarSincronizacaoAgendada() {
-    console.log('Agendamento da sincronização de PRODUTOS ativado. A rotina rodará a cada 1 hora.');
-    
     sincronizarProdutos();
-    setInterval(sincronizarProdutos, MEIA_HORA_EM_MS);
+    setInterval(sincronizarProdutos, meiaHora);
 }
 
 module.exports = {
     iniciarSincronizacaoGeral,
     iniciarSincronizacaoAgendada,
-    sincronizarProdutos,
-    sincronizarClientes,
 };
