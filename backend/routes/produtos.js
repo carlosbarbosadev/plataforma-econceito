@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const { autenticarToken } = require('../middlewares/authMiddleware');
 const db = require('../db');
-const { sincronizarProdutos } = require('../services/blingSyncService');
 
 async function getIdsProdutosEmCampanhaAtiva() {
   try {
