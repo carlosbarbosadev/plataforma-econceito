@@ -60,7 +60,7 @@ type CampanhaBanner = {
   imagem_url: string | null;
 };
 
-const TEMAS_FILTRO = ['Natal'];
+const TEMAS_FILTRO = ['Natal', 'Pascoa 2026'];
 
 const TAGS_FILTRO = [
   'Kraft',
@@ -920,9 +920,9 @@ export default function ProductsPage() {
                       <td style={{ fontSize: '0.9em' }}>
                         {typeof produto.preco === 'number'
                           ? produto.preco.toLocaleString('pt-BR', {
-                              style: 'currency',
-                              currency: 'BRL',
-                            })
+                            style: 'currency',
+                            currency: 'BRL',
+                          })
                           : '-'}
                       </td>
 
