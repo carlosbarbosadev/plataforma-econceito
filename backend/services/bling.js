@@ -331,9 +331,9 @@ async function atualizarPedidoNoBling(pedidoId, pedidoEditadoDoFrontend) {
         const pedidoOriginalDoBling = await fetchDetalhesPedidoVenda(pedidoId);
 
         const statusOriginal = pedidoOriginalDoBling.situacao.id;
-        const statusNovo = pedidoEditadoDoFrontend.situacao.id;
+        const statusNovo = pedidoEditadoDoFrontend.situacao?.id;
 
-        if (statusNovo !== statusOriginal) {
+        if (statusNovo && statusNovo !== statusOriginal) {
             console.log(`[blingService] Detectada mudança de status de ${statusOriginal} para ${statusNovo}.`);
             await alterarSituacaoPedidoBling(pedidoId, statusNovo);
         }
@@ -469,6 +469,31 @@ async function buscarIdProdutoPorSku(sku, nomeConta = 'concept') {
     }
 }
 
+/**
+ * Atualiza um pedido de forma simples (sem buscar pedido original)
+ * Usado principalmente para sincronização dual-write com a Concept
+ */
+async function atualizarPedidoSimples(pedidoId, payload, nomeConta = 'conceitofestas') {
+    try {
+        const response = await blingApiCall({
+            method: 'put',
+            url: `${BLING_API_V3_URL}/pedidos/vendas/${pedidoId}`,
+            data: payload,
+            headers: { 'Content-Type': 'application/json' }
+        }, nomeConta);
+
+        return response.data;
+
+    } catch (error) {
+        console.error(`[blingService] Erro ao atualizar pedido ${pedidoId} na conta ${nomeConta}:`, error.message);
+        if (error.response) {
+            console.error('Status:', error.response.status);
+            console.error('Data:', JSON.stringify(error.response.data, null, 2));
+        }
+        throw error;
+    }
+}
+
 module.exports = {
     refreshBlingAccessToken,
     fetchProdutos,
@@ -480,6 +505,7 @@ module.exports = {
     fetchDetalhesPedidoVenda,
     criarPedidoVenda,
     atualizarPedidoNoBling,
+    atualizarPedidoSimples,
     fetchFormasPagamento,
     alterarSituacaoPedidoBling,
     atualizarClienteBling,

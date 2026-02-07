@@ -11,6 +11,58 @@ const idCheckoutCompleto = 718183;
 const idPascoa = 710186;
 const idSaldoPendente = 722370;
 
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+const MAPA_VENDEDORES = {
+    "15596296612": "15596336667",
+    "15596375075": "15596429451",
+    "15596444660": "15596460068",
+    "15596444658": "15596459962",
+    "15596432168": "15596538397",
+    "15596381239": "15596429455",
+    "15596366972": "15596429449",
+    "15596349291": "15596349303",
+    "15596335316": "15596337054",
+    "15596297654": "15596337046",
+    "15596224985": "15596227824",
+    "15596092270": "15596200017",
+    "15596092267": "15596200019",
+    "15596046115": "15596200021",
+    "15294368112": "15596200022",
+    "15259226712": "15596200023",
+    "15224192591": "15596200026",
+    "15224097835": "15596200034",
+    "15224084996": "15596200043",
+    "15218883077": "15596200045",
+    "15218872916": "15596200048",
+    "15218866887": "15596200050",
+    "15596598445": "15596704721",
+    "15596582390": "15596840466",
+    "15596842904": "15596843385",
+    "15596600910": "15596839803",
+    "15596858502": "15596858517",
+};
+
+const MAPA_FORMAS_PAGAMENTO = {
+    "3359853": "9225872",
+    "2076718": "3514101",
+    "2076727": "3514103",
+    "2076783": "9225883",
+    "7758544": "9225899",
+    "4421026": "9225911",
+    "2076737": "3514106",
+    "2091116": "3514107",
+    "3514108": "3514113",
+    "2076738": "3514130",
+    "2076750": "3514113",
+    "2306222": "3514137",
+    "2076765": "3514139",
+    "2127537": "3514084",
+    "7616572": "9226237",
+};
+
+const ID_FORMA_PAGAMENTO_CONCEPT_PADRAO = 3514084;
+
 router.get('/pedidos', autenticarToken, async (req, res) => {
     console.log(`Rota GET /api/checkout/pedidos acessada por: ${req.usuario.email}`);
 
@@ -467,9 +519,8 @@ router.post('/substituir-produto', autenticarToken, async (req, res) => {
             }))
         };
 
-        if (!pedidoParaAtualizar.situacao) {
-            pedidoParaAtualizar.situacao = { id: idCheckoutIncompleto };
-        }
+        delete pedidoParaAtualizar.situacao;
+
         await blingService.atualizarPedidoNoBling(orderId, pedidoParaAtualizar);
 
         const pedidoAtualizado = await blingService.fetchDetalhesPedidoVenda(orderId);
@@ -496,6 +547,83 @@ router.post('/substituir-produto', autenticarToken, async (req, res) => {
         );
 
         await client.query('COMMIT');
+
+        try {
+            const mapResult = await db.query(
+                'SELECT pedido_id_concept FROM map_pedidos_concept WHERE pedido_id_conceitofestas = $1',
+                [orderId]
+            );
+
+            if (mapResult.rows.length > 0) {
+                const pedidoIdConcept = mapResult.rows[0].pedido_id_concept;
+                console.log(`[checkout] Sincronizando substituição com Concept (pedido ${pedidoIdConcept})`);
+
+                await sleep(500);
+
+                const itensTraduzidos = [];
+                for (const item of pedidoAtualizado.itens) {
+                    const sku = item.codigo || item.produto?.codigo;
+                    if (sku) {
+                        const idProdutoConcept = await blingService.buscarIdProdutoPorSku(String(sku).trim(), 'concept');
+                        if (idProdutoConcept) {
+                            itensTraduzidos.push({
+                                produto: { id: idProdutoConcept },
+                                quantidade: Number(item.quantidade),
+                                valor: Number(item.valor),
+                                descricao: item.descricao,
+                                unidade: item.unidade || 'UN',
+                                tipo: 'P'
+                            });
+                        }
+                        await sleep(200);
+                    }
+                }
+
+                let clienteIdConcept = null;
+                const docCliente = pedidoAtualizado.contato?.numeroDocumento;
+                if (docCliente) {
+                    const docLimpo = String(docCliente).replace(/\D/g, '');
+                    const clienteMap = await db.query('SELECT id_concept FROM map_clientes_concept WHERE documento = $1', [docLimpo]);
+                    if (clienteMap.rows.length > 0) {
+                        clienteIdConcept = clienteMap.rows[0].id_concept;
+                    }
+                }
+
+                let vendedorConcept = null;
+                if (pedidoAtualizado.vendedor?.id) {
+                    const idVendedorOrigem = String(pedidoAtualizado.vendedor.id);
+                    if (MAPA_VENDEDORES[idVendedorOrigem]) {
+                        vendedorConcept = { id: Number(MAPA_VENDEDORES[idVendedorOrigem]) };
+                    }
+                }
+
+                const payloadConcept = {
+                    data: pedidoAtualizado.data,
+                    dataSaida: pedidoAtualizado.dataSaida || pedidoAtualizado.data,
+                    ...(clienteIdConcept && { contato: { id: clienteIdConcept } }),
+                    ...(vendedorConcept && { vendedor: vendedorConcept }),
+                    itens: itensTraduzidos,
+                    ...(pedidoAtualizado.desconto && { desconto: pedidoAtualizado.desconto }),
+                };
+
+                if (pedidoAtualizado.parcelas && pedidoAtualizado.parcelas.length > 0) {
+                    payloadConcept.parcelas = pedidoAtualizado.parcelas.map(p => {
+                        const idFormaPgtoOrigem = String(p.formaPagamento?.id || '');
+                        const idFormaPgtoConcept = MAPA_FORMAS_PAGAMENTO[idFormaPgtoOrigem] || ID_FORMA_PAGAMENTO_CONCEPT_PADRAO;
+                        return {
+                            dataVencimento: p.dataVencimento,
+                            valor: parseFloat(p.valor),
+                            formaPagamento: { id: Number(idFormaPgtoConcept) }
+                        };
+                    });
+                }
+
+                await blingService.atualizarPedidoSimples(pedidoIdConcept, payloadConcept, 'concept');
+                console.log(`[checkout] Pedido ${pedidoIdConcept} atualizado na Concept`);
+            }
+        } catch (conceptError) {
+            console.error('[checkout] Erro ao sincronizar com Concept:', conceptError.message);
+        }
 
         console.log(`[checkout] Produto substituído com sucesso: ${oldSku} -> ${newProductSku}`);
 
@@ -723,6 +851,143 @@ router.post('/saldo-pendente', autenticarToken, async (req, res) => {
         }
 
         await client.query('COMMIT');
+
+        try {
+            const mapResult = await db.query(
+                'SELECT pedido_id_concept FROM map_pedidos_concept WHERE pedido_id_conceitofestas = $1',
+                [orderId]
+            );
+
+            if (mapResult.rows.length > 0) {
+                console.log(`[checkout] Sincronizando saldo pendente com Concept`);
+
+                let clienteIdConcept = null;
+                const docCliente = dadosCompletos.contato?.numeroDocumento;
+                if (docCliente) {
+                    const docLimpo = String(docCliente).replace(/\D/g, '');
+                    const clienteMap = await db.query('SELECT id_concept FROM map_clientes_concept WHERE documento = $1', [docLimpo]);
+                    if (clienteMap.rows.length > 0) {
+                        clienteIdConcept = clienteMap.rows[0].id_concept;
+                    }
+                }
+
+                let vendedorConcept = null;
+                if (dadosCompletos.vendedor?.id) {
+                    const idVendedorOrigem = String(dadosCompletos.vendedor.id);
+                    if (MAPA_VENDEDORES[idVendedorOrigem]) {
+                        vendedorConcept = { id: Number(MAPA_VENDEDORES[idVendedorOrigem]) };
+                    }
+                }
+
+                await sleep(500);
+
+                const itensPendentesConceptTraduzidos = [];
+                for (const item of itensPendentes) {
+                    const sku = item.codigo;
+                    if (sku) {
+                        const idProdutoConcept = await blingService.buscarIdProdutoPorSku(String(sku).trim(), 'concept');
+                        if (idProdutoConcept) {
+                            itensPendentesConceptTraduzidos.push({
+                                produto: { id: idProdutoConcept },
+                                quantidade: Number(item.quantidade),
+                                valor: Number(item.valor),
+                                descricao: item.descricao,
+                                unidade: item.unidade || 'UN',
+                                tipo: 'P'
+                            });
+                        }
+                        await sleep(200);
+                    }
+                }
+
+                if (itensPendentesConceptTraduzidos.length > 0) {
+                    const parcelasNovaConcept = parcelasNovas.map(p => {
+                        const idFormaPgtoOrigem = String(p.formaPagamento?.id || '');
+                        const idFormaPgtoConcept = MAPA_FORMAS_PAGAMENTO[idFormaPgtoOrigem] || ID_FORMA_PAGAMENTO_CONCEPT_PADRAO;
+                        return {
+                            dataVencimento: p.dataVencimento,
+                            valor: parseFloat(p.valor),
+                            formaPagamento: { id: Number(idFormaPgtoConcept) }
+                        };
+                    });
+
+                    const novoPedidoConceptPayload = {
+                        data: dataHoje,
+                        dataSaida: dataHoje,
+                        ...(clienteIdConcept && { contato: { id: clienteIdConcept } }),
+                        ...(vendedorConcept && { vendedor: vendedorConcept }),
+                        itens: itensPendentesConceptTraduzidos,
+                        parcelas: parcelasNovaConcept,
+                        observacoes: `Saldo pendente do pedido ${dadosCompletos.numero || orderId}`,
+                    };
+
+                    const respostaNovoPedidoConcept = await blingService.criarPedidoVenda(novoPedidoConceptPayload, 'concept');
+                    const novoPedidoIdConcept = respostaNovoPedidoConcept.data?.id;
+
+                    if (novoPedidoIdConcept && novoPedidoId) {
+                        await db.query(`
+                            INSERT INTO map_pedidos_concept (pedido_id_conceitofestas, pedido_id_concept, numero_pedido)
+                            VALUES ($1, $2, $3)
+                            ON CONFLICT (pedido_id_conceitofestas) DO UPDATE SET 
+                                pedido_id_concept = EXCLUDED.pedido_id_concept,
+                                updated_at = NOW();
+                        `, [novoPedidoId, novoPedidoIdConcept, novoPedidoNumero]);
+                        console.log(`[checkout] Novo pedido saldo pendente criado na Concept: ${novoPedidoIdConcept}`);
+                    }
+                }
+
+                await sleep(500);
+
+                if (itensConferidos.length > 0) {
+                    const pedidoIdConcept = mapResult.rows[0].pedido_id_concept;
+
+                    const itensConferidosConceptTraduzidos = [];
+                    for (const item of pedidoAtualizadoDoBling.itens) {
+                        const sku = item.codigo || item.produto?.codigo;
+                        if (sku) {
+                            const idProdutoConcept = await blingService.buscarIdProdutoPorSku(String(sku).trim(), 'concept');
+                            if (idProdutoConcept) {
+                                itensConferidosConceptTraduzidos.push({
+                                    produto: { id: idProdutoConcept },
+                                    quantidade: Number(item.quantidade),
+                                    valor: Number(item.valor),
+                                    descricao: item.descricao,
+                                    unidade: item.unidade || 'UN',
+                                    tipo: 'P'
+                                });
+                            }
+                            await sleep(200);
+                        }
+                    }
+
+                    const payloadOriginalConcept = {
+                        data: pedidoAtualizadoDoBling.data,
+                        dataSaida: pedidoAtualizadoDoBling.dataSaida || pedidoAtualizadoDoBling.data,
+                        ...(clienteIdConcept && { contato: { id: clienteIdConcept } }),
+                        ...(vendedorConcept && { vendedor: vendedorConcept }),
+                        itens: itensConferidosConceptTraduzidos,
+                        ...(pedidoAtualizadoDoBling.desconto && { desconto: pedidoAtualizadoDoBling.desconto }),
+                    };
+
+                    if (pedidoAtualizadoDoBling.parcelas && pedidoAtualizadoDoBling.parcelas.length > 0) {
+                        payloadOriginalConcept.parcelas = pedidoAtualizadoDoBling.parcelas.map(p => {
+                            const idFormaPgtoOrigem = String(p.formaPagamento?.id || '');
+                            const idFormaPgtoConcept = MAPA_FORMAS_PAGAMENTO[idFormaPgtoOrigem] || ID_FORMA_PAGAMENTO_CONCEPT_PADRAO;
+                            return {
+                                dataVencimento: p.dataVencimento,
+                                valor: parseFloat(p.valor),
+                                formaPagamento: { id: Number(idFormaPgtoConcept) }
+                            };
+                        });
+                    }
+
+                    await blingService.atualizarPedidoSimples(pedidoIdConcept, payloadOriginalConcept, 'concept');
+                    console.log(`[checkout] Pedido original ${pedidoIdConcept} atualizado na Concept`);
+                }
+            }
+        } catch (conceptError) {
+            console.error('[checkout] Erro ao sincronizar saldo pendente com Concept:', conceptError.message);
+        }
 
         console.log(`[checkout] Saldo pendente criado com sucesso. Pedido original ${orderId} atualizado.`);
 

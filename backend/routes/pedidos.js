@@ -5,7 +5,55 @@ const blingService = require('../services/bling')
 const db = require('../db');
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-const { formatInTimeZone } = require('date-fns-tz');
+const MAPA_VENDEDORES = {
+    "15596296612": "15596336667", // Diogo Silva Guimarães
+    "15596375075": "15596429451", // Rosana de Almeira Tavares
+    "15596444660": "15596460068", // Rita de Cássia
+    "15596444658": "15596459962", // Jean Charles
+    "15596432168": "15596538397", // Aquila Cardoso
+    "15596381239": "15596429455", // Maycon Junior
+    "15596366972": "15596429449", // Rogério Aparecido
+    "15596349291": "15596349303", // Rodrigo Pavan
+    "15596335316": "15596337054", // Gircelio Tomas
+    "15596297654": "15596337046", // Anderson Lima
+    "15596224985": "15596227824", // Vera Lucia
+    "15596092270": "15596200017", // José Ricardo
+    "15596092267": "15596200019", // Rogério Ribeiro
+    "15596046115": "15596200021", // Anselmo Ribeiro
+    "15294368112": "15596200022", // Eduardo Safar
+    "15259226712": "15596200023", // João Glauddios
+    "15224192591": "15596200026", // Marijo Rodrigues
+    "15224097835": "15596200034", // Sidma Regina
+    "15224084996": "15596200043", // Carlos Eduardo
+    "15218883077": "15596200045", // Mauricio
+    "15218872916": "15596200048", // Pedro Magno
+    "15218866887": "15596200050", // Marcelo Peixoto
+    "15596598445": "15596704721", // José Nairton
+    "15596582390": "15596840466", // João de Oliveira
+    "15596842904": "15596843385", // Bruno Cézar
+    "15596600910": "15596839803", // Ana Luiza
+    "15596858502": "15596858517", // Rosane Moura Martins
+};
+
+const MAPA_FORMAS_PAGAMENTO = {
+    "3359853": "9225872",   // 7 dias
+    "2076718": "3514101",   // 30 dias
+    "2076727": "3514103",   // 60 dias
+    "2076783": "9225883",   // 30 dias (alt)
+    "7758544": "9225899",   // 1 dia
+    "4421026": "9225911",   // 7, 14 dias
+    "2076737": "3514106",   // 28, 35 dias
+    "2091116": "3514107",   // 30, 45 dias
+    "3514108": "3514113",   // 30, 45, 60 dias
+    "2076738": "3514130",   // 28, 35, 42 dias
+    "2076750": "3514113",   // 30, 45, 60 dias
+    "2306222": "3514137",   // 28, 35, 42, 49 dias
+    "2076765": "3514139",   // 28, 35, 42, 49, 56 dias
+    "2127537": "3514084",   // 1 dia (À Vista)
+    "7616572": "9226237",   // 1 dia (alt)
+};
+
+const ID_FORMA_PAGAMENTO_CONCEPT_PADRAO = 3514084;
 
 const calcularParcelas = (formaPagamentoId, valorTotal) => {
     const regrasDeParcelamento = {
@@ -39,7 +87,7 @@ const calcularParcelas = (formaPagamentoId, valorTotal) => {
 
     const numeroDeParcelas = diasParaVencimentos.length;
     const valorPorParcela = numeroDeParcelas > 0 ? (valorTotal / numeroDeParcelas) : valorTotal;
-    
+
     const parcelasCalculadas = diasParaVencimentos.map(dias => {
         const dataVencimento = new Date();
         dataVencimento.setDate(dataVencimento.getDate() + dias);
@@ -120,33 +168,6 @@ router.post('/', autenticarToken, async (req, res) => {
     console.log(`Rota POST /api/pedidos (Dual Write) acessada por: ${req.usuario.email}`);
 
     try {
-        const MAPA_VENDEDORES = {
-            "15596296612": "15596336667", // Diogo Silva Guimarães
-            "15596375075": "15596429451", // Rosana de Almeira Tavares
-            "15596444660": "15596460068", // Rita de Cássia
-            "15596444658": "15596459962", // Jean Charles
-            "15596432168": "15596538397", // Aquila Cardoso
-            "15596381239": "15596429455", // Maycon Junior
-            "15596366972": "15596429449", // Rogério Aparecido
-            "15596349291": "15596349303", // Rodrigo Pavan
-            "15596335316": "15596337054", // Gircelio Tomas
-            "15596297654": "15596337046", // Anderson Lima
-            "15596224985": "15596227824", // Vera Lucia
-            "15596092270": "15596200017", // José Ricardo
-            "15596092267": "15596200019", // Rogério Ribeiro
-            "15596046115": "15596200021", // Anselmo Ribeiro
-            "15294368112": "15596200022", // Eduardo Safar
-            "15259226712": "15596200023", // João Glauddios
-            "15224192591": "15596200026", // Marijo Rodrigues
-            "15224097835": "15596200034", // Sidma Regina
-            "15224084996": "15596200043", // Carlos Eduardo
-            "15218883077": "15596200045", // Mauricio
-            "15218872916": "15596200048", // Pedro Magno
-            "15218866887": "15596200050", // Marcelo Peixoto
-            "15596598445": "15596704721", // José Nairton
-            "15596582390": "15596840466", // João de Oliveira
-        };
-
         const {
             idClienteBling,
             itensPedido,
@@ -169,7 +190,7 @@ router.post('/', autenticarToken, async (req, res) => {
 
         const parcelasParaBling = calcularParcelas(idFormaPagamentoBling, valorTotalPedido);
         const hoje = new Date().toISOString().split('T')[0];
-        
+
         const pedidoBase = {
             data: dataPedido || hoje,
             dataSaida: dataPedido || hoje,
@@ -199,10 +220,10 @@ router.post('/', autenticarToken, async (req, res) => {
 
         console.log("--> Enviando para CONCEITOFESTAS...");
         let resultadoBlingPrincipal;
-        
+
         try {
             resultadoBlingPrincipal = await blingService.criarPedidoVenda(pedidoBase, 'conceitofestas');
-            
+
             statusEnvio.conceitofestas.sucesso = true;
             statusEnvio.conceitofestas.id = resultadoBlingPrincipal.data?.id;
             console.log('Sucesso na ConceitoFestas! ID:', statusEnvio.conceitofestas.id);
@@ -210,7 +231,7 @@ router.post('/', autenticarToken, async (req, res) => {
             if (resultadoBlingPrincipal.data?.id) {
                 const novoPedidoId = resultadoBlingPrincipal.data.id;
                 console.log(`Atualizando cache local...`);
-                
+
                 pedidoDetalhado = await blingService.fetchDetalhesPedidoVenda(novoPedidoId);
 
                 const upsertQuery = `
@@ -238,32 +259,32 @@ router.post('/', autenticarToken, async (req, res) => {
 
         } catch (error) {
             console.error('ERRO CRÍTICO na ConceitoFestas:', error.message);
-            throw error; 
+            throw error;
         }
-        
+
         await sleep(2000);
 
         console.log("--> Enviando para CONCEPT...");
-        
+
         try {
             if (!pedidoDetalhado) {
-                 throw new Error("Não foi possível recuperar os detalhes do pedido da conta principal.");
+                throw new Error("Não foi possível recuperar os detalhes do pedido da conta principal.");
             }
 
             const pedidoSecundario = JSON.parse(JSON.stringify(pedidoBase));
             const contatoResumido = pedidoDetalhado.contato;
-            
-            
+
+
             let docCliente = contatoResumido.numeroDocumento;
-            
+
             let clienteCompletoOrigem = null;
             if (!docCliente) {
-                 clienteCompletoOrigem = await blingService.fetchDetalhesContato(contatoResumido.id, 'conceitofestas');
-                 docCliente = clienteCompletoOrigem.numeroDocumento;
+                clienteCompletoOrigem = await blingService.fetchDetalhesContato(contatoResumido.id, 'conceitofestas');
+                docCliente = clienteCompletoOrigem.numeroDocumento;
             }
 
             const docLimpo = docCliente ? String(docCliente).replace(/\D/g, '') : null;
-            
+
             if (!docLimpo) {
                 throw new Error(`Cliente ${contatoResumido.nome} não possui CPF/CNPJ. Sincronização cancelada.`);
             }
@@ -275,18 +296,24 @@ router.post('/', autenticarToken, async (req, res) => {
                 const idEncontrado = buscaDb.rows[0].id_concept;
                 console.log(`Cliente encontrado no CACHE LOCAL (DB). ID: ${idEncontrado}`);
                 pedidoSecundario.contato.id = idEncontrado;
-            
+
             } else {
                 console.log(`Cliente não encontrado no DB Local. Iniciando cadastro na Concept...`);
-                
+
                 if (!clienteCompletoOrigem) {
                     clienteCompletoOrigem = await blingService.fetchDetalhesContato(contatoResumido.id, 'conceitofestas');
                 }
 
                 const dadosParaCriacao = { ...clienteCompletoOrigem };
-                delete dadosParaCriacao.id; 
-                delete dadosParaCriacao.codigo; 
-                delete dadosParaCriacao.vendedor;
+                delete dadosParaCriacao.id;
+                delete dadosParaCriacao.codigo;
+
+                const idVendedorCliente = String(req.usuario.id_vendedor_bling);
+                if (idVendedorCliente && MAPA_VENDEDORES[idVendedorCliente]) {
+                    dadosParaCriacao.vendedor = { id: Number(MAPA_VENDEDORES[idVendedorCliente]) };
+                } else {
+                    delete dadosParaCriacao.vendedor;
+                }
 
                 let novoId = null;
 
@@ -317,8 +344,8 @@ router.post('/', autenticarToken, async (req, res) => {
                                 throw new Error("Cliente existe mas API não retornou ID na busca.");
                             }
                         } catch (e) {
-                             console.error("Falha na recuperação:", e.message);
-                             throw erroCriacao;
+                            console.error("Falha na recuperação:", e.message);
+                            throw erroCriacao;
                         }
                     } else {
                         throw erroCriacao;
@@ -338,11 +365,11 @@ router.post('/', autenticarToken, async (req, res) => {
             }
 
             const idVendedorOrigem = String(req.usuario.id_vendedor_bling);
-            
+
             if (idVendedorOrigem && MAPA_VENDEDORES[idVendedorOrigem]) {
                 console.log(`Vendedor Traduzido: ${idVendedorOrigem} -> ${MAPA_VENDEDORES[idVendedorOrigem]}`);
-                pedidoSecundario.vendedor = { 
-                    id: Number(MAPA_VENDEDORES[idVendedorOrigem]) 
+                pedidoSecundario.vendedor = {
+                    id: Number(MAPA_VENDEDORES[idVendedorOrigem])
                 };
             } else {
                 console.log(`Vendedor ID ${idVendedorOrigem} sem mapeamento. Enviando sem vendedor.`);
@@ -351,18 +378,21 @@ router.post('/', autenticarToken, async (req, res) => {
 
             delete pedidoSecundario.situacao;
 
-            const ID_FORMA_PAGAMENTO_CONCEPT = 3514084; 
-            pedidoSecundario.parcelas = pedidoSecundario.parcelas.map(p => ({
-                ...p,
-                formaPagamento: { id: ID_FORMA_PAGAMENTO_CONCEPT } 
-            }));
+            pedidoSecundario.parcelas = pedidoSecundario.parcelas.map(p => {
+                const idFormaPgtoOrigem = String(p.formaPagamento?.id || '');
+                const idFormaPgtoConcept = MAPA_FORMAS_PAGAMENTO[idFormaPgtoOrigem] || ID_FORMA_PAGAMENTO_CONCEPT_PADRAO;
+                return {
+                    ...p,
+                    formaPagamento: { id: Number(idFormaPgtoConcept) }
+                };
+            });
 
             console.log("Iniciando Tradução de Produtos (SKU -> ID)");
-            
+
             const itensTraduzidos = [];
 
             for (const itemReal of pedidoDetalhado.itens) {
-                
+
                 let sku = itemReal.produto?.codigo || itemReal.codigo;
                 if (sku) sku = String(sku).trim();
 
@@ -376,7 +406,7 @@ router.post('/', autenticarToken, async (req, res) => {
 
                 if (idProdutoConcept) {
                     console.log(`Encontrado! SKU "${sku}" = ID Concept ${idProdutoConcept}`);
-                    
+
                     itensTraduzidos.push({
                         produto: { id: idProdutoConcept },
                         quantidade: Number(itemReal.quantidade),
@@ -389,17 +419,33 @@ router.post('/', autenticarToken, async (req, res) => {
                 } else {
                     throw new Error(`O produto SKU "${sku}" (${itemReal.descricao}) não foi encontrado na conta Concept. Cadastre-o lá com o mesmo código.`);
                 }
-                
-                await new Promise(r => setTimeout(r, 200)); 
+
+                await new Promise(r => setTimeout(r, 200));
             }
 
             pedidoSecundario.itens = itensTraduzidos;
 
             const resultadoBlingSecundario = await blingService.criarPedidoVenda(pedidoSecundario, 'concept');
-            
+
             statusEnvio.concept.sucesso = true;
             statusEnvio.concept.id = resultadoBlingSecundario.data?.id;
             console.log('Sucesso na Concept! ID:', statusEnvio.concept.id);
+
+            // salvar mapeamento pedido ConceitoFestas -> Concept
+            if (statusEnvio.conceitofestas.id && statusEnvio.concept.id) {
+                try {
+                    await db.query(`
+                        INSERT INTO map_pedidos_concept (pedido_id_conceitofestas, pedido_id_concept, numero_pedido)
+                        VALUES ($1, $2, $3)
+                        ON CONFLICT (pedido_id_conceitofestas) DO UPDATE SET 
+                            pedido_id_concept = EXCLUDED.pedido_id_concept,
+                            updated_at = NOW();
+                    `, [statusEnvio.conceitofestas.id, statusEnvio.concept.id, pedidoDetalhado?.numero]);
+                    console.log('Mapeamento pedido salvo: CF', statusEnvio.conceitofestas.id, '-> Concept', statusEnvio.concept.id);
+                } catch (dbError) {
+                    console.error("Erro ao salvar mapeamento pedido Concept:", dbError.message);
+                }
+            }
 
         } catch (error) {
             console.error('ALERTA: Falha na Concept:', error.message);
@@ -409,8 +455,8 @@ router.post('/', autenticarToken, async (req, res) => {
             statusEnvio.concept.msg = error.response?.data?.error?.message || error.message;
         }
 
-        res.status(201).json({ 
-            mensagem: "Processamento concluído.", 
+        res.status(201).json({
+            mensagem: "Processamento concluído.",
             status_envio: statusEnvio,
             data: resultadoBlingPrincipal.data
         });
@@ -424,11 +470,11 @@ router.post('/', autenticarToken, async (req, res) => {
     }
 });
 
-router.get ('/:idPedidoVenda', autenticarToken, async(req, res) => {
+router.get('/:idPedidoVenda', autenticarToken, async (req, res) => {
     const { idPedidoVenda } = req.params;
     console.log(`Rota GET /api/pedidos/${idPedidoVenda} acessada por: ${req.usuario.email}`);
 
-    if(!idPedidoVenda || isNaN(Number(idPedidoVenda))) {
+    if (!idPedidoVenda || isNaN(Number(idPedidoVenda))) {
         return res.status(400).json({ mensagem: "ID do Pedido inválido ou não fornecido." });
     }
 
@@ -471,7 +517,7 @@ router.get ('/:idPedidoVenda', autenticarToken, async(req, res) => {
             const resultVendedor = await db.query(queryVendedor, [vendedorIdBling]);
 
             if (resultVendedor.rows.length > 0) {
-                detalhesDoPedido.vendedor_nome = resultVendedor.rows[0].nome; 
+                detalhesDoPedido.vendedor_nome = resultVendedor.rows[0].nome;
                 console.log(`Nome do vendedor encontrado: ${detalhesDoPedido.vendedor_nome}`);
             } else {
                 console.log(`Vendedor com ID Bling ${vendedorIdBling} não encontrado.`);
@@ -519,54 +565,56 @@ router.get ('/:idPedidoVenda', autenticarToken, async(req, res) => {
 });
 
 router.put('/:id', autenticarToken, async (req, res) => {
-  const pedidoId = req.params.id;
-  const pedidoEditadoDoFrontend = req.body;
+    const pedidoId = req.params.id;
+    const pedidoEditadoDoFrontend = req.body;
 
-  console.log(`Backend: Recebida requisição para ATUALIZAR o pedido ID: ${pedidoId}`);
+    console.log(`Backend: Recebida requisição para ATUALIZAR o pedido ID: ${pedidoId}`);
 
-  try {
-    const selectQuery = 'SELECT status_id FROM cache_pedidos WHERE id = $1';
-    const queryResult = await db.query(selectQuery, [pedidoId]);  
+    try {
+        const selectQuery = 'SELECT status_id FROM cache_pedidos WHERE id = $1';
+        const queryResult = await db.query(selectQuery, [pedidoId]);
 
-    if (queryResult.rows.length === 0) {
-        return res.status(404).json({ mensagem: `Pedido ${pedidoId} não encontrado no cache local.` });
-    }
+        if (queryResult.rows.length === 0) {
+            return res.status(404).json({ mensagem: `Pedido ${pedidoId} não encontrado no cache local.` });
+        }
 
-    const statusIdAnterior = queryResult.rows[0].status_id;
-    const statusIdNovo = pedidoEditadoDoFrontend.situacao.id;
+        const statusIdAnterior = queryResult.rows[0].status_id;
+        const statusIdNovo = pedidoEditadoDoFrontend.situacao.id;
 
-    const ID_ORCAMENTO = 47722;
-    const ID_EM_ABERTO = 6;
+        const ID_ORCAMENTO = 47722;
+        const ID_EM_ABERTO = 6;
+        const ID_PASCOA_2026 = 710186;
 
-    const deveAtualizarData = statusIdAnterior === ID_ORCAMENTO && statusIdNovo === ID_EM_ABERTO;
-    
-    const payloadParaBling = {
-        ...pedidoEditadoDoFrontend,
-    };
+        const deveAtualizarData = statusIdAnterior === ID_ORCAMENTO &&
+            (statusIdNovo === ID_EM_ABERTO || statusIdNovo === ID_PASCOA_2026);
 
-    if (deveAtualizarData) {
-        const hoje = new Date();
-        const dia = String(hoje.getDate()).padStart(2, '0');
-        const mes = String(hoje.getMonth() + 1).padStart(2, '0');
-        const ano = hoje.getFullYear();
-        const dataFormatada = `${dia}/${mes}/${ano}`;
-        payloadParaBling.data = dataFormatada;
-    }
-
-    if (payloadParaBling.desconto && typeof payloadParaBling.desconto.valor !== 'undefined') {
-        payloadParaBling.desconto = {
-          valor: payloadParaBling.desconto.valor,
-          unidade: 'PERCENTUAL'
+        const payloadParaBling = {
+            ...pedidoEditadoDoFrontend,
         };
-    } else {
-        delete payloadParaBling.desconto;
-    }
 
-    const resultadoBling = await blingService.atualizarPedidoNoBling(pedidoId, payloadParaBling);
+        if (deveAtualizarData) {
+            const hoje = new Date();
+            const dia = String(hoje.getDate()).padStart(2, '0');
+            const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+            const ano = hoje.getFullYear();
+            const dataFormatada = `${dia}/${mes}/${ano}`;
+            payloadParaBling.data = dataFormatada;
+        }
 
-    const pedidoDetalhado = await blingService.fetchDetalhesPedidoVenda(pedidoId);
+        if (payloadParaBling.desconto && typeof payloadParaBling.desconto.valor !== 'undefined') {
+            payloadParaBling.desconto = {
+                valor: payloadParaBling.desconto.valor,
+                unidade: 'PERCENTUAL'
+            };
+        } else {
+            delete payloadParaBling.desconto;
+        }
 
-    const upsertQuery = `
+        const resultadoBling = await blingService.atualizarPedidoNoBling(pedidoId, payloadParaBling);
+
+        const pedidoDetalhado = await blingService.fetchDetalhesPedidoVenda(pedidoId);
+
+        const upsertQuery = `
       INSERT INTO cache_pedidos (
         id, numero, data_pedido, data_saida, total, total_produtos, status_id, status_nome,
         cliente_id, cliente_nome, cliente_documento, vendedor_id, observacoes, observacoes_internas, updated_at, dados_completos_json
@@ -578,49 +626,151 @@ router.put('/:id', autenticarToken, async (req, res) => {
         cliente_documento = EXCLUDED.cliente_documento, vendedor_id = EXCLUDED.vendedor_id,
         observacoes = EXCLUDED.observacoes, observacoes_internas = EXCLUDED.observacoes_internas, updated_at = NOW(), dados_completos_json = EXCLUDED.dados_completos_json;
     `;
-    const params = [
-      pedidoDetalhado.id, pedidoDetalhado.numero, pedidoDetalhado.data, pedidoDetalhado.dataSaida || null,
-      pedidoDetalhado.total, pedidoDetalhado.totalProdutos, pedidoDetalhado.situacao.id, pedidoDetalhado.situacao.valor,
-      pedidoDetalhado.contato.id, pedidoDetalhado.contato.nome, pedidoDetalhado.contato.numeroDocumento || null,
-      pedidoDetalhado.vendedor?.id || null, pedidoDetalhado.observacoes || null, pedidoDetalhado.observacoesInternas || null, pedidoDetalhado
-    ];
-    await db.query(upsertQuery, params);
+        const params = [
+            pedidoDetalhado.id, pedidoDetalhado.numero, pedidoDetalhado.data, pedidoDetalhado.dataSaida || null,
+            pedidoDetalhado.total, pedidoDetalhado.totalProdutos, pedidoDetalhado.situacao.id, pedidoDetalhado.situacao.valor,
+            pedidoDetalhado.contato.id, pedidoDetalhado.contato.nome, pedidoDetalhado.contato.numeroDocumento || null,
+            pedidoDetalhado.vendedor?.id || null, pedidoDetalhado.observacoes || null, pedidoDetalhado.observacoesInternas || null, pedidoDetalhado
+        ];
+        await db.query(upsertQuery, params);
 
-    const deleteQuery = 'DELETE FROM cache_pedido_itens WHERE pedido_id = $1';
-    await db.query(deleteQuery, [pedidoId]);
+        const deleteQuery = 'DELETE FROM cache_pedido_itens WHERE pedido_id = $1';
+        await db.query(deleteQuery, [pedidoId]);
 
-    if (pedidoDetalhado.itens && pedidoDetalhado.itens.length > 0) {
-        const insertQuery = `
+        if (pedidoDetalhado.itens && pedidoDetalhado.itens.length > 0) {
+            const insertQuery = `
             INSERT INTO cache_pedido_itens (
                 pedido_id, item_id, produto_id, produto_codigo, produto_nome,
                 quantidade, valor_unitario, valor_total
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
         `;
 
-        const insertPromises = pedidoDetalhado.itens.map(item => {
-            const itemParams = [
-                pedidoId,
-                item.id,
-                item.produto.id,
-                item.codigo,
-                item.descricao,
-                item.quantidade,
-                item.valor,
-                (item.quantidade * item.valor)
-            ];
-            return db.query(insertQuery, itemParams);
-        });
+            const insertPromises = pedidoDetalhado.itens.map(item => {
+                const itemParams = [
+                    pedidoId,
+                    item.id,
+                    item.produto.id,
+                    item.codigo,
+                    item.descricao,
+                    item.quantidade,
+                    item.valor,
+                    (item.quantidade * item.valor)
+                ];
+                return db.query(insertQuery, itemParams);
+            });
 
-        await Promise.all(insertPromises);
-    } else {
+            await Promise.all(insertPromises);
+        } else {
+        }
+
+        try {
+            const mapQuery = 'SELECT pedido_id_concept FROM map_pedidos_concept WHERE pedido_id_conceitofestas = $1';
+            const mapResult = await db.query(mapQuery, [pedidoId]);
+
+            if (mapResult.rows.length > 0) {
+                const pedidoIdConcept = mapResult.rows[0].pedido_id_concept;
+                console.log(`Encontrado mapeamento. Atualizando pedido ${pedidoIdConcept} na Concept.`);
+
+                await sleep(1000);
+
+                // traduzir cliente para Concept
+                let clienteIdConcept = null;
+                const docCliente = pedidoDetalhado.contato?.numeroDocumento;
+                if (docCliente) {
+                    const docLimpo = String(docCliente).replace(/\D/g, '');
+                    const clienteMap = await db.query('SELECT id_concept FROM map_clientes_concept WHERE documento = $1', [docLimpo]);
+                    if (clienteMap.rows.length > 0) {
+                        clienteIdConcept = clienteMap.rows[0].id_concept;
+                    }
+                }
+
+                // traduzir vendedor para Concept
+                let vendedorConcept = null;
+                if (pedidoDetalhado.vendedor?.id) {
+                    const idVendedorOrigem = String(pedidoDetalhado.vendedor.id);
+                    if (MAPA_VENDEDORES[idVendedorOrigem]) {
+                        vendedorConcept = { id: Number(MAPA_VENDEDORES[idVendedorOrigem]) };
+                    }
+                }
+
+                // traduzir itens (SKU -> ID Concept)
+                const itensTraduzidos = [];
+                for (const item of pedidoDetalhado.itens) {
+                    const sku = item.codigo || item.produto?.codigo;
+                    if (sku) {
+                        const idProdutoConcept = await blingService.buscarIdProdutoPorSku(String(sku).trim(), 'concept');
+                        if (idProdutoConcept) {
+                            itensTraduzidos.push({
+                                produto: { id: idProdutoConcept },
+                                quantidade: Number(item.quantidade),
+                                valor: Number(item.valor),
+                                descricao: item.descricao,
+                                unidade: item.unidade || 'UN',
+                                tipo: 'P'
+                            });
+                        }
+                        await sleep(200);
+                    }
+                }
+
+                // montar payload para Concept
+                const payloadConcept = {
+                    data: pedidoDetalhado.data,
+                    dataSaida: pedidoDetalhado.dataSaida || pedidoDetalhado.data,
+                    ...(clienteIdConcept && { contato: { id: clienteIdConcept } }),
+                    ...(vendedorConcept && { vendedor: vendedorConcept }),
+                    itens: itensTraduzidos,
+                    observacoes: pedidoDetalhado.observacoes || undefined,
+                    observacoesInternas: pedidoDetalhado.observacoesInternas || undefined,
+                };
+
+                // calcular total correto (considerando desconto)
+                const subtotalItens = itensTraduzidos.reduce((acc, item) => acc + (item.valor * item.quantidade), 0);
+                const percentualDesconto = pedidoDetalhado.desconto?.valor || 0;
+                const valorDescontoEmReais = (subtotalItens * percentualDesconto) / 100;
+                const totalFinal = subtotalItens - valorDescontoEmReais;
+
+                // traduzir parcelas com forma de pagamento Concept e valores recalculados
+                if (pedidoDetalhado.parcelas && pedidoDetalhado.parcelas.length > 0) {
+                    const numeroDeParcelas = pedidoDetalhado.parcelas.length;
+                    const valorPorParcela = numeroDeParcelas > 0 ? (totalFinal / numeroDeParcelas) : totalFinal;
+
+                    payloadConcept.parcelas = pedidoDetalhado.parcelas.map(p => {
+                        const idFormaPgtoOrigem = String(p.formaPagamento?.id || '');
+                        const idFormaPgtoConcept = MAPA_FORMAS_PAGAMENTO[idFormaPgtoOrigem] || ID_FORMA_PAGAMENTO_CONCEPT_PADRAO;
+                        return {
+                            dataVencimento: p.dataVencimento,
+                            valor: parseFloat(valorPorParcela.toFixed(2)),
+                            formaPagamento: { id: Number(idFormaPgtoConcept) }
+                        };
+                    });
+                }
+
+                // adicionar desconto se existir
+                if (percentualDesconto > 0) {
+                    payloadConcept.desconto = {
+                        valor: percentualDesconto,
+                        unidade: 'PERCENTUAL'
+                    };
+                }
+
+                await blingService.atualizarPedidoSimples(pedidoIdConcept, payloadConcept, 'concept');
+                console.log(`Pedido ${pedidoIdConcept} atualizado com sucesso na Concept.`);
+
+            } else {
+                console.log(`Sem mapeamento para pedido ${pedidoId}. Concept não será atualizada.`);
+            }
+        } catch (conceptError) {
+            console.error(`Erro ao atualizar na Concept:`, conceptError.message);
+            // não falha a requisição principal, apenas loga o erro
+        }
+
+        res.json(resultadoBling);
+
+    } catch (error) {
+        console.error(`Erro na rota de atualização do pedido ${pedidoId}:`, error.message);
+        res.status(500).json({ mensagem: error.message });
     }
-
-    res.json(resultadoBling);
-
-  } catch (error) {
-    console.error(`Erro na rota de atualização do pedido ${pedidoId}:`, error.message);
-    res.status(500).json({ mensagem: error.message });
-  }
 });
 
 module.exports = router;
