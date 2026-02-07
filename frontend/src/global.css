@@ -810,3 +810,13 @@ body.modal-open .desktop-sidebar {
   color: #6c757d;
   background: none;
 }
+
+#filtro-pascoa:checked {
+  background-color: #5cd4ff;
+  border-color: #5cd4ff;
+}
+
+#filtro-pascoa:focus {
+  box-shadow: none;
+  border-color: #5cd4ff;
+}
