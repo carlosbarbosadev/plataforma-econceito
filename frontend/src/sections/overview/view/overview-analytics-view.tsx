@@ -122,7 +122,7 @@ export function OverviewAnalyticsView() {
                 percent={0}
                 total={vendasAno}
                 color="secondary"
-                icon={<img alt="Vendas do ano" src="/assets/icons/glass/cart-check.svg" />}
+                icon={<img alt="Vendas do ano" src="/assets/icons/glass/cart.svg" />}
                 chart={{
                   categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'],
                   series: [56, 47, 40, 62, 73, 30, 23, 54],

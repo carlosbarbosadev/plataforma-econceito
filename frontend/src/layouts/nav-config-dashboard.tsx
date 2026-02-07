@@ -33,16 +33,17 @@ export const navData: NavItem[] = [
     bgcolor: '#9b1dda',
   },
   {
-    title: 'CAMPANHAS',
-    path: '/campanhas',
-    icon: <img src="/assets/icons/glass/campaign.svg" width="24" alt="Campanhas" />,
-    bgcolor: '#f66c1d',
-  },
-  {
     title: 'EXPEDIÇÃO',
     path: '/expedicao',
     icon: <img src="/assets/icons/glass/shipment.svg" width="24" alt="Expedição" />,
     bgcolor: '#00BCD4',
+    roles: ['admin'],
+  },
+  {
+    title: 'CHECKOUT',
+    path: '/checkout',
+    icon: <img src="/assets/icons/glass/cart-check.svg" width="24" alt="Checkout" />,
+    bgcolor: '#f66c1d',
     roles: ['admin'],
   },
 ];
