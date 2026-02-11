@@ -373,7 +373,12 @@ router.post('/salvar-parcial', autenticarToken, async (req, res) => {
         await client.query('COMMIT');
 
         try {
-            await alterarSituacaoPedidoBling(orderId, idCheckoutIncompleto);
+            const statusAtual = await client.query('SELECT status_id FROM cache_pedidos WHERE id = $1', [orderId]);
+            const statusIdAtual = statusAtual.rows.length > 0 ? Number(statusAtual.rows[0].status_id) : null;
+
+            if (statusIdAtual !== idCheckoutIncompleto) {
+                await alterarSituacaoPedidoBling(orderId, idCheckoutIncompleto);
+            }
         } catch (blingError) {
             console.error(`[checkout] Erro ao atualizar status no Bling (pedido ${orderId}):`, blingError.message);
             console.error(`[checkout] Detalhes do erro:`, JSON.stringify(blingError.response?.data, null, 2));
@@ -438,9 +443,9 @@ router.post('/finalizar', autenticarToken, async (req, res) => {
 });
 
 router.post('/substituir-produto', autenticarToken, async (req, res) => {
-    const { orderId, oldSku, newProductSku } = req.body;
+    const { orderId, oldSku, newProductSku, newQuantity } = req.body;
 
-    console.log(`[checkout] Substituição: Pedido ${orderId}, SKU antigo: ${oldSku}, SKU novo: ${newProductSku}`);
+    console.log(`[checkout] Substituição: Pedido ${orderId}, SKU antigo: ${oldSku}, SKU novo: ${newProductSku}, Nova qtd: ${newQuantity || 'manter original'}`);
 
     if (!orderId || !oldSku || !newProductSku) {
         return res.status(400).json({ mensagem: 'orderId, oldSku e newProductSku são obrigatórios' });
@@ -473,7 +478,19 @@ router.post('/substituir-produto', autenticarToken, async (req, res) => {
         }
 
         const itemAntigo = itens[itemAntigoIndex];
-        const quantidadeOriginal = Number(itemAntigo.quantidade);
+        const qtdTotalPedida = Number(itemAntigo.quantidade);
+
+        const conferidoQuery = `
+            SELECT quantidade_conferida 
+            FROM checkout_conferencias 
+            WHERE pedido_id = $1 AND sku = $2
+        `;
+        const { rows: conferidoRows } = await client.query(conferidoQuery, [orderId, oldSku]);
+        const qtdConferida = conferidoRows.length > 0 ? parseFloat(conferidoRows[0].quantidade_conferida) : 0;
+
+        const qtdParaNovoItem = newQuantity && newQuantity > 0
+            ? Number(newQuantity)
+            : (qtdTotalPedida - qtdConferida);
 
         const produtoQuery = `
             SELECT 
@@ -499,13 +516,24 @@ router.post('/substituir-produto', autenticarToken, async (req, res) => {
             produto: { id: Number(novoProduto.id) },
             codigo: novoProduto.codigo,
             descricao: novoProduto.nome,
-            quantidade: quantidadeOriginal,
+            quantidade: qtdParaNovoItem,
             valor: parseFloat(novoProduto.preco) || 0,
             unidade: itemAntigo.unidade || 'UN'
         };
 
-        const novosItens = [...itens];
-        novosItens[itemAntigoIndex] = novoItem;
+        let novosItens = [...itens];
+
+        if (qtdConferida > 0) {
+            console.log(`[checkout] Substituição parcial: mantendo ${qtdConferida} do antigo, adicionando ${qtdParaNovoItem} do novo`);
+            novosItens[itemAntigoIndex] = {
+                ...itemAntigo,
+                quantidade: qtdConferida
+            };
+            novosItens.push(novoItem);
+        } else {
+            console.log(`[checkout] Substituição completa: adicionando ${qtdParaNovoItem} do novo`);
+            novosItens[itemAntigoIndex] = novoItem;
+        }
 
         const pedidoParaAtualizar = {
             ...dadosCompletos,
@@ -541,10 +569,12 @@ router.post('/substituir-produto', autenticarToken, async (req, res) => {
             orderId
         ]);
 
-        await client.query(
-            `DELETE FROM checkout_conferencias WHERE pedido_id = $1 AND sku = $2`,
-            [orderId, oldSku]
-        );
+        if (qtdConferida === 0) {
+            await client.query(
+                `DELETE FROM checkout_conferencias WHERE pedido_id = $1 AND sku = $2`,
+                [orderId, oldSku]
+            );
+        }
 
         await client.query('COMMIT');
 
@@ -635,7 +665,7 @@ router.post('/substituir-produto', autenticarToken, async (req, res) => {
                 sku: novoProduto.codigo,
                 name: novoProduto.nome,
                 unitPrice: parseFloat(novoProduto.preco) || 0,
-                quantity: quantidadeOriginal
+                quantity: qtdParaNovoItem
             }
         });
 

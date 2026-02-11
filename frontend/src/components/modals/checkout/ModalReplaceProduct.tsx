@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
 import AsyncSelect from 'react-select/async';
+import React, { useState, useEffect } from 'react';
 import { Modal, Button, Form, Alert, Spinner } from 'react-bootstrap';
 
 import api from 'src/services/api';
@@ -36,8 +36,15 @@ export default function ModalReplaceProduct({
     onReplaceSuccess,
 }: ModalReplaceProductProps) {
     const [selectedProduct, setSelectedProduct] = useState<ProductOption | null>(null);
+    const [newQuantity, setNewQuantity] = useState<number>(1);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (currentProduct) {
+            setNewQuantity(currentProduct.quantityOrdered);
+        }
+    }, [currentProduct]);
 
     const loadProductOptions = async (inputValue: string): Promise<ProductOption[]> => {
         if (inputValue.trim().length < 2) {
@@ -74,6 +81,7 @@ export default function ModalReplaceProduct({
                 orderId,
                 oldSku: currentProduct.sku,
                 newProductSku: selectedProduct.codigo,
+                newQuantity,
             });
 
             onReplaceSuccess();
@@ -88,6 +96,7 @@ export default function ModalReplaceProduct({
 
     const handleClose = () => {
         setSelectedProduct(null);
+        setNewQuantity(1);
         setError(null);
         onHide();
     };
@@ -139,9 +148,20 @@ export default function ModalReplaceProduct({
                         <p className="mb-1 fw-bold" style={{ fontSize: '0.95rem', color: '#1f2a3b' }}>
                             {selectedProduct.nome}
                         </p>
-                        <div className="d-flex justify-content-between" style={{ fontSize: '0.85rem' }}>
-                            <div className="d-flex gap-3">
+                        <div className="d-flex justify-content-between align-items-center" style={{ fontSize: '0.85rem' }}>
+                            <div className="d-flex gap-3 align-items-center">
                                 <span>SKU: {selectedProduct.codigo}</span>
+                                <div className="d-flex align-items-center gap-2">
+                                    <span>Quantidade:</span>
+                                    <Form.Control
+                                        type="number"
+                                        min={1}
+                                        value={newQuantity}
+                                        onChange={(e) => setNewQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                                        className="input-foco-verde"
+                                        style={{ width: '60px', padding: '2px 8px', fontSize: '0.85rem', borderRadius: '5px' }}
+                                    />
+                                </div>
                             </div>
                             <span>{formatCurrency(selectedProduct.preco)}</span>
                         </div>

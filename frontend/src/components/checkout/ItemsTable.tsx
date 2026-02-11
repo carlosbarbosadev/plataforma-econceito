@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Table } from 'react-bootstrap';
 import { FiImage } from 'react-icons/fi';
 
+import api from '../../services/api';
 import { OrderItem } from '../../types/checkout';
 import { useCheckout } from '../../context/CheckoutContext';
 import ModalReplaceProduct from '../modals/checkout/ModalReplaceProduct';
@@ -29,9 +30,16 @@ const ItemsTable: React.FC = () => {
     setShowReplaceModal(true);
   };
 
-  const handleReplaceSuccess = () => {
-    // Recarrega o pedido atual para refletir a substituição
+  const handleReplaceSuccess = async () => {
     if (selectedOrder) {
+      try {
+        await api.post('/api/checkout/salvar-parcial', {
+          orderId: selectedOrder.id,
+          items: selectedOrder.items,
+        });
+      } catch (err) {
+        console.error('Erro ao salvar progresso antes da substituição:', err);
+      }
       selectOrder(selectedOrder.id);
     }
   };
