@@ -169,6 +169,15 @@ export default function ShipmentPage() {
         titleColor: '#ffffff',
         indicatorColor: '#5cd4ff',
       },
+      'saldo-pendente': {
+        id: 'saldo-pendente',
+        title: 'SALDO PENDENTE',
+        pedidos: [],
+        color: '#fdf0ee',
+        titleBgColor: '#ef664e',
+        titleColor: '#ffffff',
+        indicatorColor: '#ef664e',
+      },
       'em-producao': {
         id: 'em-producao',
         title: 'AGUARDANDO PRODUÇÃO',
@@ -178,18 +187,9 @@ export default function ShipmentPage() {
         titleColor: '#48412f',
         indicatorColor: '#f8ae00',
       },
-      'em-separacao': {
-        id: 'em-separacao',
-        title: 'EM SEPARAÇÃO',
-        pedidos: [],
-        color: '#fff3e0',
-        titleBgColor: '#f8ae00',
-        titleColor: '#48412f',
-        indicatorColor: '#f8ae00',
-      },
-      verificado: {
-        id: 'verificado',
-        title: 'VERIFICADO',
+      'checkout-completo': {
+        id: 'checkout-completo',
+        title: 'CHECKOUT COMPLETO',
         pedidos: [],
         color: '#eee9fcff',
         titleBgColor: '#6317f8',

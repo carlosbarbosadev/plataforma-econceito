@@ -9,7 +9,7 @@ router.get('/pedidos-para-envio', autenticarToken, async (req, res) => {
         DELETE FROM shipment_status
         WHERE order_id IN (
             SELECT id FROM cache_pedidos
-            WHERE status_id NOT IN (6, 710186)
+            WHERE status_id NOT IN (6, 710186, 722370)
         )
     `;
     await db.query(cleanupQuery);
@@ -27,7 +27,7 @@ router.get('/pedidos-para-envio', autenticarToken, async (req, res) => {
         const queryParams = [];
         let paramIndex = 1;
 
-        let whereClauses = ['cp.status_id IN (6, 710186)'];
+        let whereClauses = ['cp.status_id IN (6, 710186, 722370)'];
 
         if (termoBusca.trim()) {
             whereClauses.push(`(cp.cliente_nome ILIKE $${paramIndex} OR cp.numero::text ILIKE $${paramIndex} OR u.nome ILIKE $${paramIndex})`);
@@ -76,7 +76,7 @@ router.get('/pedidos-para-envio', autenticarToken, async (req, res) => {
         const { rows: pedidosParaEnvio } = await db.query(query, queryParams);
 
         const pedidosFormatados = pedidosParaEnvio.map(p => {
-            let colunaInicial = p.kanban_column || (p.status_id === 710186 ? 'pascoa' : 'em-aberto');
+            let colunaInicial = p.kanban_column || (p.status_id === 710186 ? 'pascoa' : p.status_id === 722370 ? 'saldo-pendente' : 'em-aberto');
 
             return {
                 id: p.id,
@@ -143,6 +143,8 @@ router.put('/status/:orderId', autenticarToken, async (req, res) => {
             let defaultColumn = 'em-aberto';
             if (statusId === 710186) {
                 defaultColumn = 'pascoa';
+            } else if (statusId === 722370) {
+                defaultColumn = 'saldo-pendente';
             }
 
             const finalColumn = newColumn || defaultColumn;
@@ -195,6 +197,8 @@ router.post('/acknowledge/:orderId', autenticarToken, async (req, res) => {
             let defaultColumn = 'em-aberto';
             if (statusId === 710186) {
                 defaultColumn = 'pascoa';
+            } else if (statusId === 722370) {
+                defaultColumn = 'saldo-pendente';
             }
 
             const insertQuery = `
