@@ -67,6 +67,7 @@ const CheckoutContent: React.FC = () => {
 
 const CheckoutPage: React.FC = () => (
   <CheckoutProvider>
+    <title>Checkout - GoStratto</title>
     <CheckoutContent />
   </CheckoutProvider>
 );

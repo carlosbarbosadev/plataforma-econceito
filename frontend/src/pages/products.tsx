@@ -543,14 +543,17 @@ export default function ProductsPage() {
 
   if (loadingClientes || loadingFormasPagamento || loadingProdutos) {
     return (
-      <Container
-        className="d-flex justify-content-center align-items-center"
-        style={{ minHeight: 'calc(100vh - 200px)' }}
-      >
-        <Spinner animation="border" role="status">
-          <span className="visually-hidden">Carregando...</span>
-        </Spinner>
-      </Container>
+      <>
+        <title>Produtos - GoStratto</title>
+        <Container
+          className="d-flex justify-content-center align-items-center"
+          style={{ minHeight: 'calc(100vh - 200px)' }}
+        >
+          <Spinner animation="border" role="status">
+            <span className="visually-hidden">Carregando...</span>
+          </Spinner>
+        </Container>
+      </>
     );
   }
 
@@ -599,413 +602,416 @@ export default function ProductsPage() {
   };
 
   return (
-    <Container fluid className="mb-4">
-      <Row>
-        <Col md={5}>
-          <div
-            className="mt-5 mb-4"
-            style={{
-              background: 'linear-gradient(135deg, #2453dc 0%, #577CFF 100%)',
-              color: '#fff',
-              padding: '25px',
-              borderRadius: '16px',
-              maxWidth: '300px',
-              display: 'flex',
-              justifyContent: 'center',
-            }}
-          >
-            <h3 className="fw-bold mb-0" style={{ color: '#fff', marginBottom: '0' }}>
-              {pageTitle}
-            </h3>
-          </div>
-          <p className="fs-5 fw-bold">Criar pedido</p>
-          <Form.Group className="mb-3" controlId="selecionarCliente">
-            <Select
-              options={optionsClientes}
-              value={optionsClientes.find((option) => option.value === selectedClientId) || null}
-              onChange={handleClienteSelectChange}
-              placeholder="Selecione ou digite para buscar um cliente"
-              isLoading={loadingClientes}
-              isClearable
-              filterOption={filterOption}
-              noOptionsMessage={() => 'Nenhum cliente encontrado.'}
-              classNamePrefix="select-padrao"
-            />
-            {listaDeClientes.length === 0 && !loadingClientes && !errorClientes && (
-              <Form.Text className="text-muted">
-                Nenhum cliente encontrado para este vendedor.
-              </Form.Text>
-            )}
-          </Form.Group>
-          <Form.Group controlId="selecionarFormaPagamento">
-            <Select
-              options={optionsFormasPagamento}
-              value={
-                optionsFormasPagamento.find(
-                  (option) => option.value === selectedFormaPagamentoId
-                ) || null
-              }
-              onChange={handleFormaPagamentoSelectChange}
-              placeholder="Selecione uma forma de pagamento"
-              isLoading={loadingFormasPagamento}
-              isClearable
-              isSearchable={false}
-              noOptionsMessage={() => 'Nenhuma forma de pagamento encontrada.'}
-              classNamePrefix="select-padrao"
-              isDisabled={!selectedClientId}
-            />
-          </Form.Group>
-        </Col>
-
-        <Col md={7} className="d-flex justify-content-center">
-          {campanhaBanner && (
-            <Card
-              className="shadow-sm text-white"
+    <>
+      <title>Produtos - GoStratto</title>
+      <Container fluid className="mb-4">
+        <Row>
+          <Col md={5}>
+            <div
+              className="mt-5 mb-4"
               style={{
-                position: 'relative',
-                minHeight: '200px',
-                width: '100%',
-                maxWidth: '520px',
-                marginTop: '5.4rem',
-                borderRadius: '30px',
+                background: 'linear-gradient(135deg, #2453dc 0%, #577CFF 100%)',
+                color: '#fff',
+                padding: '25px',
+                borderRadius: '16px',
+                maxWidth: '300px',
+                display: 'flex',
+                justifyContent: 'center',
               }}
             >
-              <Card.Img
-                src={campanhaBanner.imagem_url || ''}
-                alt={`Campanha ${campanhaBanner.nome}`}
+              <h3 className="fw-bold mb-0" style={{ color: '#fff', marginBottom: '0' }}>
+                {pageTitle}
+              </h3>
+            </div>
+            <p className="fs-5 fw-bold">Criar pedido</p>
+            <Form.Group className="mb-3" controlId="selecionarCliente">
+              <Select
+                options={optionsClientes}
+                value={optionsClientes.find((option) => option.value === selectedClientId) || null}
+                onChange={handleClienteSelectChange}
+                placeholder="Selecione ou digite para buscar um cliente"
+                isLoading={loadingClientes}
+                isClearable
+                filterOption={filterOption}
+                noOptionsMessage={() => 'Nenhum cliente encontrado.'}
+                classNamePrefix="select-padrao"
+              />
+              {listaDeClientes.length === 0 && !loadingClientes && !errorClientes && (
+                <Form.Text className="text-muted">
+                  Nenhum cliente encontrado para este vendedor.
+                </Form.Text>
+              )}
+            </Form.Group>
+            <Form.Group controlId="selecionarFormaPagamento">
+              <Select
+                options={optionsFormasPagamento}
+                value={
+                  optionsFormasPagamento.find(
+                    (option) => option.value === selectedFormaPagamentoId
+                  ) || null
+                }
+                onChange={handleFormaPagamentoSelectChange}
+                placeholder="Selecione uma forma de pagamento"
+                isLoading={loadingFormasPagamento}
+                isClearable
+                isSearchable={false}
+                noOptionsMessage={() => 'Nenhuma forma de pagamento encontrada.'}
+                classNamePrefix="select-padrao"
+                isDisabled={!selectedClientId}
+              />
+            </Form.Group>
+          </Col>
+
+          <Col md={7} className="d-flex justify-content-center">
+            {campanhaBanner && (
+              <Card
+                className="shadow-sm text-white"
                 style={{
+                  position: 'relative',
+                  minHeight: '200px',
                   width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  position: 'absolute',
-                  borderRadius: '16px',
+                  maxWidth: '520px',
+                  marginTop: '5.4rem',
+                  borderRadius: '30px',
                 }}
-              />
-              <div
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                  borderRadius: '16px',
-                }}
-              />
-              <Card.Body
-                className="d-flex flex-column justify-content-end align-items-center h-100 pb-4"
-                style={{ position: 'relative', zIndex: 2 }}
               >
-                <Button
-                  size="sm"
-                  className="campaign-button"
-                  onClick={() => handleFiltroCampanhaClick(campanhaBanner.id)}
+                <Card.Img
+                  src={campanhaBanner.imagem_url || ''}
+                  alt={`Campanha ${campanhaBanner.nome}`}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    position: 'absolute',
+                    borderRadius: '16px',
+                  }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                    borderRadius: '16px',
+                  }}
+                />
+                <Card.Body
+                  className="d-flex flex-column justify-content-end align-items-center h-100 pb-4"
+                  style={{ position: 'relative', zIndex: 2 }}
                 >
-                  {filtroCampanhaAtivo ? 'Limpar filtro' : 'Ver produtos da campanha'}
-                </Button>
-              </Card.Body>
-            </Card>
-          )}
-        </Col>
-      </Row>
-
-      <Row className="mt-3 align-items-end" gap={2}>
-        <Col md={3}>
-          <Form.Group controlId="filtroTag">
-            <Form.Label className="text-muted" style={{ fontSize: '13px' }}>
-              Pesquisas rápidas
-            </Form.Label>
-            <Form.Select
-              value={searchTerm}
-              onChange={(e) => {
-                const novoTermo = e.target.value;
-                setSearchTerm(novoTermo);
-                setSubmittedSearchTerm(novoTermo);
-              }}
-              className="input-foco-azul"
-              style={{ borderRadius: '4px' }}
-            >
-              <option value="">Todas</option>
-              {TAGS_FILTRO.map((tag) => (
-                <option key={tag} value={tag}>
-                  {tag}
-                </option>
-              ))}
-            </Form.Select>
-          </Form.Group>
-        </Col>
-
-        <Col md={3}>
-          <Form.Group controlId="filtroTema">
-            <Form.Label className="text-muted" style={{ fontSize: '13px' }}>
-              Categorias
-            </Form.Label>
-            <Form.Select
-              value={filtroTema}
-              onChange={(e) => setFiltroTema(e.target.value)}
-              className="input-foco-azul"
-              style={{ borderRadius: '4px' }}
-            >
-              <option value="">Todos</option>
-              {TEMAS_FILTRO.map((tema) => (
-                <option key={tema} value={tema}>
-                  {tema}
-                </option>
-              ))}
-            </Form.Select>
-          </Form.Group>
-        </Col>
-      </Row>
-
-      <div className="d-flex justify-content-end">
-        <Button className="mb-4 import-button" onClick={() => setShowImportModal(true)}>
-          Importar pedido
-        </Button>
-      </div>
-
-      {itensDoPedidoAtual.length > 0 && selectedClientId && selectedFormaPagamentoId && (
-        <Alert variant="light" className="mb-4 pedido-atual-painel">
-          <h5>
-            <strong>Pedido atual ({itensDoPedidoAtual.length} itens)</strong>
-          </h5>
-          <ul className="list-unstyled mb-0">
-            {itensDoPedidoAtual.map((item) => (
-              <li key={item.idProduto} className="d-flex align-items-center mb-1 pe-1">
-                <span
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.5tem', width: '100%' }}
-                >
-                  <Form.Control
-                    type="number"
-                    className="input-foco-verde"
-                    value={item.quantidade}
-                    onChange={(e) => handleAtualizarQuantidade(item.idProduto, e.target.value)}
-                    onBlur={(e) => handleQuantidadeBlur(item.idProduto, e.target.value)}
-                    style={{ width: '65px', textAlign: 'center' }}
-                    min={1}
+                  <Button
                     size="sm"
-                  />
+                    className="campaign-button"
+                    onClick={() => handleFiltroCampanhaClick(campanhaBanner.id)}
+                  >
+                    {filtroCampanhaAtivo ? 'Limpar filtro' : 'Ver produtos da campanha'}
+                  </Button>
+                </Card.Body>
+              </Card>
+            )}
+          </Col>
+        </Row>
 
-                  <div className="d-flex flex-column ms-2">
-                    <span>
-                      {item.nomeProduto} -{' '}
-                      <strong>
-                        {(Number(item.quantidade) * item.valorUnitario).toLocaleString('pt-BR', {
-                          style: 'currency',
-                          currency: 'BRL',
-                        })}
-                      </strong>
-                      <Button
-                        variant="link"
-                        className="p-0 text-danger ms-2"
-                        onClick={() => handleRemoverItemDoPedido(item.idProduto)}
-                        title="Remover item"
-                      >
-                        <Trash size={16} />
-                      </Button>
-                    </span>
-                    <small className="text-muted">Código: {item.codigoProduto || '--'}</small>
-                  </div>
-                </span>
-              </li>
-            ))}
-          </ul>
-          <p>
-            <strong>
-              Total: R${' '}
-              {itensDoPedidoAtual
-                .reduce((acc, item) => acc + Number(item.quantidade) * item.valorUnitario, 0)
-                .toFixed(2)}
-            </strong>
-          </p>
+        <Row className="mt-3 align-items-end" gap={2}>
+          <Col md={3}>
+            <Form.Group controlId="filtroTag">
+              <Form.Label className="text-muted" style={{ fontSize: '13px' }}>
+                Pesquisas rápidas
+              </Form.Label>
+              <Form.Select
+                value={searchTerm}
+                onChange={(e) => {
+                  const novoTermo = e.target.value;
+                  setSearchTerm(novoTermo);
+                  setSubmittedSearchTerm(novoTermo);
+                }}
+                className="input-foco-azul"
+                style={{ borderRadius: '4px' }}
+              >
+                <option value="">Todas</option>
+                {TAGS_FILTRO.map((tag) => (
+                  <option key={tag} value={tag}>
+                    {tag}
+                  </option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+          </Col>
 
-          <Form.Group className="mt-4" controlId="observacoes">
-            <Form.Control
-              as="textarea"
-              rows={3}
-              placeholder="Observações"
-              value={observacoes}
-              onChange={(e) => setObservacoes(e.target.value)}
-              className="input-foco-verde"
-            />
-          </Form.Group>
-          <Form.Group className="mt-4" controlId="observacoesInternas">
-            <Form.Control
-              as="textarea"
-              rows={3}
-              placeholder="Observações Internas"
-              value={observacoesInternas}
-              onChange={(e) => setObservacoesInternas(e.target.value)}
-              className="input-foco-verde"
-            />
-          </Form.Group>
-          <div className="d-flex justify-content-end gap-2 mt-3">
-            <Button className="cancel-button" onClick={handleCancelarPedido}>
-              Cancelar
-            </Button>
+          <Col md={3}>
+            <Form.Group controlId="filtroTema">
+              <Form.Label className="text-muted" style={{ fontSize: '13px' }}>
+                Categorias
+              </Form.Label>
+              <Form.Select
+                value={filtroTema}
+                onChange={(e) => setFiltroTema(e.target.value)}
+                className="input-foco-azul"
+                style={{ borderRadius: '4px' }}
+              >
+                <option value="">Todos</option>
+                {TEMAS_FILTRO.map((tema) => (
+                  <option key={tema} value={tema}>
+                    {tema}
+                  </option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+          </Col>
+        </Row>
 
-            <Button
-              className="save-button"
-              onClick={handleFinalizarPedido}
-              disabled={
-                submittingOrder ||
-                itensDoPedidoAtual.length === 0 ||
-                !selectedClientId ||
-                !selectedFormaPagamentoId
-              }
-            >
-              Finalizar
-            </Button>
-          </div>
-        </Alert>
-      )}
+        <div className="d-flex justify-content-end">
+          <Button className="mb-4 import-button" onClick={() => setShowImportModal(true)}>
+            Importar pedido
+          </Button>
+        </div>
 
-      {!errorProdutos && (
-        <>
-          {produtos.length === 0 && !loadingProdutos && (
-            <Alert variant="info" className="mt-3">
-              {searchTerm ? noProductsSearchMsg(searchTerm) : noProductsMsg}
-            </Alert>
-          )}
+        {itensDoPedidoAtual.length > 0 && selectedClientId && selectedFormaPagamentoId && (
+          <Alert variant="light" className="mb-4 pedido-atual-painel">
+            <h5>
+              <strong>Pedido atual ({itensDoPedidoAtual.length} itens)</strong>
+            </h5>
+            <ul className="list-unstyled mb-0">
+              {itensDoPedidoAtual.map((item) => (
+                <li key={item.idProduto} className="d-flex align-items-center mb-1 pe-1">
+                  <span
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.5tem', width: '100%' }}
+                  >
+                    <Form.Control
+                      type="number"
+                      className="input-foco-verde"
+                      value={item.quantidade}
+                      onChange={(e) => handleAtualizarQuantidade(item.idProduto, e.target.value)}
+                      onBlur={(e) => handleQuantidadeBlur(item.idProduto, e.target.value)}
+                      style={{ width: '65px', textAlign: 'center' }}
+                      min={1}
+                      size="sm"
+                    />
 
-          {produtos.length > 0 && !loadingProdutos && (
-            <Table hover responsive className="align-middle table-style">
-              <thead>
-                <tr>
-                  <th className="fw-normal text-muted" style={{ fontSize: '0.8em' }}>
-                    Imagem
-                  </th>
-                  <th className="fw-normal text-muted" style={{ width: '40%', fontSize: '0.8em' }}>
-                    Descrição
-                  </th>
-                  <th className="fw-normal text-muted" style={{ width: '13%', fontSize: '0.8em' }}>
-                    Código
-                  </th>
-                  <th className="fw-normal text-muted" style={{ width: '13%', fontSize: '0.8em' }}>
-                    Preço
-                  </th>
-                  <th className="fw-normal text-muted" style={{ width: '5%', fontSize: '0.8em' }}>
-                    Quantidade
-                  </th>
-                  <th className="fw-normal text-muted"> </th>
-                </tr>
-              </thead>
-              <tbody>
-                {produtosParaExibir.map((produto) => {
-                  console.log('Dados do produto sendo renderizado:', produto);
-
-                  return (
-                    <tr key={produto.id}>
-                      <td>
-                        <img
-                          src={
-                            produto.imagemURL ||
-                            produto.imagem_url ||
-                            '/img/placeholder-produto.png'
-                          }
-                          alt={produto.nome}
-                          style={{
-                            width: '57px',
-                            height: '57px',
-                            objectFit: 'cover',
-                            borderRadius: '0.375rem',
-                          }}
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = '/img/placeholder-produto.png';
-                          }}
-                        />
-                      </td>
-
-                      <td style={{ fontSize: '0.9em' }}>{produto.nome}</td>
-                      <td style={{ fontSize: '0.9em' }}>{produto.codigo || '-'}</td>
-                      <td style={{ fontSize: '0.9em' }}>
-                        {typeof produto.preco === 'number'
-                          ? produto.preco.toLocaleString('pt-BR', {
+                    <div className="d-flex flex-column ms-2">
+                      <span>
+                        {item.nomeProduto} -{' '}
+                        <strong>
+                          {(Number(item.quantidade) * item.valorUnitario).toLocaleString('pt-BR', {
                             style: 'currency',
                             currency: 'BRL',
-                          })
-                          : '-'}
-                      </td>
-
-                      <td>
-                        <Form.Control
-                          type="number"
-                          size="sm"
-                          className="input-foco-verde"
-                          style={{ width: '65px', textAlign: 'center' }}
-                          placeholder="1"
-                          value={quantidadesParaAdicionar[produto.id] || ''}
-                          onChange={(e) => handleTabelaQuantidadeChange(produto.id, e.target.value)}
-                          onBlur={(e) => handleTabelaQuantidadeBlur(produto.id, e.target.value)}
-                          min={1}
-                        />
-                      </td>
-
-                      <td className="text-end">
+                          })}
+                        </strong>
                         <Button
-                          variant="success"
-                          size="sm"
-                          onClick={() => handleAdicionarAoPedido(produto)}
-                          style={{
-                            fontSize: '0.8rem',
-                            padding: '0.2rem 0.75rem',
-                            backgroundColor: '#4CAF50',
-                            borderColor: '#4CAF50',
-                          }}
+                          variant="link"
+                          className="p-0 text-danger ms-2"
+                          onClick={() => handleRemoverItemDoPedido(item.idProduto)}
+                          title="Remover item"
                         >
-                          Adicionar ao p/
+                          <Trash size={16} />
                         </Button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </Table>
-          )}
+                      </span>
+                      <small className="text-muted">Código: {item.codigoProduto || '--'}</small>
+                    </div>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p>
+              <strong>
+                Total: R${' '}
+                {itensDoPedidoAtual
+                  .reduce((acc, item) => acc + Number(item.quantidade) * item.valorUnitario, 0)
+                  .toFixed(2)}
+              </strong>
+            </p>
 
-          <div className="rodape-busca-fixo">
-            <Container>
-              <Row className="justify-content-center">
-                <Col md={8}>
-                  <Form onSubmit={handleSearchSubmit}>
-                    <Form.Group className="mb-0">
-                      <Form.Control
-                        style={{ borderRadius: '4px' }}
-                        className="input-foco-azul rounded-3"
-                        type="text"
-                        placeholder="Buscar produtos por nome ou código"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        disabled={loadingProdutos}
-                      />
-                    </Form.Group>
-                  </Form>
-                </Col>
-              </Row>
-            </Container>
-          </div>
+            <Form.Group className="mt-4" controlId="observacoes">
+              <Form.Control
+                as="textarea"
+                rows={3}
+                placeholder="Observações"
+                value={observacoes}
+                onChange={(e) => setObservacoes(e.target.value)}
+                className="input-foco-verde"
+              />
+            </Form.Group>
+            <Form.Group className="mt-4" controlId="observacoesInternas">
+              <Form.Control
+                as="textarea"
+                rows={3}
+                placeholder="Observações Internas"
+                value={observacoesInternas}
+                onChange={(e) => setObservacoesInternas(e.target.value)}
+                className="input-foco-verde"
+              />
+            </Form.Group>
+            <div className="d-flex justify-content-end gap-2 mt-3">
+              <Button className="cancel-button" onClick={handleCancelarPedido}>
+                Cancelar
+              </Button>
 
-          {!loadingProdutos && (produtos.length > 0 || currentPage > 1) && (
-            <div className="d-flex justify-content-end mt-4">
-              <Pagination>
-                <Pagination.Prev
-                  onClick={() => setCurrentPage((p) => p - 1)}
-                  disabled={currentPage === 1}
-                />
-                <Pagination.Item disabled>{`Página ${currentPage}`}</Pagination.Item>
-                <Pagination.Next
-                  onClick={() => setCurrentPage((p) => p + 1)}
-                  disabled={produtos.length < 100}
-                />
-              </Pagination>
+              <Button
+                className="save-button"
+                onClick={handleFinalizarPedido}
+                disabled={
+                  submittingOrder ||
+                  itensDoPedidoAtual.length === 0 ||
+                  !selectedClientId ||
+                  !selectedFormaPagamentoId
+                }
+              >
+                Finalizar
+              </Button>
             </div>
-          )}
-        </>
-      )}
-      <ModalImportOrder
-        show={showImportModal}
-        onHide={() => setShowImportModal(false)}
-        onImportItems={handleImportItems}
-      />
-    </Container>
+          </Alert>
+        )}
+
+        {!errorProdutos && (
+          <>
+            {produtos.length === 0 && !loadingProdutos && (
+              <Alert variant="info" className="mt-3">
+                {searchTerm ? noProductsSearchMsg(searchTerm) : noProductsMsg}
+              </Alert>
+            )}
+
+            {produtos.length > 0 && !loadingProdutos && (
+              <Table hover responsive className="align-middle table-style">
+                <thead>
+                  <tr>
+                    <th className="fw-normal text-muted" style={{ fontSize: '0.8em' }}>
+                      Imagem
+                    </th>
+                    <th className="fw-normal text-muted" style={{ width: '40%', fontSize: '0.8em' }}>
+                      Descrição
+                    </th>
+                    <th className="fw-normal text-muted" style={{ width: '13%', fontSize: '0.8em' }}>
+                      Código
+                    </th>
+                    <th className="fw-normal text-muted" style={{ width: '13%', fontSize: '0.8em' }}>
+                      Preço
+                    </th>
+                    <th className="fw-normal text-muted" style={{ width: '5%', fontSize: '0.8em' }}>
+                      Quantidade
+                    </th>
+                    <th className="fw-normal text-muted"> </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {produtosParaExibir.map((produto) => {
+                    console.log('Dados do produto sendo renderizado:', produto);
+
+                    return (
+                      <tr key={produto.id}>
+                        <td>
+                          <img
+                            src={
+                              produto.imagemURL ||
+                              produto.imagem_url ||
+                              '/img/placeholder-produto.png'
+                            }
+                            alt={produto.nome}
+                            style={{
+                              width: '57px',
+                              height: '57px',
+                              objectFit: 'cover',
+                              borderRadius: '0.375rem',
+                            }}
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = '/img/placeholder-produto.png';
+                            }}
+                          />
+                        </td>
+
+                        <td style={{ fontSize: '0.9em' }}>{produto.nome}</td>
+                        <td style={{ fontSize: '0.9em' }}>{produto.codigo || '-'}</td>
+                        <td style={{ fontSize: '0.9em' }}>
+                          {typeof produto.preco === 'number'
+                            ? produto.preco.toLocaleString('pt-BR', {
+                              style: 'currency',
+                              currency: 'BRL',
+                            })
+                            : '-'}
+                        </td>
+
+                        <td>
+                          <Form.Control
+                            type="number"
+                            size="sm"
+                            className="input-foco-verde"
+                            style={{ width: '65px', textAlign: 'center' }}
+                            placeholder="1"
+                            value={quantidadesParaAdicionar[produto.id] || ''}
+                            onChange={(e) => handleTabelaQuantidadeChange(produto.id, e.target.value)}
+                            onBlur={(e) => handleTabelaQuantidadeBlur(produto.id, e.target.value)}
+                            min={1}
+                          />
+                        </td>
+
+                        <td className="text-end">
+                          <Button
+                            variant="success"
+                            size="sm"
+                            onClick={() => handleAdicionarAoPedido(produto)}
+                            style={{
+                              fontSize: '0.8rem',
+                              padding: '0.2rem 0.75rem',
+                              backgroundColor: '#4CAF50',
+                              borderColor: '#4CAF50',
+                            }}
+                          >
+                            Adicionar ao p/
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </Table>
+            )}
+
+            <div className="rodape-busca-fixo">
+              <Container>
+                <Row className="justify-content-center">
+                  <Col md={8}>
+                    <Form onSubmit={handleSearchSubmit}>
+                      <Form.Group className="mb-0">
+                        <Form.Control
+                          style={{ borderRadius: '4px' }}
+                          className="input-foco-azul rounded-3"
+                          type="text"
+                          placeholder="Buscar produtos por nome ou código"
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          disabled={loadingProdutos}
+                        />
+                      </Form.Group>
+                    </Form>
+                  </Col>
+                </Row>
+              </Container>
+            </div>
+
+            {!loadingProdutos && (produtos.length > 0 || currentPage > 1) && (
+              <div className="d-flex justify-content-end mt-4">
+                <Pagination>
+                  <Pagination.Prev
+                    onClick={() => setCurrentPage((p) => p - 1)}
+                    disabled={currentPage === 1}
+                  />
+                  <Pagination.Item disabled>{`Página ${currentPage}`}</Pagination.Item>
+                  <Pagination.Next
+                    onClick={() => setCurrentPage((p) => p + 1)}
+                    disabled={produtos.length < 100}
+                  />
+                </Pagination>
+              </div>
+            )}
+          </>
+        )}
+        <ModalImportOrder
+          show={showImportModal}
+          onHide={() => setShowImportModal(false)}
+          onImportItems={handleImportItems}
+        />
+      </Container>
+    </>
   );
 }

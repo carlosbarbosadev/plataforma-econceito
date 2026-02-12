@@ -282,14 +282,17 @@ export default function ShipmentPage() {
 
   if (loading) {
     return (
-      <Container
-        className="d-flex justify-content-center align-items-center"
-        style={{ minHeight: 'calc(100vh - 200px)' }}
-      >
-        <Spinner animation="border" role="status">
-          <span className="visually-hidden">Carregando...</span>
-        </Spinner>
-      </Container>
+      <>
+        <title>Expedição - GoStratto</title>
+        <Container
+          className="d-flex justify-content-center align-items-center"
+          style={{ minHeight: 'calc(100vh - 200px)' }}
+        >
+          <Spinner animation="border" role="status">
+            <span className="visually-hidden">Carregando...</span>
+          </Spinner>
+        </Container>
+      </>
     );
   }
 
@@ -300,97 +303,100 @@ export default function ShipmentPage() {
   const activeColumn = activeCard ? columns[activeCard.kanban_column] : null;
 
   return (
-    <Container
-      fluid
-      className="mt-4 d-flex flex-column"
-      style={{ height: 'calc(102.1vh - 100px)' }}
-    >
-      <div className="d-flex justify-content-between align-items-center mb-4 mt-4">
-        <h3 className="mb-0 fw-bold">Quadro de expedição</h3>
-      </div>
-
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <Form.Group style={{ width: '100%', maxWidth: '500px' }}>
-          <Form.Control
-            className="input-foco-azul"
-            type="text"
-            placeholder="Pesquisar por nome, vendedor ou nº do pedido"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ borderRadius: '4px' }}
-          />
-        </Form.Group>
-
-        <div className="d-flex gap-2">
-          <Button onClick={() => setShowReportModal(true)} className="relatorio-button">
-            Relatório produção
-          </Button>
-
-          <Button onClick={() => setShowStockReportModal(true)} className="relatorio-button">
-            Relatório estoque
-          </Button>
+    <>
+      <title>Expedição - GoStratto</title>
+      <Container
+        fluid
+        className="mt-4 d-flex flex-column"
+        style={{ height: 'calc(102.1vh - 100px)' }}
+      >
+        <div className="d-flex justify-content-between align-items-center mb-4 mt-4">
+          <h3 className="mb-0 fw-bold">Quadro de expedição</h3>
         </div>
-      </div>
 
-      <div
-        ref={scrollableContainerRef}
-        style={{ flex: 1, overflowY: 'auto', paddingBottom: '16px' }}
-      >
-        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-          <div
-            style={{
-              display: 'flex',
-              gap: '16px',
-              height: '100%',
-              alignItems: 'flex-start',
-            }}
-          >
-            {Object.values(columns).map((column) => (
-              <KanbanColumnComponent
-                key={column.id}
-                column={column}
-                titleSize="14px"
-                titleColor="#6b6e76"
-                onCardClick={handleShowModal}
-              />
-            ))}
+        <div className="d-flex justify-content-between align-items-center mb-4">
+          <Form.Group style={{ width: '100%', maxWidth: '500px' }}>
+            <Form.Control
+              className="input-foco-azul"
+              type="text"
+              placeholder="Pesquisar por nome, vendedor ou nº do pedido"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ borderRadius: '4px' }}
+            />
+          </Form.Group>
+
+          <div className="d-flex gap-2">
+            <Button onClick={() => setShowReportModal(true)} className="relatorio-button">
+              Relatório produção
+            </Button>
+
+            <Button onClick={() => setShowStockReportModal(true)} className="relatorio-button">
+              Relatório estoque
+            </Button>
           </div>
-          <DragOverlay>
-            {activeCard && activeColumn ? (
-              <KanbanCard
-                pedido={activeCard}
-                isOverlay
-                columnTitle={activeColumn.title}
-                indicatorColor={activeColumn.indicatorColor}
-              />
-            ) : null}
-          </DragOverlay>
-        </DndContext>
-      </div>
-      <PedidoDetalhesModal
-        show={modalShow}
-        onHide={handleCloseModal}
-        pedido={selectedPedido}
-        columns={Object.values(columns)}
-        onPedidoUpdate={handlePedidoAtualizado}
-        unmountOnExit={false}
-        onAcknowledged={handlePedidoAcknowledged}
-      />
+        </div>
 
-      <Button
-        onClick={scrollToTop}
-        className={`scroll-to-top-btn ${isVisible ? 'visible' : ''}`}
-        aria-label="Voltar ao topo"
-      >
-        &uarr;
-      </Button>
+        <div
+          ref={scrollableContainerRef}
+          style={{ flex: 1, overflowY: 'auto', paddingBottom: '16px' }}
+        >
+          <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+            <div
+              style={{
+                display: 'flex',
+                gap: '16px',
+                height: '100%',
+                alignItems: 'flex-start',
+              }}
+            >
+              {Object.values(columns).map((column) => (
+                <KanbanColumnComponent
+                  key={column.id}
+                  column={column}
+                  titleSize="14px"
+                  titleColor="#6b6e76"
+                  onCardClick={handleShowModal}
+                />
+              ))}
+            </div>
+            <DragOverlay>
+              {activeCard && activeColumn ? (
+                <KanbanCard
+                  pedido={activeCard}
+                  isOverlay
+                  columnTitle={activeColumn.title}
+                  indicatorColor={activeColumn.indicatorColor}
+                />
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        </div>
+        <PedidoDetalhesModal
+          show={modalShow}
+          onHide={handleCloseModal}
+          pedido={selectedPedido}
+          columns={Object.values(columns)}
+          onPedidoUpdate={handlePedidoAtualizado}
+          unmountOnExit={false}
+          onAcknowledged={handlePedidoAcknowledged}
+        />
 
-      <ProductionReportModal show={showReportModal} onHide={() => setShowReportModal(false)} />
+        <Button
+          onClick={scrollToTop}
+          className={`scroll-to-top-btn ${isVisible ? 'visible' : ''}`}
+          aria-label="Voltar ao topo"
+        >
+          &uarr;
+        </Button>
 
-      <StockDemandReportModal
-        show={showStockReportModal}
-        onHide={() => setShowStockReportModal(false)}
-      />
-    </Container>
+        <ProductionReportModal show={showReportModal} onHide={() => setShowReportModal(false)} />
+
+        <StockDemandReportModal
+          show={showStockReportModal}
+          onHide={() => setShowStockReportModal(false)}
+        />
+      </Container>
+    </>
   );
 }

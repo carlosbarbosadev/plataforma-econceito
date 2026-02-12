@@ -104,14 +104,17 @@ export default function ClientesPage() {
 
   if (loading) {
     return (
-      <Container
-        className="d-flex justify-content-center align-items-center"
-        style={{ minHeight: 'calc(100vh - 200px)' }}
-      >
-        <Spinner animation="border" role="status">
-          <span className="visually-hidden">Carregando...</span>
-        </Spinner>
-      </Container>
+      <>
+        <title>Contatos - GoStratto</title>
+        <Container
+          className="d-flex justify-content-center align-items-center"
+          style={{ minHeight: 'calc(100vh - 200px)' }}
+        >
+          <Spinner animation="border" role="status">
+            <span className="visually-hidden">Carregando...</span>
+          </Spinner>
+        </Container>
+      </>
     );
   }
 
@@ -132,109 +135,112 @@ export default function ClientesPage() {
   const headerTelefone = 'Telefone';
 
   return (
-    <Container className="mb-4">
-      <div>
-        <div
-          className="mt-5 mb-5"
-          style={{
-            background: 'linear-gradient(135deg, #2453dc 0%, #577CFF 100%)',
-            color: '#fff',
-            padding: '25px',
-            borderRadius: '16px',
-            maxWidth: '300px',
-            display: 'flex',
-            justifyContent: 'center',
-          }}
-        >
-          <h3 className="fw-bold mb-0" style={{ color: '#fff' }}>
-            {pageTitle}
-          </h3>
-        </div>
-        <Row className="mb-4">
-          <Col md={5}>
-            <Form.Group>
-              <Form.Control
-                className="input-foco-azul form-style"
-                type="text"
-                placeholder={searchPlaceholder}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </Form.Group>
-          </Col>
-          <Col className="d-flex justify-content-end">
-            <Button onClick={handleShowCreateModal} className="create-button">
-              Cadastrar cliente
-            </Button>
-          </Col>
-        </Row>
+    <>
+      <title>Contatos - GoStratto</title>
+      <Container className="mb-4">
+        <div>
+          <div
+            className="mt-5 mb-5"
+            style={{
+              background: 'linear-gradient(135deg, #2453dc 0%, #577CFF 100%)',
+              color: '#fff',
+              padding: '25px',
+              borderRadius: '16px',
+              maxWidth: '300px',
+              display: 'flex',
+              justifyContent: 'center',
+            }}
+          >
+            <h3 className="fw-bold mb-0" style={{ color: '#fff' }}>
+              {pageTitle}
+            </h3>
+          </div>
+          <Row className="mb-4">
+            <Col md={5}>
+              <Form.Group>
+                <Form.Control
+                  className="input-foco-azul form-style"
+                  type="text"
+                  placeholder={searchPlaceholder}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </Form.Group>
+            </Col>
+            <Col className="d-flex justify-content-end">
+              <Button onClick={handleShowCreateModal} className="create-button">
+                Cadastrar cliente
+              </Button>
+            </Col>
+          </Row>
 
-        {data.length === 0 && !loading && !error && (
-          <Alert variant="info">Nenhum cliente encontrado.</Alert>
-        )}
-        {filteredClients.length === 0 && data.length > 0 && searchTerm !== '' && (
-          <Alert variant="info">{`Nenhum cliente encontrado para o termo "${searchTerm}".`}</Alert>
-        )}
-        {data.length > 0 && (
-          <Table striped hover className="table-style">
-            <thead>
-              <tr>
-                <th
-                  className="text-muted"
-                  style={{ width: '45%', fontSize: '0.8em', fontWeight: 'normal' }}
-                >
-                  {headerNome}
-                </th>
-                <th
-                  className="text-muted"
-                  style={{ width: '15%', fontSize: '0.8em', fontWeight: 'normal' }}
-                >
-                  {headerCnpjCpf}
-                </th>
-                <th
-                  className="text-muted"
-                  style={{ width: '15%', fontSize: '0.8em', fontWeight: 'normal' }}
-                >
-                  {headerCidade}
-                </th>
-                <th
-                  className="text-muted"
-                  style={{ width: '15%', fontSize: '0.8em', fontWeight: 'normal' }}
-                >
-                  {headerTelefone}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredClients.map((c) => (
-                <tr
-                  key={c.id}
-                  onClick={() => handleShowViewModal(c.id)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <td style={{ fontSize: '0.9em' }}>{c.nome}</td>
-                  <td style={{ fontSize: '0.9em' }}>{c.numeroDocumento || '-'}</td>
-                  <td style={{ fontSize: '0.9em' }}>{c.endereco?.geral?.municipio || '-'}</td>
-                  <td style={{ fontSize: '0.9em' }}>{c.telefone || '-'}</td>
+          {data.length === 0 && !loading && !error && (
+            <Alert variant="info">Nenhum cliente encontrado.</Alert>
+          )}
+          {filteredClients.length === 0 && data.length > 0 && searchTerm !== '' && (
+            <Alert variant="info">{`Nenhum cliente encontrado para o termo "${searchTerm}".`}</Alert>
+          )}
+          {data.length > 0 && (
+            <Table striped hover className="table-style">
+              <thead>
+                <tr>
+                  <th
+                    className="text-muted"
+                    style={{ width: '45%', fontSize: '0.8em', fontWeight: 'normal' }}
+                  >
+                    {headerNome}
+                  </th>
+                  <th
+                    className="text-muted"
+                    style={{ width: '15%', fontSize: '0.8em', fontWeight: 'normal' }}
+                  >
+                    {headerCnpjCpf}
+                  </th>
+                  <th
+                    className="text-muted"
+                    style={{ width: '15%', fontSize: '0.8em', fontWeight: 'normal' }}
+                  >
+                    {headerCidade}
+                  </th>
+                  <th
+                    className="text-muted"
+                    style={{ width: '15%', fontSize: '0.8em', fontWeight: 'normal' }}
+                  >
+                    {headerTelefone}
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </Table>
-        )}
+              </thead>
+              <tbody>
+                {filteredClients.map((c) => (
+                  <tr
+                    key={c.id}
+                    onClick={() => handleShowViewModal(c.id)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <td style={{ fontSize: '0.9em' }}>{c.nome}</td>
+                    <td style={{ fontSize: '0.9em' }}>{c.numeroDocumento || '-'}</td>
+                    <td style={{ fontSize: '0.9em' }}>{c.endereco?.geral?.municipio || '-'}</td>
+                    <td style={{ fontSize: '0.9em' }}>{c.telefone || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          )}
 
-        <ModalCreateClient
-          show={showCreateModal}
-          onHide={handleCloseCreateModal}
-          onClientCreated={handleClientCreated}
-        />
+          <ModalCreateClient
+            show={showCreateModal}
+            onHide={handleCloseCreateModal}
+            onClientCreated={handleClientCreated}
+          />
 
-        <ModalEditClient
-          show={!!viewingClientId}
-          onHide={handleCloseViewModal}
-          clientId={viewingClientId}
-          onClientUpdated={handleClientUpdated}
-        />
-      </div>
-    </Container>
+          <ModalEditClient
+            show={!!viewingClientId}
+            onHide={handleCloseViewModal}
+            clientId={viewingClientId}
+            onClientUpdated={handleClientUpdated}
+          />
+        </div>
+      </Container>
+    </>
   );
 }
