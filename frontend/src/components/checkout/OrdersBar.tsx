@@ -9,13 +9,11 @@ const OrdersBar: React.FC = () => {
   return (
     <div className="d-flex align-items-center bg-white p-2 rounded w-100">
       <div
-        className="d-flex gap-2 align-items-center orders-bar-scroll"
+        className="d-flex gap-2 align-items-center"
         style={{
           whiteSpace: 'nowrap',
           overflowX: 'auto',
           flexWrap: 'nowrap',
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none',
         }}
       >
         {orders.map((order) => {

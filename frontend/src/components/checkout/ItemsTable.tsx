@@ -5,6 +5,7 @@ import { FiImage } from 'react-icons/fi';
 import api from '../../services/api';
 import { OrderItem } from '../../types/checkout';
 import { useCheckout } from '../../context/CheckoutContext';
+import ModalAddProduct from '../modals/checkout/ModalAddProduct';
 import ModalReplaceProduct from '../modals/checkout/ModalReplaceProduct';
 
 const ItemsTable: React.FC = () => {
@@ -12,6 +13,7 @@ const ItemsTable: React.FC = () => {
 
   const [showReplaceModal, setShowReplaceModal] = useState(false);
   const [itemToReplace, setItemToReplace] = useState<OrderItem | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   const pendingItems = selectedOrder
     ? selectedOrder.items.filter((item) => item.quantityChecked < item.quantityOrdered)
@@ -44,19 +46,25 @@ const ItemsTable: React.FC = () => {
     }
   };
 
+  const handleAddSuccess = async () => {
+    if (selectedOrder) {
+      selectOrder(selectedOrder.id);
+    }
+  };
+
   return (
     <>
       <div className="table-responsive h-100">
         <Table className="align-middle mb-0" style={{ tableLayout: 'fixed' }}>
           <thead className="sticky-top" style={{ zIndex: 1 }}>
             <tr>
-              <th className="ps-4 py-1" style={{ ...headerStyle, width: '50%' }}>
+              <th className="ps-4 py-1" style={{ ...headerStyle, width: '70%' }}>
                 Produto
               </th>
-              <th className="py-1 text-center" style={{ ...headerStyle, width: '15%' }}>
+              <th className="py-1 text-center" style={{ ...headerStyle, width: '10%' }}>
                 Conferidos
               </th>
-              <th className="py-1 text-center" style={{ ...headerStyle, width: '20%' }}>
+              <th className="py-1 text-center" style={{ ...headerStyle, width: '10%' }}>
                 Total
               </th>
               <th className="pe-4 py-1 text-center" style={{ ...headerStyle, width: '15%' }}>
@@ -160,7 +168,38 @@ const ItemsTable: React.FC = () => {
             ))}
           </tbody>
         </Table>
+
+        <div className="d-flex justify-content-center p-3">
+          <button
+            type="button"
+            className="d-flex align-items-center gap-2"
+            style={{
+              backgroundColor: '#fff',
+              border: '1px solid #ccd5e0',
+              borderRadius: '8px',
+              padding: '10px 18px',
+              fontSize: '0.85rem',
+              color: '#495769',
+              cursor: 'pointer',
+            }}
+            onClick={() => setShowAddModal(true)}
+          >
+            <img
+              src="/assets/icons/glass/plus.svg"
+              alt="Adicionar"
+              style={{ width: '20px', height: '20px' }}
+            />
+            Adicionar produto
+          </button>
+        </div>
       </div>
+
+      <ModalAddProduct
+        show={showAddModal}
+        onHide={() => setShowAddModal(false)}
+        orderId={selectedOrder?.id || ''}
+        onAddSuccess={handleAddSuccess}
+      />
 
       <ModalReplaceProduct
         show={showReplaceModal}
