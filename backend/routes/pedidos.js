@@ -146,7 +146,7 @@ router.get('/', autenticarToken, async (req, res) => {
             SELECT id, numero, TO_CHAR(data_pedido, 'DD/MM/YYYY') AS data_pedido, cliente_nome, total, status_id
             FROM cache_pedidos
             ${whereString}
-            ORDER BY cache_pedidos.data_pedido DESC
+            ORDER BY cache_pedidos.data_pedido DESC, cache_pedidos.numero DESC
             LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
         `;
         const { rows: pedidosDaPagina } = await db.query(pedidosQuery, finalParams);
@@ -424,6 +424,7 @@ router.post('/', autenticarToken, async (req, res) => {
             }
 
             pedidoSecundario.itens = itensTraduzidos;
+            pedidoSecundario.numero = pedidoDetalhado.numero;
 
             const resultadoBlingSecundario = await blingService.criarPedidoVenda(pedidoSecundario, 'concept');
 
