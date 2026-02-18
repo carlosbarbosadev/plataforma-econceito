@@ -2,15 +2,16 @@ import React from 'react';
 import { Card } from 'react-bootstrap';
 import { Draggable } from '@hello-pangea/dnd';
 
-import { Deal, LABELS } from '../../types/crm';
+import { Deal, Label } from '../../types/crm';
 
 interface KanbanCardProps {
   deal: Deal;
   index: number;
   onClick: (deal: Deal) => void;
+  labels: Label[];
 }
 
-const KanbanCard: React.FC<KanbanCardProps> = ({ deal, index, onClick }) => {
+const KanbanCard: React.FC<KanbanCardProps> = ({ deal, index, onClick, labels }) => {
   const draggableId = String(deal.deal_id ?? deal.client_id);
 
   const attachmentsCount = Number(deal.total_attachments || 0);
@@ -43,9 +44,9 @@ const KanbanCard: React.FC<KanbanCardProps> = ({ deal, index, onClick }) => {
             {deal.labels && deal.labels.length > 0 && (
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '8px 0' }}>
                 {deal.labels.map((label) => {
-                  const labelData = LABELS.find((l) => l.name === label);
+                  const labelData = labels.find((l) => l.name === label);
                   const bg = labelData?.color || '#e0e0e0';
-                  const text = labelData?.textColor || '#505258';
+                  const text = labelData?.text_color || '#505258';
                   return (
                     <span
                       key={label}

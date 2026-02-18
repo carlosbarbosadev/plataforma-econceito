@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
 import { DragDropContext, DropResult } from '@hello-pangea/dnd';
-import { Container, Row, Col, Form, Button, Spinner } from 'react-bootstrap';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Container, Row, Col, Form, Button, Spinner, Dropdown } from 'react-bootstrap';
 
 import api from '../services/api';
-import { Column, ColumnConfig, Deal } from '../types/crm';
 import KanbanColumn from '../components/crm/KanbanColumn';
 import ColumnModal from '../components/modals/crm/ColumnModal';
+import { Column, ColumnConfig, Deal, Label } from '../types/crm';
 import NewClientModal from '../components/modals/crm/NewClientModal';
 import ClientDetailsModal from '../components/modals/crm/ClientDetailsModal';
 
@@ -17,11 +17,15 @@ export default function CRMPage() {
   const [showColumnModal, setShowColumnModal] = useState(false);
   const [editingColumn, setEditingColumn] = useState<ColumnConfig | null>(null);
   const [saving, setSaving] = useState(false);
-  const [formData, setFormData] = useState({ client_name: '', client_email: '' });
+  const [formData, setFormData] = useState({ client_name: '', client_email: '', client_phone: '' });
   const [columnFormData, setColumnFormData] = useState({ title: '' });
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [showDealModal, setShowDealModal] = useState(false);
+  const [labels, setLabels] = useState<Label[]>([]);
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [hoveredIcon, setHoveredIcon] = useState<string | null>(null);
 
   const processDeals = useCallback(
     (deals: any[], colsConfig: ColumnConfig[]): Column[] =>
@@ -38,14 +42,24 @@ export default function CRMPage() {
     []
   );
 
-  const filteredColumns = columns.map((col) => ({
-    ...col,
-    deals: col.deals.filter(
-      (deal) =>
-        deal.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (deal.client_email && deal.client_email.toLowerCase().includes(searchTerm.toLowerCase()))
-    ),
-  }));
+  const filteredColumns = useMemo(
+    () =>
+      columns.map((col) => ({
+        ...col,
+        deals: col.deals.filter((deal) => {
+          const matchesSearch =
+            (deal.client_name && deal.client_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (deal.client_email && deal.client_email.toLowerCase().includes(searchTerm.toLowerCase()));
+
+          const matchesLabels =
+            selectedLabels.length === 0 ||
+            (deal.labels && deal.labels.some((label) => selectedLabels.includes(label)));
+
+          return matchesSearch && matchesLabels;
+        }),
+      })),
+    [columns, searchTerm, selectedLabels]
+  );
 
   const fetchColumns = useCallback(async () => {
     try {
@@ -71,12 +85,21 @@ export default function CRMPage() {
     [processDeals]
   );
 
+  const fetchLabels = useCallback(async () => {
+    try {
+      const res = await api.get('/api/crm/labels');
+      setLabels(res.data);
+    } catch (error) {
+      console.error('Erro ao buscar etiquetas:', error);
+    }
+  }, []);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     const colsConfig = await fetchColumns();
-    await fetchDeals(colsConfig);
+    await Promise.all([fetchDeals(colsConfig), fetchLabels()]);
     setLoading(false);
-  }, [fetchColumns, fetchDeals]);
+  }, [fetchColumns, fetchDeals, fetchLabels]);
 
   useEffect(() => {
     loadData();
@@ -108,7 +131,13 @@ export default function CRMPage() {
         ? sourceCol
         : { ...newColumns[destColIndex], deals: [...newColumns[destColIndex].deals] };
 
-    const [movedDeal] = sourceCol.deals.splice(source.index, 1);
+    const movedDealIndex = sourceCol.deals.findIndex(
+      (d) => String(d.deal_id ?? d.client_id) === draggableId
+    );
+
+    if (movedDealIndex === -1) return;
+
+    const [movedDeal] = sourceCol.deals.splice(movedDealIndex, 1);
 
     movedDeal.column_status = destination.droppableId;
     movedDeal.position = destination.index;
@@ -132,7 +161,8 @@ export default function CRMPage() {
     setColumns(newColumns);
 
     try {
-      await api.put(`/api/crm/deals/${movedDeal.client_id}/move`, {
+      const moveId = movedDeal.client_id || movedDeal.deal_id;
+      await api.put(`/api/crm/deals/${moveId}/move`, {
         column_status: destination.droppableId,
         position: destination.index,
       });
@@ -142,7 +172,7 @@ export default function CRMPage() {
     }
   };
 
-  const handleCreateDeal = async (e: React.FormEvent) => {
+  const handleCreateDeal = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.client_name.trim()) return;
@@ -152,18 +182,19 @@ export default function CRMPage() {
       await api.post('/api/crm/deals', {
         client_name: formData.client_name,
         client_email: formData.client_email,
+        client_phone: formData.client_phone,
       });
       setShowModal(false);
-      setFormData({ client_name: '', client_email: '' });
+      setFormData({ client_name: '', client_email: '', client_phone: '' });
       loadData();
     } catch (error) {
       console.error('Erro ao criar deal:', error);
     } finally {
       setSaving(false);
     }
-  };
+  }, [formData, loadData]);
 
-  const handleOpenColumnModal = (column?: ColumnConfig) => {
+  const handleOpenColumnModal = useCallback((column?: ColumnConfig) => {
     if (column) {
       setEditingColumn(column);
       setColumnFormData({ title: column.title });
@@ -172,9 +203,9 @@ export default function CRMPage() {
       setColumnFormData({ title: '' });
     }
     setShowColumnModal(true);
-  };
+  }, []);
 
-  const handleSaveColumn = async (e: React.FormEvent) => {
+  const handleSaveColumn = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!columnFormData.title.trim()) return;
@@ -201,9 +232,9 @@ export default function CRMPage() {
     } finally {
       setSaving(false);
     }
-  };
+  }, [columnFormData.title, editingColumn, loadData]);
 
-  const handleDeleteColumn = async (column: ColumnConfig) => {
+  const handleDeleteColumn = useCallback(async (column: ColumnConfig) => {
     if (columns.length <= 1) {
       alert('Você precisa ter pelo menos uma coluna.');
       return;
@@ -223,7 +254,45 @@ export default function CRMPage() {
     } catch (error) {
       console.error('Erro ao excluir coluna:', error);
     }
-  };
+  }, [columns, loadData]);
+
+  const reloadDeals = useCallback(async () => {
+    const colsConfig = await fetchColumns();
+    await fetchDeals(colsConfig);
+  }, [fetchColumns, fetchDeals]);
+
+  const handleCardClick = useCallback(async (deal: Deal) => {
+    if (!deal.deal_id && deal.client_id) {
+      try {
+        const res = await api.post('/api/crm/deals/ensure', { client_id: deal.client_id });
+        const updatedDeal = { ...deal, deal_id: res.data.deal_id };
+        setSelectedDeal(updatedDeal);
+        setShowDealModal(true);
+
+        // Atualiza o deal na lista local para não precisar de reload
+        setColumns((prev) =>
+          prev.map((col) => ({
+            ...col,
+            deals: col.deals.map((d) =>
+              d.client_id === deal.client_id ? { ...d, deal_id: res.data.deal_id } : d
+            ),
+          }))
+        );
+      } catch (err) {
+        console.error('Erro ao criar deal:', err);
+        alert('Erro ao abrir detalhes do cliente.');
+      }
+    } else {
+      setSelectedDeal(deal);
+      setShowDealModal(true);
+    }
+  }, []);
+
+  const toggleLabelFilter = useCallback((labelName: string) => {
+    setSelectedLabels((prev) =>
+      prev.includes(labelName) ? prev.filter((l) => l !== labelName) : [...prev, labelName]
+    );
+  }, []);
 
   if (loading) {
     return (
@@ -237,37 +306,173 @@ export default function CRMPage() {
     );
   }
 
-  const reloadDeals = async () => {
-    const colsConfig = await fetchColumns();
-    await fetchDeals(colsConfig);
-  };
+
 
   return (
     <Container
       fluid
       className="mt-4 d-flex flex-column"
-      style={{ height: 'calc(102.1vh - 100px)' }}
+      style={{ height: 'calc(102.1vh - 100px)', scrollbarGutter: 'stable' }}
     >
       <div className="d-flex justify-content-between align-items-center mb-4 mt-4">
         <h3 className="mb-0 fw-bold">CRM Vendas</h3>
       </div>
 
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <div className="d-flex align-items-center gap-2">
-          <Form.Control
-            className="input-foco-azul"
-            type="text"
-            placeholder="Pesquisar cliente"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ width: '250px', borderRadius: '4px' }}
-          />
-          <Button className="save-button" onClick={() => setShowModal(true)}>
-            Novo cliente
-          </Button>
-          <Button className="save-button" onClick={() => handleOpenColumnModal()}>
-            Criar coluna
-          </Button>
+      <div className="d-flex align-items-center gap-3 mb-4">
+        <Form.Control
+          className="input-foco-azul"
+          type="text"
+          placeholder="Pesquisar cliente"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={{ width: '350px', borderRadius: '4px' }}
+        />
+
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 24,
+            minWidth: 'fit-content',
+            backgroundColor: '#1868db',
+            border: 'none',
+            borderRadius: 4,
+            padding: '0 24px',
+            height: 48,
+          }}
+        >
+          <div
+            title="Novo cliente"
+            onClick={() => setShowModal(true)}
+            onMouseEnter={() => setHoveredIcon('new-client')}
+            onMouseLeave={() => setHoveredIcon(null)}
+            style={{
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              padding: 7,
+              borderRadius: '50%',
+              backgroundColor: hoveredIcon === 'new-client' ? 'rgba(255,255,255,0.25)' : 'transparent',
+              transition: 'background-color 0.2s ease',
+            }}
+          >
+            <img src="/assets/icons/glass/client-plus.svg" alt="Novo cliente" width={21} height={21} />
+          </div>
+
+          <div
+            title="Criar coluna"
+            onClick={() => handleOpenColumnModal()}
+            onMouseEnter={() => setHoveredIcon('create-column')}
+            onMouseLeave={() => setHoveredIcon(null)}
+            style={{
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              padding: 7,
+              borderRadius: '50%',
+              backgroundColor: hoveredIcon === 'create-column' ? 'rgba(255,255,255,0.35)' : 'transparent',
+              transition: 'background-color 0.2s ease',
+            }}
+          >
+            <img src="/assets/icons/glass/white-plus.svg" alt="Criar coluna" width={21} height={21} />
+          </div>
+
+          <Dropdown show={showFilterPanel} onToggle={(isOpen) => setShowFilterPanel(isOpen)}>
+            <Dropdown.Toggle
+              as="div"
+              title="Filtrar cartões"
+              onMouseEnter={() => setHoveredIcon('filter')}
+              onMouseLeave={() => setHoveredIcon(null)}
+              style={{
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                padding: 7,
+                borderRadius: '50%',
+                backgroundColor: hoveredIcon === 'filter' ? 'rgba(255,255,255,0.25)' : 'transparent',
+                transition: 'background-color 0.2s ease',
+              }}
+            >
+              <img src="/assets/icons/glass/filers.svg" alt="Filtrar" width={21} height={21} />
+            </Dropdown.Toggle>
+
+            <Dropdown.Menu
+              style={{
+                backgroundColor: '#ffffff',
+                border: '1px solid #dee2e6',
+                borderRadius: 10,
+                padding: '16px',
+                minWidth: '320px',
+                maxHeight: '400px',
+                overflowY: 'auto',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+                marginTop: 8,
+              }}
+            >
+              <h5 style={{ fontSize: '1rem', fontWeight: 600, color: '#1c252e', textAlign: 'center', marginBottom: 20 }}>
+                Filtro
+              </h5>
+
+              <div style={{ marginBottom: 12 }}>
+                <h6 style={{ fontSize: '0.85rem', color: '#6c757d', marginBottom: 12 }}>
+                  Etiquetas
+                </h6>
+                {labels.length === 0 ? (
+                  <p style={{ fontSize: '0.875rem', color: '#6c757d', margin: 0 }}>Nenhuma etiqueta disponível</p>
+                ) : (
+                  labels.map((label) => {
+                    const isSelected = selectedLabels.includes(label.name);
+                    return (
+                      <div
+                        key={label.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          marginBottom: 8,
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            toggleLabelFilter(label.name);
+                          }}
+                          style={{
+                            marginRight: 8,
+                            width: 15,
+                            height: 15,
+                            cursor: 'pointer',
+                          }}
+                        />
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleLabelFilter(label.name);
+                          }}
+                          style={{
+                            flex: 1,
+                            height: 36,
+                            backgroundColor: label.color,
+                            color: label.text_color,
+                            borderRadius: 4,
+                            padding: '6px 12px',
+                            fontSize: '0.875rem',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                          }}
+                        >
+                          {label.name}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </Dropdown.Menu>
+          </Dropdown>
         </div>
       </div>
 
@@ -279,10 +484,8 @@ export default function CRMPage() {
               column={column}
               onRename={(col) => handleOpenColumnModal(col)}
               onDelete={(col) => handleDeleteColumn(col)}
-              onCardClick={(deal) => {
-                setSelectedDeal(deal);
-                setShowDealModal(true);
-              }}
+              onCardClick={handleCardClick}
+              labels={labels}
             />
           ))}
         </Row>
@@ -293,6 +496,8 @@ export default function CRMPage() {
         onHide={() => setShowDealModal(false)}
         deal={selectedDeal}
         onLabelsUpdated={reloadDeals}
+        labels={labels}
+        onLabelsChanged={() => { fetchLabels(); reloadDeals(); }}
       />
 
       <NewClientModal

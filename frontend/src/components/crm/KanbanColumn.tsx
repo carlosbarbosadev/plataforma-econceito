@@ -3,24 +3,24 @@ import { Droppable } from '@hello-pangea/dnd';
 import { Col, Badge, Dropdown } from 'react-bootstrap';
 
 import KanbanCard from './KanbanCard';
-import { Column, Deal } from '../../types/crm';
+import { Column, Deal, Label } from '../../types/crm';
 
 interface KanbanColumnProps {
   column: Column;
   onRename: (col: Column) => void;
   onDelete: (col: Column) => void;
   onCardClick: (deal: Deal) => void;
+  labels: Label[];
 }
 
-const KanbanColumn: React.FC<KanbanColumnProps> = ({ column, onRename, onDelete, onCardClick }) => (
+const KanbanColumn: React.FC<KanbanColumnProps> = ({ column, onRename, onDelete, onCardClick, labels }) => (
   <Col style={{ minWidth: '300px', maxWidth: '300px' }}>
     <Droppable droppableId={column.title}>
       {(provided, snapshot) => (
         <>
           <div
-            className={`p-3 rounded-top d-flex align-items-center justify-content-between column-header${
-              snapshot.isDraggingOver ? ' kanban-col-hover' : ''
-            }`}
+            className={`p-3 rounded-top d-flex align-items-center justify-content-between column-header${snapshot.isDraggingOver ? ' kanban-col-hover' : ''
+              }`}
             style={{
               backgroundColor: snapshot.isDraggingOver ? '#eaeaee' : '#f5f5f6',
               color: '#424242',
@@ -69,6 +69,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({ column, onRename, onDelete,
                 deal={deal}
                 index={index}
                 onClick={onCardClick}
+                labels={labels}
               />
             ))}
             {provided.placeholder}
@@ -79,4 +80,4 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({ column, onRename, onDelete,
   </Col>
 );
 
-export default KanbanColumn;
+export default React.memo(KanbanColumn);

@@ -22,7 +22,7 @@ export default function ColumnModal({
   return (
     <Modal show={show} onHide={onHide} dialogClassName="meu-modal-custom4" centered>
       <Modal.Header closeButton>
-        <Modal.Title>{editingColumn ? 'Edit Column' : 'Criar coluna'}</Modal.Title>
+        <Modal.Title>{editingColumn ? 'Editar coluna' : 'Criar coluna'}</Modal.Title>
       </Modal.Header>
       <Form onSubmit={onSubmit}>
         <Modal.Body>

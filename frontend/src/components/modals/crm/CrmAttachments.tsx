@@ -92,7 +92,8 @@ const CrmAttachments = forwardRef<CrmAttachmentsRef, CrmAttachmentsProps>(
 
     const handleOpenFile = (file: Attachment) => {
       const baseURL = api.defaults.baseURL || 'http://localhost:3000';
-      const fileUrl = `${baseURL}/api/crm/attachments/${file.id}/download`;
+      const token = localStorage.getItem('authToken');
+      const fileUrl = `${baseURL}/api/crm/attachments/${file.id}/download?token=${token}`;
 
       const isImage = file.file_type && file.file_type.startsWith('image/');
       const isPdf = file.file_type === 'application/pdf';
@@ -171,7 +172,7 @@ const CrmAttachments = forwardRef<CrmAttachmentsRef, CrmAttachmentsProps>(
                   >
                     {file.file_type && file.file_type.startsWith('image/') ? (
                       <img
-                        src={`${api.defaults.baseURL || 'http://localhost:3000'}/api/crm/attachments/${file.id}/download`}
+                        src={`${api.defaults.baseURL || 'http://localhost:3000'}/api/crm/attachments/${file.id}/download?token=${localStorage.getItem('authToken')}`}
                         alt="Preview"
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       />

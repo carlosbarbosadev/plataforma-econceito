@@ -4,7 +4,7 @@ import { Modal, Button, Spinner } from 'react-bootstrap';
 import CrmComments from './CrmComments';
 import api from '../../../services/api';
 import LabelsPopover from './LabelsPopover';
-import { Deal, LABELS } from '../../../types/crm';
+import { Deal, Label } from '../../../types/crm';
 import CrmAttachments, { CrmAttachmentsRef } from './CrmAttachments';
 
 interface ClientDetailsModalProps {
@@ -12,6 +12,8 @@ interface ClientDetailsModalProps {
   onHide: () => void;
   deal: Deal | null;
   onLabelsUpdated?: () => void;
+  labels: Label[];
+  onLabelsChanged: () => void;
 }
 
 export default function ClientDetailsModal({
@@ -19,6 +21,8 @@ export default function ClientDetailsModal({
   onHide,
   deal,
   onLabelsUpdated,
+  labels,
+  onLabelsChanged,
 }: ClientDetailsModalProps) {
   const [showLabelsPopover, setShowLabelsPopover] = useState(false);
   const [selectedLabels, setSelectedLabels] = useState<string[]>(deal?.labels || []);
@@ -38,10 +42,10 @@ export default function ClientDetailsModal({
   }, [deal, show]);
   const etiquetasBtnRef = useRef<HTMLButtonElement>(null);
 
-  async function updateLabelsOnServer(labels: string[]) {
+  async function updateLabelsOnServer(updatedLabels: string[]) {
     if (!deal?.deal_id) return;
     try {
-      await api.put(`/api/crm/deals/${deal.deal_id}/labels`, { labels });
+      await api.put(`/api/crm/deals/${deal.deal_id}/labels`, { labels: updatedLabels });
 
       if (typeof onLabelsUpdated === 'function') {
         onLabelsUpdated();
@@ -92,7 +96,7 @@ export default function ClientDetailsModal({
   const getWhatsappUrl = (phone: string) => {
     let cleanPhone = phone.replace(/\D/g, '');
 
-    if (cleanPhone.length >= 110 && cleanPhone.length <= 11) {
+    if (cleanPhone.length >= 10 && cleanPhone.length <= 11) {
       cleanPhone = `55${cleanPhone}`;
     }
 
@@ -119,10 +123,24 @@ export default function ClientDetailsModal({
     );
   };
 
+  const handleDeleteDeal = async () => {
+    if (!deal?.deal_id) return;
+    if (!window.confirm(`Deseja excluir o deal de "${deal.client_name}"?`)) return;
+
+    try {
+      await api.delete(`/api/crm/deals/${deal.deal_id}`);
+      onHide();
+      if (onLabelsUpdated) onLabelsUpdated();
+    } catch (err) {
+      console.error('Erro ao excluir deal:', err);
+      alert('Erro ao excluir deal.');
+    }
+  };
+
   return (
-    <Modal show={show} onHide={onHide} dialogClassName="meu-modal-custom5">
+    <Modal show={show} onHide={onHide} dialogClassName="meu-modal-custom5" enforceFocus={false}>
       <Modal.Header closeButton>
-        <Modal.Title>
+        <Modal.Title style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           {deal?.client_phone && (
             <button
               onClick={() => handleOpenWhatsapp(deal.client_phone)}
@@ -142,6 +160,27 @@ export default function ClientDetailsModal({
               onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
             >
               <img src="/assets/icons/glass/whatsapp.svg" alt="WhatsApp" width={26} height={26} />
+            </button>
+          )}
+          {deal && !deal.client_id && (
+            <button
+              onClick={handleDeleteDeal}
+              title="Excluir deal"
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: '6px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '50%',
+                transition: 'background 0.2s',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = '#f0f0f0')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
+            >
+              <img src="/assets/icons/glass/circle-x-2.svg" alt="Excluir" width={27} height={27} />
             </button>
           )}
         </Modal.Title>
@@ -239,6 +278,8 @@ export default function ClientDetailsModal({
                   onHide={() => setShowLabelsPopover(false)}
                   selected={selectedLabels}
                   onSelect={handleSelectLabel}
+                  labels={labels}
+                  onLabelsChanged={onLabelsChanged}
                 />
               </div>
 
@@ -256,7 +297,7 @@ export default function ClientDetailsModal({
                   </div>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     {selectedLabels.map((label) => {
-                      const labelData = LABELS.find((l) => l.name === label);
+                      const labelData = labels.find((l: Label) => l.name === label);
                       return (
                         <div
                           key={label}
@@ -271,7 +312,7 @@ export default function ClientDetailsModal({
                         >
                           <span
                             style={{
-                              color: labelData?.textColor || '#505258',
+                              color: labelData?.text_color || '#505258',
                               fontWeight: 500,
                               fontSize: '0.9rem',
                             }}
@@ -312,7 +353,7 @@ export default function ClientDetailsModal({
                 />
 
                 {showDescriptionActions && (
-                  <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
                     <Button
                       className="cancel-button"
                       onClick={() => {
@@ -340,6 +381,7 @@ export default function ClientDetailsModal({
                 onUpdate={onLabelsUpdated}
               />
             </div>
+
             <div style={{ width: 1, background: '#e0e0e0', margin: '0 16px' }} />
             <CrmComments dealId={deal.deal_id} onUpdate={onLabelsUpdated} />
           </div>
