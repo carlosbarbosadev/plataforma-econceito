@@ -25,376 +25,10 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-router.get('/deals/:id/attachments', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const result = await db.query(
-      'SELECT * FROM crm_attachments WHERE deal_id = $1 ORDER BY created_at DESC',
-      [id]
-    );
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Erro ao buscar anexos:', error);
-    res.status(500).json({ mensagem: 'Erro ao buscar anexos.' });
-  }
-});
-
-router.post('/deals/:id/attachments', upload.single('file'), async (req, res) => {
-  try {
-    const { id } = req.params;
-    const file = req.file;
-
-    if (!file) {
-      return res.status(400).json({ mensagem: 'Nenhum arquivo enviado.' });
-    }
-
-    const result = await db.query(
-      `INSERT INTO crm_attachments (deal_id, file_name, file_path, file_type, file_size)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING *`,
-      [id, file.originalname, file.path, file.mimetype, file.size]
-    );
-
-    res.status(201).json(result.rows[0]);
-  } catch (error) {
-    console.error('Erro ao salvar anexo:', error);
-    res.status(500).json({ mensagem: 'Erro ao salvar anexo.' });
-  }
-});
-
-router.delete('/attachments/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const fileResult = await db.query('SELECT * FROM crm_attachments WHERE id = $1', [id]);
-
-    if (fileResult.rows.length === 0) {
-      return res.status(404).json({ mensagem: 'Anexo não encontrado.' });
-    }
-
-    const file = fileResult.rows[0];
-
-    await db.query('DELETE FROM crm_attachments WHERE id = $1', [id]);
-
-    try {
-      if (fs.existsSync(file.file_path)) {
-        fs.unlinkSync(file.file_path);
-      }
-    } catch (err) {
-      console.error('Erro ao apagar arquivo físico:', err);
-    }
-
-    res.json({ mensagem: 'Anexo excluído.' });
-  } catch (error) {
-    console.error('Erro ao excluir anexo:', error);
-    res.status(500).json({ mensagem: 'Erro ao excluir anexo.' });
-  }
-});
-
-router.get('/attachments/:id/download', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const result = await db.query('SELECT * FROM crm_attachments WHERE id = $1', [id]);
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ mensagem: 'Anexo não encontrado.' });
-    }
-
-    const file = result.rows[0];
-
-    if (!fs.existsSync(file.file_path)) {
-      return res.status(404).json({ mensagem: 'Arquivo físico não encontrado.' });
-    }
-
-    if (file.file_type) {
-      res.setHeader('Content-Type', file.file_type);
-    }
-
-    res.setHeader('Content-Disposition', `inline; filename="${file.file_name}"`);
-
-    res.sendFile(path.resolve(file.file_path));
-
-  } catch (error) {
-    console.error('Erro ao baixar anexo:', error);
-    res.status(500).json({ mensagem: 'Erro ao baixar anexo.' });
-  }
-});
-
-router.post('/deals/:id/comments', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { comment } = req.body;
-    if (!comment || typeof comment !== 'string' || !comment.trim()) {
-      return res.status(400).json({ mensagem: 'Comentário é obrigatório.' });
-    }
-    const result = await db.query(
-      `INSERT INTO crm_comments (deal_id, comment, created_at, updated_at) VALUES ($1, $2, NOW(), NOW()) RETURNING id, deal_id, comment, created_at, updated_at`,
-      [id, comment.trim()]
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (error) {
-    console.error('Erro ao adicionar comentário ao deal:', error);
-    res.status(500).json({ mensagem: 'Erro ao adicionar comentário.' });
-  }
-});
-
-router.get('/deals/:id/comments', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const result = await db.query(
-      `SELECT id, deal_id, comment, created_at, updated_at FROM crm_comments WHERE deal_id = $1 ORDER BY created_at DESC`,
-      [id]
-    );
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Erro ao buscar comentários do deal:', error);
-    res.status(500).json({ mensagem: 'Erro ao buscar comentários.' });
-  }
-});
-
-router.delete('/comments/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const result = await db.query(
-      'DELETE FROM crm_comments WHERE id = $1 RETURNING id',
-      [id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ mensagem: 'Comentário não encontrado.' });
-    }
-
-    res.json({ mensagem: 'Comentário excluído com sucesso.' });
-  } catch (error) {
-    console.error('Erro ao excluir comentário:', error);
-    res.status(500).json({ mensagem: 'Erro ao excluir comentário.' });
-  }
-});
-
-
-router.put('/deals/:id/labels', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { labels } = req.body;
-    if (!Array.isArray(labels)) {
-      return res.status(400).json({ mensagem: 'Labels deve ser um array.' });
-    }
-    const result = await db.query(
-      `UPDATE crm_deals SET labels = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
-      [JSON.stringify(labels), id]
-    );
-    if (result.rows.length === 0) {
-      return res.status(404).json({ mensagem: 'Deal não encontrado.' });
-    }
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Erro ao atualizar etiquetas do deal:', error);
-    res.status(500).json({ mensagem: 'Erro ao atualizar etiquetas.' });
-  }
-});
-
-
 router.use(autenticarToken);
 router.use(checkPermission('CRM'));
 
-router.get('/deals', async (req, res) => {
-  try {
-    const idVendedorBling = req.usuario.id_vendedor_bling;
-    const tipoUsuario = req.usuario.tipo;
-
-    const firstColResult = await db.query(
-      `SELECT title FROM crm_columns WHERE user_id = $1 ORDER BY position ASC LIMIT 1`,
-      [req.usuario.id]
-    );
-    const defaultColumn = firstColResult.rows.length > 0 ? firstColResult.rows[0].title : 'Novos Leads';
-
-    let query;
-    let params;
-
-    const orderBy = `ORDER BY column_status, position ASC, c.nome ASC`;
-
-    if (tipoUsuario === 'admin') {
-      query = `
-        SELECT 
-          d.id AS deal_id,
-          c.id AS client_id,
-          c.nome AS client_name,
-          c.email AS client_email,
-          c.fone AS client_phone,
-          COALESCE(d.column_status, $1) AS column_status,
-          COALESCE(d.position, 0) AS position, -- Mantemos 0 padrão
-          d.labels,
-          d.description,
-          (SELECT COUNT(*)::int FROM crm_attachments WHERE deal_id = d.id) AS total_attachments,
-          (SELECT COUNT(*)::int FROM crm_comments WHERE deal_id = d.id) AS total_comments,
-          c.data_cadastro AS created_at
-        FROM cache_clientes c
-        LEFT JOIN crm_deals d ON d.client_id = c.id
-        ${orderBy}
-      `;
-      params = [defaultColumn];
-    } else {
-      query = `
-        SELECT 
-          d.id AS deal_id,
-          c.id AS client_id,
-          c.nome AS client_name,
-          c.email AS client_email,
-          c.fone AS client_phone,
-          COALESCE(d.column_status, $1) AS column_status,
-          COALESCE(d.position, 0) AS position, -- Mantemos 0 padrão
-          d.labels,
-          d.description,
-          (SELECT COUNT(*)::int FROM crm_attachments WHERE deal_id = d.id) AS total_attachments,
-          (SELECT COUNT(*)::int FROM crm_comments WHERE deal_id = d.id) AS total_comments,
-          c.data_cadastro AS created_at
-        FROM cache_clientes c
-        LEFT JOIN crm_deals d ON d.client_id = c.id
-        WHERE c.vendedor_id = $2
-        ${orderBy}
-      `;
-      params = [defaultColumn, idVendedorBling];
-    }
-
-    const result = await db.query(query, params);
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Erro ao listar deals:', error);
-    res.status(500).json({ mensagem: 'Erro ao buscar oportunidades.' });
-  }
-});
-
-router.post('/deals', async (req, res) => {
-  try {
-    const { client_name, client_email } = req.body;
-
-    if (!client_name) {
-      return res.status(400).json({ mensagem: 'O nome do cliente é obrigatório.' });
-    }
-
-    const result = await db.query(
-      `INSERT INTO crm_deals (user_id, client_name, client_email, column_status, position)
-       VALUES ($1, $2, $3, 'Novos Leads', 0)
-       RETURNING *`,
-      [req.usuario.id, client_name, client_email || '']
-    );
-
-    res.status(201).json(result.rows[0]);
-  } catch (error) {
-    console.error('Erro ao criar deal:', error);
-    res.status(500).json({ mensagem: 'Erro ao criar deal.' });
-  }
-});
-
-router.put('/deals/:id/move', async (req, res) => {
-  const { id } = req.params;
-  const { column_status, position: newPosition } = req.body;
-
-  if (!column_status || newPosition === undefined) {
-    return res.status(400).json({ mensagem: 'Dados incompletos.' });
-  }
-
-  const client = await db.pool.connect();
-
-  try {
-    await client.query('BEGIN');
-
-    const currentRes = await client.query(
-      'SELECT position, column_status FROM crm_deals WHERE client_id = $1',
-      [id]
-    );
-
-    if (currentRes.rows.length === 0) {
-      await client.query(
-        `UPDATE crm_deals 
-         SET position = position + 1 
-         WHERE column_status = $1 
-         AND position >= $2`,
-        [column_status, newPosition]
-      );
-
-      const insertRes = await client.query(
-        `INSERT INTO crm_deals (client_id, column_status, position, user_id, updated_at)
-         VALUES ($1, $2, $3, $4, NOW())
-         RETURNING *`,
-        [id, column_status, newPosition, req.usuario.id]
-      );
-
-      await client.query('COMMIT');
-      return res.json(insertRes.rows[0]);
-    }
-
-    const oldPosition = currentRes.rows[0].position;
-    const oldColumn = currentRes.rows[0].column_status;
-
-    if (oldColumn === column_status) {
-      if (newPosition > oldPosition) {
-        await client.query(
-          `UPDATE crm_deals SET position = position - 1 
-           WHERE column_status = $1 AND position > $2 AND position <= $3`,
-          [column_status, oldPosition, newPosition]
-        );
-      } else if (newPosition < oldPosition) {
-        await client.query(
-          `UPDATE crm_deals SET position = position + 1 
-           WHERE column_status = $1 AND position >= $2 AND position < $3`,
-          [column_status, newPosition, oldPosition]
-        );
-      }
-    } else {
-      await client.query(
-        `UPDATE crm_deals SET position = position - 1 
-         WHERE column_status = $1 AND position > $2`,
-        [oldColumn, oldPosition]
-      );
-      await client.query(
-        `UPDATE crm_deals SET position = position + 1 
-         WHERE column_status = $1 AND position >= $2`,
-        [column_status, newPosition]
-      );
-    }
-
-    const updateRes = await client.query(
-      `UPDATE crm_deals 
-       SET column_status = $1, position = $2, updated_at = NOW()
-       WHERE client_id = $3
-       RETURNING *`,
-      [column_status, newPosition, id]
-    );
-
-    await client.query('COMMIT');
-    res.json(updateRes.rows[0]);
-
-  } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('Erro ao mover card:', error);
-    res.status(500).json({ mensagem: 'Erro ao mover card.' });
-  } finally {
-    client.release();
-  }
-});
-
-router.delete('/deals/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const result = await db.query(
-      'DELETE FROM crm_deals WHERE id = $1 RETURNING *',
-      [id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ mensagem: 'Card não encontrado.' });
-    }
-
-    res.json({ mensagem: 'Card excluído com sucesso.' });
-  } catch (error) {
-    console.error('Erro ao excluir card:', error);
-    res.status(500).json({ mensagem: 'Erro ao excluir card.' });
-  }
-});
+//  colunas
 
 router.get('/columns', async (req, res) => {
   try {
@@ -546,46 +180,139 @@ router.delete('/columns/:id', async (req, res) => {
   }
 });
 
-router.put('/columns/reorder', async (req, res) => {
+//  deals
+
+router.get('/deals', async (req, res) => {
   try {
-    const { columns } = req.body;
+    const idVendedorBling = req.usuario.id_vendedor_bling;
+    const tipoUsuario = req.usuario.tipo;
+    const userId = req.usuario.id;
 
-    if (!columns || !Array.isArray(columns)) {
-      return res.status(400).json({ mensagem: 'Dados inválidos.' });
+    const firstColResult = await db.query(
+      `SELECT title FROM crm_columns WHERE user_id = $1 ORDER BY position ASC LIMIT 1`,
+      [userId]
+    );
+    const defaultColumn = firstColResult.rows.length > 0 ? firstColResult.rows[0].title : 'Novos Leads';
+
+    let query;
+    let params;
+
+    if (tipoUsuario === 'admin') {
+      query = `
+        SELECT 
+          d.id AS deal_id,
+          c.id AS client_id,
+          c.nome AS client_name,
+          c.email AS client_email,
+          COALESCE(c.celular, c.fone) AS client_phone,
+          COALESCE(d.column_status, $1) AS column_status,
+          COALESCE(d.position, 0) AS position,
+          d.labels,
+          d.description,
+          (SELECT COUNT(*)::int FROM crm_attachments WHERE deal_id = d.id) AS total_attachments,
+          (SELECT COUNT(*)::int FROM crm_comments WHERE deal_id = d.id) AS total_comments,
+          c.data_cadastro AS created_at
+        FROM cache_clientes c
+        LEFT JOIN crm_deals d ON d.client_id = c.id
+
+        UNION ALL
+
+        SELECT
+          d.id AS deal_id,
+          NULL AS client_id,
+          d.client_name AS client_name,
+          d.client_email AS client_email,
+          d.client_phone AS client_phone,
+          d.column_status,
+          COALESCE(d.position, 0) AS position,
+          d.labels,
+          d.description,
+          (SELECT COUNT(*)::int FROM crm_attachments WHERE deal_id = d.id) AS total_attachments,
+          (SELECT COUNT(*)::int FROM crm_comments WHERE deal_id = d.id) AS total_comments,
+          d.created_at
+        FROM crm_deals d
+        WHERE d.client_id IS NULL
+
+        ORDER BY column_status, position ASC, client_name ASC
+      `;
+      params = [defaultColumn];
+    } else {
+      query = `
+        SELECT 
+          d.id AS deal_id,
+          c.id AS client_id,
+          c.nome AS client_name,
+          c.email AS client_email,
+          COALESCE(c.celular, c.fone) AS client_phone,
+          COALESCE(d.column_status, $1) AS column_status,
+          COALESCE(d.position, 0) AS position,
+          d.labels,
+          d.description,
+          (SELECT COUNT(*)::int FROM crm_attachments WHERE deal_id = d.id) AS total_attachments,
+          (SELECT COUNT(*)::int FROM crm_comments WHERE deal_id = d.id) AS total_comments,
+          c.data_cadastro AS created_at
+        FROM cache_clientes c
+        LEFT JOIN crm_deals d ON d.client_id = c.id
+        WHERE c.vendedor_id = $2
+
+        UNION ALL
+
+        SELECT
+          d.id AS deal_id,
+          NULL AS client_id,
+          d.client_name AS client_name,
+          d.client_email AS client_email,
+          d.client_phone AS client_phone,
+          d.column_status,
+          COALESCE(d.position, 0) AS position,
+          d.labels,
+          d.description,
+          (SELECT COUNT(*)::int FROM crm_attachments WHERE deal_id = d.id) AS total_attachments,
+          (SELECT COUNT(*)::int FROM crm_comments WHERE deal_id = d.id) AS total_comments,
+          d.created_at
+        FROM crm_deals d
+        WHERE d.client_id IS NULL AND d.user_id = $3
+
+        ORDER BY column_status, position ASC, client_name ASC
+      `;
+      params = [defaultColumn, idVendedorBling, userId];
     }
 
-    for (const col of columns) {
-      await db.query(
-        'UPDATE crm_columns SET position = $1 WHERE id = $2 AND user_id = $3',
-        [col.position, col.id, req.usuario.id]
-      );
-    }
-
-    res.json({ mensagem: 'Colunas reordenadas com sucesso.' });
+    const result = await db.query(query, params);
+    res.json(result.rows);
   } catch (error) {
-    console.error('Erro ao reordenar colunas:', error);
-    res.status(500).json({ mensagem: 'Erro ao reordenar colunas.' });
+    console.error('Erro ao listar deals:', error);
+    res.status(500).json({ mensagem: 'Erro ao buscar oportunidades.' });
   }
 });
 
-router.put('/deals/:id/description', async (req, res) => {
+router.post('/deals', async (req, res) => {
   try {
-    const { id } = req.params;
-    const { description } = req.body;
+    const { client_name, client_email, client_phone } = req.body;
 
-    const result = await db.query(
-      `UPDATE crm_deals SET description = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
-      [description, id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ mensagem: 'Deal não encontrado.' });
+    if (!client_name) {
+      return res.status(400).json({ mensagem: 'O nome do cliente é obrigatório.' });
     }
 
-    res.json(result.rows[0]);
+    const userId = req.usuario.id;
+
+    const colResult = await db.query(
+      'SELECT title FROM crm_columns WHERE user_id = $1 ORDER BY position ASC LIMIT 1',
+      [userId]
+    );
+    const defaultColumn = colResult.rows.length > 0 ? colResult.rows[0].title : 'Novos Leads';
+
+    const result = await db.query(
+      `INSERT INTO crm_deals (user_id, client_name, client_email, client_phone, column_status, position, created_at)
+       VALUES ($1, $2, $3, $4, $5, 0, NOW())
+       RETURNING *`,
+      [userId, client_name, client_email || '', client_phone || '', defaultColumn]
+    );
+
+    res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('Erro ao atualizar descrição:', error);
-    res.status(500).json({ mensagem: 'Erro ao atualizar descrição.' });
+    console.error('Erro ao criar deal:', error);
+    res.status(500).json({ mensagem: 'Erro ao criar deal.' });
   }
 });
 
@@ -621,6 +348,443 @@ router.post('/deals/ensure', async (req, res) => {
     res.status(500).json({ error: 'Erro ao criar deal.' });
   } finally {
     client.release();
+  }
+});
+
+router.put('/deals/:id/move', async (req, res) => {
+  const { id } = req.params;
+  const { column_status, position: newPosition } = req.body;
+
+  if (!column_status || newPosition === undefined) {
+    return res.status(400).json({ mensagem: 'Dados incompletos.' });
+  }
+
+  const client = await db.pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const currentRes = await client.query(
+      'SELECT position, column_status FROM crm_deals WHERE client_id = $1 OR (client_id IS NULL AND id = $1)',
+      [id]
+    );
+
+    if (currentRes.rows.length === 0) {
+      await client.query(
+        `UPDATE crm_deals 
+         SET position = position + 1 
+         WHERE column_status = $1 
+         AND position >= $2`,
+        [column_status, newPosition]
+      );
+
+      const insertRes = await client.query(
+        `INSERT INTO crm_deals (client_id, column_status, position, user_id, updated_at)
+         VALUES ($1, $2, $3, $4, NOW())
+         RETURNING *`,
+        [id, column_status, newPosition, req.usuario.id]
+      );
+
+      await client.query('COMMIT');
+      return res.json(insertRes.rows[0]);
+    }
+
+    const oldPosition = currentRes.rows[0].position;
+    const oldColumn = currentRes.rows[0].column_status;
+
+    if (oldColumn === column_status) {
+      if (newPosition > oldPosition) {
+        await client.query(
+          `UPDATE crm_deals SET position = position - 1 
+           WHERE column_status = $1 AND position > $2 AND position <= $3`,
+          [column_status, oldPosition, newPosition]
+        );
+      } else if (newPosition < oldPosition) {
+        await client.query(
+          `UPDATE crm_deals SET position = position + 1 
+           WHERE column_status = $1 AND position >= $2 AND position < $3`,
+          [column_status, newPosition, oldPosition]
+        );
+      }
+    } else {
+      await client.query(
+        `UPDATE crm_deals SET position = position - 1 
+         WHERE column_status = $1 AND position > $2`,
+        [oldColumn, oldPosition]
+      );
+      await client.query(
+        `UPDATE crm_deals SET position = position + 1 
+         WHERE column_status = $1 AND position >= $2`,
+        [column_status, newPosition]
+      );
+    }
+
+    const updateRes = await client.query(
+      `UPDATE crm_deals 
+       SET column_status = $1, position = $2, updated_at = NOW()
+       WHERE client_id = $3 OR (client_id IS NULL AND id = $3)
+       RETURNING *`,
+      [column_status, newPosition, id]
+    );
+
+    await client.query('COMMIT');
+    res.json(updateRes.rows[0]);
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Erro ao mover card:', error);
+    res.status(500).json({ mensagem: 'Erro ao mover card.' });
+  } finally {
+    client.release();
+  }
+});
+
+router.delete('/deals/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const check = await db.query('SELECT client_id FROM crm_deals WHERE id = $1', [id]);
+
+    if (check.rows.length === 0) {
+      return res.status(404).json({ mensagem: 'Card não encontrado.' });
+    }
+
+    if (check.rows[0].client_id !== null) {
+      return res.status(403).json({ mensagem: 'Não é possível excluir um deal vinculado a um cliente.' });
+    }
+
+    const attachments = await db.query('SELECT file_path FROM crm_attachments WHERE deal_id = $1', [id]);
+    for (const att of attachments.rows) {
+      const filePath = path.resolve(att.file_path);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+    await db.query('DELETE FROM crm_attachments WHERE deal_id = $1', [id]);
+
+    await db.query('DELETE FROM crm_comments WHERE deal_id = $1', [id]);
+
+    await db.query('DELETE FROM crm_deals WHERE id = $1', [id]);
+
+    res.json({ mensagem: 'Card excluído com sucesso.' });
+  } catch (error) {
+    console.error('Erro ao excluir card:', error);
+    res.status(500).json({ mensagem: 'Erro ao excluir card.' });
+  }
+});
+
+//  detalhes do deal (etiquetas e descrição)
+
+router.put('/deals/:id/labels', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { labels } = req.body;
+    if (!Array.isArray(labels)) {
+      return res.status(400).json({ mensagem: 'Labels deve ser um array.' });
+    }
+    const result = await db.query(
+      `UPDATE crm_deals SET labels = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
+      [JSON.stringify(labels), id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ mensagem: 'Deal não encontrado.' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Erro ao atualizar etiquetas do deal:', error);
+    res.status(500).json({ mensagem: 'Erro ao atualizar etiquetas.' });
+  }
+});
+
+router.put('/deals/:id/description', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { description } = req.body;
+
+    const result = await db.query(
+      `UPDATE crm_deals SET description = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
+      [description, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ mensagem: 'Deal não encontrado.' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Erro ao atualizar descrição:', error);
+    res.status(500).json({ mensagem: 'Erro ao atualizar descrição.' });
+  }
+});
+
+//  etiquetas (crud)
+
+router.get('/labels', async (req, res) => {
+  try {
+    const userId = req.usuario.id;
+    const result = await db.query(
+      'SELECT * FROM crm_labels WHERE user_id = $1 ORDER BY position ASC',
+      [userId]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Erro ao buscar etiquetas:', error);
+    res.status(500).json({ mensagem: 'Erro ao buscar etiquetas.' });
+  }
+});
+
+router.post('/labels', async (req, res) => {
+  try {
+    const { name, color, text_color } = req.body;
+    const userId = req.usuario.id;
+
+    if (!name || !color || !text_color) {
+      return res.status(400).json({ mensagem: 'Nome, cor e cor do texto são obrigatórios.' });
+    }
+
+    const maxPos = await db.query(
+      'SELECT COALESCE(MAX(position), -1) as max_pos FROM crm_labels WHERE user_id = $1',
+      [userId]
+    );
+
+    const result = await db.query(
+      'INSERT INTO crm_labels (user_id, name, color, text_color, position) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [userId, name, color, text_color, maxPos.rows[0].max_pos + 1]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Erro ao criar etiqueta:', error);
+    res.status(500).json({ mensagem: 'Erro ao criar etiqueta.' });
+  }
+});
+
+router.put('/labels/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, color, text_color } = req.body;
+    const userId = req.usuario.id;
+
+    const oldLabel = await db.query(
+      'SELECT name FROM crm_labels WHERE id = $1 AND user_id = $2',
+      [id, userId]
+    );
+
+    if (oldLabel.rows.length === 0) {
+      return res.status(404).json({ mensagem: 'Etiqueta não encontrada.' });
+    }
+
+    const oldName = oldLabel.rows[0].name;
+
+    const result = await db.query(
+      'UPDATE crm_labels SET name = COALESCE($1, name), color = COALESCE($2, color), text_color = COALESCE($3, text_color) WHERE id = $4 AND user_id = $5 RETURNING *',
+      [name, color, text_color, id, userId]
+    );
+
+    if (name && name !== oldName) {
+      const deals = await db.query(
+        "SELECT id, labels FROM crm_deals WHERE labels IS NOT NULL AND labels::text LIKE $1",
+        [`%${oldName}%`]
+      );
+      for (const deal of deals.rows) {
+        const labels = typeof deal.labels === 'string' ? JSON.parse(deal.labels) : deal.labels;
+        const updated = labels.map((l) => (l === oldName ? name : l));
+        await db.query('UPDATE crm_deals SET labels = $1 WHERE id = $2', [JSON.stringify(updated), deal.id]);
+      }
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Erro ao atualizar etiqueta:', error);
+    res.status(500).json({ mensagem: 'Erro ao atualizar etiqueta.' });
+  }
+});
+
+router.delete('/labels/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.usuario.id;
+
+    const label = await db.query(
+      'SELECT name FROM crm_labels WHERE id = $1 AND user_id = $2',
+      [id, userId]
+    );
+
+    if (label.rows.length === 0) {
+      return res.status(404).json({ mensagem: 'Etiqueta não encontrada.' });
+    }
+
+    const labelName = label.rows[0].name;
+
+    const deals = await db.query(
+      "SELECT id, labels FROM crm_deals WHERE labels IS NOT NULL AND labels::text LIKE $1",
+      [`%${labelName}%`]
+    );
+    for (const deal of deals.rows) {
+      const labels = typeof deal.labels === 'string' ? JSON.parse(deal.labels) : deal.labels;
+      const updated = labels.filter((l) => l !== labelName);
+      await db.query('UPDATE crm_deals SET labels = $1 WHERE id = $2', [JSON.stringify(updated), deal.id]);
+    }
+
+    await db.query('DELETE FROM crm_labels WHERE id = $1 AND user_id = $2', [id, userId]);
+
+    res.json({ mensagem: 'Etiqueta excluída com sucesso.' });
+  } catch (error) {
+    console.error('Erro ao excluir etiqueta:', error);
+    res.status(500).json({ mensagem: 'Erro ao excluir etiqueta.' });
+  }
+});
+
+//  comentários
+
+router.post('/deals/:id/comments', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { comment } = req.body;
+    if (!comment || typeof comment !== 'string' || !comment.trim()) {
+      return res.status(400).json({ mensagem: 'Comentário é obrigatório.' });
+    }
+    const result = await db.query(
+      `INSERT INTO crm_comments (deal_id, comment, created_at, updated_at) VALUES ($1, $2, NOW(), NOW()) RETURNING id, deal_id, comment, created_at, updated_at`,
+      [id, comment.trim()]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Erro ao adicionar comentário ao deal:', error);
+    res.status(500).json({ mensagem: 'Erro ao adicionar comentário.' });
+  }
+});
+
+router.get('/deals/:id/comments', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await db.query(
+      `SELECT id, deal_id, comment, created_at, updated_at FROM crm_comments WHERE deal_id = $1 ORDER BY created_at DESC`,
+      [id]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Erro ao buscar comentários do deal:', error);
+    res.status(500).json({ mensagem: 'Erro ao buscar comentários.' });
+  }
+});
+
+router.delete('/comments/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await db.query(
+      'DELETE FROM crm_comments WHERE id = $1 RETURNING id',
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ mensagem: 'Comentário não encontrado.' });
+    }
+
+    res.json({ mensagem: 'Comentário excluído com sucesso.' });
+  } catch (error) {
+    console.error('Erro ao excluir comentário:', error);
+    res.status(500).json({ mensagem: 'Erro ao excluir comentário.' });
+  }
+});
+
+//  anexos
+
+router.get('/deals/:id/attachments', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await db.query(
+      'SELECT * FROM crm_attachments WHERE deal_id = $1 ORDER BY created_at DESC',
+      [id]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Erro ao buscar anexos:', error);
+    res.status(500).json({ mensagem: 'Erro ao buscar anexos.' });
+  }
+});
+
+router.post('/deals/:id/attachments', upload.single('file'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ mensagem: 'Nenhum arquivo enviado.' });
+    }
+
+    const result = await db.query(
+      `INSERT INTO crm_attachments (deal_id, file_name, file_path, file_type, file_size)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *`,
+      [id, file.originalname, file.path, file.mimetype, file.size]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Erro ao salvar anexo:', error);
+    res.status(500).json({ mensagem: 'Erro ao salvar anexo.' });
+  }
+});
+
+router.delete('/attachments/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const fileResult = await db.query('SELECT * FROM crm_attachments WHERE id = $1', [id]);
+
+    if (fileResult.rows.length === 0) {
+      return res.status(404).json({ mensagem: 'Anexo não encontrado.' });
+    }
+
+    const file = fileResult.rows[0];
+
+    await db.query('DELETE FROM crm_attachments WHERE id = $1', [id]);
+
+    try {
+      if (fs.existsSync(file.file_path)) {
+        fs.unlinkSync(file.file_path);
+      }
+    } catch (err) {
+      console.error('Erro ao apagar arquivo físico:', err);
+    }
+
+    res.json({ mensagem: 'Anexo excluído.' });
+  } catch (error) {
+    console.error('Erro ao excluir anexo:', error);
+    res.status(500).json({ mensagem: 'Erro ao excluir anexo.' });
+  }
+});
+
+router.get('/attachments/:id/download', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await db.query('SELECT * FROM crm_attachments WHERE id = $1', [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ mensagem: 'Anexo não encontrado.' });
+    }
+
+    const file = result.rows[0];
+
+    if (!fs.existsSync(file.file_path)) {
+      return res.status(404).json({ mensagem: 'Arquivo físico não encontrado.' });
+    }
+
+    if (file.file_type) {
+      res.setHeader('Content-Type', file.file_type);
+    }
+
+    res.setHeader('Content-Disposition', `inline; filename="${file.file_name}"`);
+
+    res.sendFile(path.resolve(file.file_path));
+
+  } catch (error) {
+    console.error('Erro ao baixar anexo:', error);
+    res.status(500).json({ mensagem: 'Erro ao baixar anexo.' });
   }
 });
 
