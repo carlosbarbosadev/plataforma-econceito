@@ -681,6 +681,192 @@ router.post('/substituir-produto', autenticarToken, async (req, res) => {
     }
 });
 
+router.post('/adicionar-produto', autenticarToken, async (req, res) => {
+    const { orderId, newProductSku, newQuantity } = req.body;
+
+    console.log(`[checkout] Adicionar produto: Pedido ${orderId}, SKU: ${newProductSku}, Qtd: ${newQuantity}`);
+
+    if (!orderId || !newProductSku || !newQuantity) {
+        return res.status(400).json({ mensagem: 'orderId, newProductSku e newQuantity são obrigatórios' });
+    }
+
+    const client = await db.connect();
+
+    try {
+        await client.query('BEGIN');
+
+        const pedidoQuery = `
+            SELECT dados_completos_json 
+            FROM cache_pedidos 
+            WHERE id = $1
+        `;
+        const { rows: pedidoRows } = await client.query(pedidoQuery, [orderId]);
+
+        if (pedidoRows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ mensagem: 'Pedido não encontrado' });
+        }
+
+        const dadosCompletos = pedidoRows[0].dados_completos_json || {};
+        const itens = dadosCompletos.itens || [];
+
+        const produtoQuery = `
+            SELECT 
+                id, 
+                codigo, 
+                nome, 
+                preco, 
+                gtin,
+                imagem_url
+            FROM cache_produtos 
+            WHERE codigo = $1
+        `;
+        const { rows: produtoRows } = await client.query(produtoQuery, [newProductSku]);
+
+        if (produtoRows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ mensagem: `Produto ${newProductSku} não encontrado no catálogo` });
+        }
+
+        const novoProduto = produtoRows[0];
+
+        const novoItem = {
+            produto: { id: Number(novoProduto.id) },
+            codigo: novoProduto.codigo,
+            descricao: novoProduto.nome,
+            quantidade: Number(newQuantity),
+            valor: parseFloat(novoProduto.preco) || 0,
+            unidade: 'UN'
+        };
+
+        const novosItens = [...itens, novoItem];
+
+        const pedidoParaAtualizar = {
+            ...dadosCompletos,
+            itens: novosItens.map(item => ({
+                produto: { id: item.produto?.id || item.produtoId },
+                codigo: item.codigo,
+                descricao: item.descricao,
+                quantidade: Number(item.quantidade),
+                valor: parseFloat(item.valor),
+                unidade: item.unidade || 'UN'
+            }))
+        };
+
+        delete pedidoParaAtualizar.situacao;
+
+        await blingService.atualizarPedidoNoBling(orderId, pedidoParaAtualizar);
+
+        const pedidoAtualizado = await blingService.fetchDetalhesPedidoVenda(orderId);
+
+        await client.query(`
+            UPDATE cache_pedidos 
+            SET dados_completos_json = $1, updated_at = NOW() 
+            WHERE id = $2
+        `, [pedidoAtualizado, orderId]);
+
+        await client.query('COMMIT');
+
+        try {
+            const mapResult = await db.query(
+                'SELECT pedido_id_concept FROM map_pedidos_concept WHERE pedido_id_conceitofestas = $1',
+                [orderId]
+            );
+
+            if (mapResult.rows.length > 0) {
+                const pedidoIdConcept = mapResult.rows[0].pedido_id_concept;
+                console.log(`[checkout] Sincronizando adição de produto com Concept (pedido ${pedidoIdConcept})`);
+
+                const itensTraduzidos = [];
+                for (const item of pedidoAtualizado.itens || []) {
+                    const sku = item.codigo || item.produto?.codigo;
+                    if (sku) {
+                        const idProdutoConcept = await blingService.buscarIdProdutoPorSku(String(sku).trim(), 'concept');
+                        if (idProdutoConcept) {
+                            itensTraduzidos.push({
+                                produto: { id: idProdutoConcept },
+                                quantidade: Number(item.quantidade),
+                                valor: Number(item.valor),
+                                descricao: item.descricao,
+                                unidade: item.unidade || 'UN',
+                                tipo: 'P'
+                            });
+                        }
+                        await sleep(200);
+                    }
+                }
+
+                let clienteIdConcept = null;
+                const docCliente = pedidoAtualizado.contato?.numeroDocumento;
+                if (docCliente) {
+                    const docLimpo = String(docCliente).replace(/\D/g, '');
+                    const clienteMap = await db.query('SELECT id_concept FROM map_clientes_concept WHERE documento = $1', [docLimpo]);
+                    if (clienteMap.rows.length > 0) {
+                        clienteIdConcept = clienteMap.rows[0].id_concept;
+                    }
+                }
+
+                let vendedorConcept = null;
+                if (pedidoAtualizado.vendedor?.id) {
+                    const idVendedorOrigem = String(pedidoAtualizado.vendedor.id);
+                    if (MAPA_VENDEDORES[idVendedorOrigem]) {
+                        vendedorConcept = { id: Number(MAPA_VENDEDORES[idVendedorOrigem]) };
+                    }
+                }
+
+                const payloadConcept = {
+                    data: pedidoAtualizado.data,
+                    dataSaida: pedidoAtualizado.dataSaida || pedidoAtualizado.data,
+                    ...(clienteIdConcept && { contato: { id: clienteIdConcept } }),
+                    ...(vendedorConcept && { vendedor: vendedorConcept }),
+                    itens: itensTraduzidos,
+                    ...(pedidoAtualizado.desconto && { desconto: pedidoAtualizado.desconto }),
+                };
+
+                if (pedidoAtualizado.parcelas && pedidoAtualizado.parcelas.length > 0) {
+                    payloadConcept.parcelas = pedidoAtualizado.parcelas.map(p => {
+                        const idFormaPgtoOrigem = String(p.formaPagamento?.id || '');
+                        const idFormaPgtoConcept = MAPA_FORMAS_PAGAMENTO[idFormaPgtoOrigem] || ID_FORMA_PAGAMENTO_CONCEPT_PADRAO;
+                        return {
+                            dataVencimento: p.dataVencimento,
+                            valor: parseFloat(p.valor),
+                            formaPagamento: { id: Number(idFormaPgtoConcept) }
+                        };
+                    });
+                }
+
+                await blingService.atualizarPedidoSimples(pedidoIdConcept, payloadConcept, 'concept');
+                console.log(`[checkout] Pedido ${pedidoIdConcept} atualizado na Concept (produto adicionado)`);
+            }
+        } catch (conceptError) {
+            console.error('[checkout] Erro ao sincronizar adição com Concept:', conceptError.message);
+        }
+
+        console.log(`[checkout] Produto adicionado com sucesso: ${newProductSku}`);
+
+        res.json({
+            success: true,
+            message: 'Produto adicionado com sucesso',
+            newProduct: {
+                sku: novoProduto.codigo,
+                name: novoProduto.nome,
+                unitPrice: parseFloat(novoProduto.preco) || 0,
+                quantity: Number(newQuantity)
+            }
+        });
+
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('[checkout] Erro ao adicionar produto:', error.message);
+        if (error.response?.data) {
+            console.error('[checkout] Detalhe do erro Bling:', JSON.stringify(error.response.data, null, 2));
+        }
+        res.status(500).json({ mensagem: `Falha ao adicionar produto: ${error.message}` });
+    } finally {
+        client.release();
+    }
+});
+
 router.post('/saldo-pendente', autenticarToken, async (req, res) => {
     const { orderId } = req.body;
 
