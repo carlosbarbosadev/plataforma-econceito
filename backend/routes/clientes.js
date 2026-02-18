@@ -54,6 +54,7 @@ router.get('/', autenticarToken, async (req, res) => {
             ...cliente,
             numeroDocumento: cliente.documento,
             telefone: cliente.fone,
+            celular: cliente.celular,
             endereco: {
                 geral: {
                     municipio: cliente.cidade
@@ -69,7 +70,7 @@ router.get('/', autenticarToken, async (req, res) => {
         if (!res.headersSent) {
             res.status(500).json({ mensagem: `Falha ao processar requisição de clientes: ${error.message}` });
         }
-    }   
+    }
 });
 
 router.get('/:id', autenticarToken, async (req, res) => {
@@ -93,7 +94,7 @@ router.get('/:id', autenticarToken, async (req, res) => {
         }
 
         const clienteDetalhado = await fetchDetalhesContato(id)
-        
+
         const clienteCompleto = {
             ...clienteDetalhado,
             data_cadastro: clienteDoCache.data_cadastro,
@@ -139,12 +140,13 @@ router.post('/', autenticarToken, async (req, res) => {
         const dataDeCadastro = new Date();
 
         const queryInsertCache = `
-            INSERT INTO cache_clientes (id, nome, tipo_pessoa, documento, email, vendedor_id, fone, cidade, data_cadastro, infocontato, observacoes)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            INSERT INTO cache_clientes (id, nome, tipo_pessoa, documento, email, vendedor_id, fone, celular, cidade, data_cadastro, infocontato, observacoes)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
             ON CONFLICT (id) DO UPDATE SET
                 nome = EXCLUDED.nome, tipo_pessoa = EXCLUDED.tipo_pessoa, documento = EXCLUDED.documento,
-                email = EXCLUDED.email, vendedor_id = EXCLUDED.vendedor_id, fone = EXCLUDED.fone, cidade = EXCLUDED.cidade,
-                data_cadastro = EXCLUDED.data_cadastro, infocontato = EXCLUDED.infocontato, observacoes = EXCLUDED.observacoes, updated_at = NOW()
+                email = EXCLUDED.email, vendedor_id = EXCLUDED.vendedor_id, fone = EXCLUDED.fone, celular = EXCLUDED.celular,
+                cidade = EXCLUDED.cidade, data_cadastro = EXCLUDED.data_cadastro, infocontato = EXCLUDED.infocontato,
+                observacoes = EXCLUDED.observacoes, updated_at = NOW()
         `;
         const params = [
             clienteDetalhado.id,
@@ -154,6 +156,7 @@ router.post('/', autenticarToken, async (req, res) => {
             clienteDetalhado.email,
             clienteDetalhado.vendedor?.id || idVendedorBling,
             clienteDetalhado.telefone || clienteDetalhado.celular || null,
+            clienteDetalhado.celular || null,
             clienteDetalhado.endereco?.geral?.municipio || null,
             dataDeCadastro,
             dadosDoFormulario.infocontato || null,
@@ -195,7 +198,7 @@ router.put('/:id', autenticarToken, async (req, res) => {
             id: idDoCorpo,
             ...payloadParaBling
         } = dadosDoFormulario;
-        
+
         await atualizarClienteBling(id, payloadParaBling);
 
         const dadosDoBling = {
@@ -204,6 +207,7 @@ router.put('/:id', autenticarToken, async (req, res) => {
             documento: payloadParaBling.numeroDocumento,
             email: payloadParaBling.email,
             fone: payloadParaBling.telefone || payloadParaBling.celular || null,
+            celular: payloadParaBling.celular || null,
             cidade: payloadParaBling.endereco?.geral?.municipio || null
         };
 
@@ -215,9 +219,9 @@ router.put('/:id', autenticarToken, async (req, res) => {
         const queryUpdateCache = `
             UPDATE cache_clientes SET
                 nome = $1, tipo_pessoa = $2, documento = $3, email = $4,
-                fone = $5, cidade = $6, infocontato = $7, observacoes = $8,
+                fone = $5, celular = $6, cidade = $7, infocontato = $8, observacoes = $9,
                 updated_at = NOW()
-            WHERE id= $9
+            WHERE id= $10
         `;
 
         const params = [
@@ -226,6 +230,7 @@ router.put('/:id', autenticarToken, async (req, res) => {
             dadosDoBling.documento,
             dadosDoBling.email,
             dadosDoBling.fone,
+            dadosDoBling.celular,
             dadosDoBling.cidade,
             dadosInternos.infocontato,
             dadosInternos.observacoes,
@@ -240,7 +245,7 @@ router.put('/:id', autenticarToken, async (req, res) => {
             infocontato: dadosInternos.infocontato,
             observacoes: dadosInternos.observacoes,
             data_cadastro: data_cadastro
-    };
+        };
 
         res.json(clienteCompleto);
 
@@ -250,7 +255,7 @@ router.put('/:id', autenticarToken, async (req, res) => {
             const formattedError = parseBlingError(error.response.data);
             return res.status(error.response.status).json(formattedError);
         }
-        
+
         console.error(`Falha crítica na rota PUT /api/clientes/${id}:`, error.message);
         if (!res.headersSent) {
             res.status(500).json({ mensagem: `Falha ao atualizar cliente: ${error.message}` });

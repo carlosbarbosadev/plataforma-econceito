@@ -35,15 +35,15 @@ async function sincronizarClientes() {
                     INSERT INTO cache_clientes (
                         id, nome, fantasia, tipo_pessoa, documento, ie_rg,
                         endereco, numero, bairro, cidade, uf, cep,
-                        fone, email, vendedor_id
+                        fone, celular, email, vendedor_id
                     )
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
                     ON CONFLICT (id) DO UPDATE SET
                         nome = EXCLUDED.nome, fantasia = EXCLUDED.fantasia, tipo_pessoa = EXCLUDED.tipo_pessoa,
                         documento = EXCLUDED.documento, ie_rg = EXCLUDED.ie_rg, endereco = EXCLUDED.endereco,
                         numero = EXCLUDED.numero, bairro = EXCLUDED.bairro, cidade = EXCLUDED.cidade,
-                        uf = EXCLUDED.uf, cep = EXCLUDED.cep, fone = EXCLUDED.fone, email = EXCLUDED.email,
-                        vendedor_id = EXCLUDED.vendedor_id, updated_at = NOW()
+                        uf = EXCLUDED.uf, cep = EXCLUDED.cep, fone = EXCLUDED.fone, celular = EXCLUDED.celular,
+                        email = EXCLUDED.email, vendedor_id = EXCLUDED.vendedor_id, updated_at = NOW()
                 `;
 
                 const params = [
@@ -60,6 +60,7 @@ async function sincronizarClientes() {
                     clienteDetalhado.endereco?.geral?.uf || null,
                     clienteDetalhado.endereco?.geral?.cep || null,
                     clienteDetalhado.telefone || clienteDetalhado.celular || null,
+                    clienteDetalhado.celular || null,
                     clienteDetalhado.email || null,
                     clienteDetalhado.vendedor?.id || null
                 ];
