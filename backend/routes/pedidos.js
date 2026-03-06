@@ -714,7 +714,6 @@ router.put('/:id', autenticarToken, async (req, res) => {
                     }
                 }
 
-                // montar payload para Concept
                 const payloadConcept = {
                     data: pedidoDetalhado.data,
                     dataSaida: pedidoDetalhado.dataSaida || pedidoDetalhado.data,
@@ -725,11 +724,24 @@ router.put('/:id', autenticarToken, async (req, res) => {
                     observacoesInternas: pedidoDetalhado.observacoesInternas || undefined,
                 };
 
+                // Buscar transporte atual da Concept para preservar transportadora
+                try {
+                    const pedidoAtualConcept = await blingService.fetchDetalhesPedidoVenda(pedidoIdConcept, 'concept');
+                    if (pedidoAtualConcept.transporte || pedidoDetalhado.transporte) {
+                        payloadConcept.transporte = {
+                            ...(pedidoAtualConcept.transporte || {}),
+                            frete: parseFloat(pedidoDetalhado.transporte?.frete || pedidoAtualConcept.transporte?.frete || 0)
+                        };
+                    }
+                } catch (e) {
+                    console.log(`[pedidos] Não foi possível buscar transporte da Concept: ${e.message}`);
+                }
+
                 // calcular total correto (considerando desconto)
                 const subtotalItens = itensTraduzidos.reduce((acc, item) => acc + (item.valor * item.quantidade), 0);
                 const percentualDesconto = pedidoDetalhado.desconto?.valor || 0;
                 const valorDescontoEmReais = (subtotalItens * percentualDesconto) / 100;
-                const totalFinal = subtotalItens - valorDescontoEmReais;
+                const totalFinal = subtotalItens - valorDescontoEmReais + parseFloat(pedidoDetalhado.transporte?.frete || 0);
 
                 // traduzir parcelas com forma de pagamento Concept e valores recalculados
                 if (pedidoDetalhado.parcelas && pedidoDetalhado.parcelas.length > 0) {

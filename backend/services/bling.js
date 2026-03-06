@@ -307,11 +307,11 @@ async function fetchPedidosVendas(idVendedorParaFiltrar = null) {
     return todosOsPedidos;
 }
 
-async function fetchDetalhesPedidoVenda(idPedido) {
+async function fetchDetalhesPedidoVenda(idPedido, nomeConta = 'conceitofestas') {
     const response = await blingApiCall({
         method: 'get',
         url: `${BLING_API_V3_URL}/pedidos/vendas/${idPedido}`
-    });
+    }, nomeConta);
     return response.data.data;
 }
 
@@ -353,7 +353,7 @@ async function atualizarPedidoNoBling(pedidoId, pedidoEditadoDoFrontend) {
         const subtotal = pedidoEditadoDoFrontend.itens.reduce((acc, item) => acc + (item.valor * item.quantidade), 0);
         const percentualDesconto = pedidoEditadoDoFrontend.desconto?.valor || 0;
         const valorDoDescontoEmReais = (subtotal * percentualDesconto) / 100;
-        const totalFinal = subtotal - valorDoDescontoEmReais;
+        const totalFinal = subtotal - valorDoDescontoEmReais + parseFloat(pedidoEditadoDoFrontend.transporte?.frete || 0);
 
         const itensFormatados = pedidoEditadoDoFrontend.itens.map(item => {
             const itemPayload = {
