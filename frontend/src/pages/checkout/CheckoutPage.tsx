@@ -1,4 +1,5 @@
 import React from 'react';
+import { FiUser } from 'react-icons/fi';
 import { Spinner, Alert } from 'react-bootstrap';
 
 import ScannedList from 'src/components/checkout/ScannedList';
@@ -8,10 +9,11 @@ import BlockingNotification from 'src/components/checkout/BlockingNotification';
 import OrdersBar from '../../components/checkout/OrdersBar';
 import ItemsTable from '../../components/checkout/ItemsTable';
 import ScannerInput from '../../components/checkout/ScannerInput';
+import OperatorSelector from '../../components/checkout/OperatorSelector';
 import { CheckoutProvider, useCheckout } from '../../context/CheckoutContext';
 
 const CheckoutContent: React.FC = () => {
-  const { loading, error } = useCheckout();
+  const { loading, error, selectedOperator, setOperator, clearOperator } = useCheckout();
 
   if (loading) {
     return (
@@ -31,12 +33,53 @@ const CheckoutContent: React.FC = () => {
     );
   }
 
+  if (!selectedOperator) {
+    return (
+      <div className="min-vh-100 bg-light">
+        <OperatorSelector onSelect={setOperator} />
+      </div>
+    );
+  }
+
   return (
     <div className="min-vh-100 bg-light d-flex flex-column mt-5">
       <SavingOverlay />
       <BlockingNotification />
 
       <div className="container-fluid mb-4">
+        <div className="d-flex justify-content-end mb-2">
+          <div
+            className="d-flex align-items-center gap-2"
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: '6px',
+              padding: '12px 20px',
+            }}
+          >
+            <img
+              src="/assets/icons/glass/green-client.svg"
+              alt=""
+              style={{ width: '20px', height: '20px' }}
+            />
+            <span style={{ fontSize: '0.9rem', color: '#1f2a3b', fontWeight: 500 }}>
+              {selectedOperator.nome}
+            </span>
+            <button
+              onClick={clearOperator}
+              className="btn btn-sm"
+              style={{
+                fontSize: '0.75rem',
+                color: '#6c757d',
+                padding: '2px 10px',
+                border: '1px solid #dee2e6',
+                borderRadius: '4px',
+                marginLeft: '4px',
+              }}
+            >
+              Trocar
+            </button>
+          </div>
+        </div>
         <OrdersBar />
       </div>
 

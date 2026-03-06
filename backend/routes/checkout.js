@@ -76,12 +76,12 @@ router.get('/pedidos', autenticarToken, async (req, res) => {
                 cp.status_nome,
                 cp.dados_completos_json
             FROM cache_pedidos AS cp
-            WHERE cp.status_id IN ($1, $2, $3)
+            WHERE cp.status_id IN ($1, $2, $3, $4)
             ORDER BY cp.numero ASC
-            LIMIT 250
+            LIMIT 350
         `;
 
-        const { rows: pedidos } = await db.query(query, [idEmAberto, idCheckoutIncompleto, idPascoa]);
+        const { rows: pedidos } = await db.query(query, [idEmAberto, idCheckoutIncompleto, idPascoa, idSaldoPendente]);
 
         if (pedidos.length === 0) {
             return res.json([]);
@@ -270,7 +270,7 @@ router.get('/pedidos/:id', autenticarToken, async (req, res) => {
 
 
 router.post('/conferir', autenticarToken, async (req, res) => {
-    const { orderId, code, quantity = 1 } = req.body;
+    const { orderId, code, quantity = 1, operadorId } = req.body;
 
     console.log(`Conferência: Pedido ${orderId}, Código ${code}, Qtd ${quantity}`);
 
@@ -316,6 +316,21 @@ router.post('/conferir', autenticarToken, async (req, res) => {
             });
         }
 
+        // Log iniciar_checkout no primeiro scan do pedido
+        const logExiste = await db.query(
+            "SELECT 1 FROM checkout_log WHERE pedido_id = $1 AND acao = 'iniciar_checkout' LIMIT 1",
+            [orderId]
+        );
+        if (logExiste.rows.length === 0) {
+            const itens = dadosCompletos.itens || [];
+            const totalSkus = itens.length;
+            const totalItens = itens.reduce((sum, i) => sum + (Number(i.quantidade) || 0), 0);
+            await db.query(
+                'INSERT INTO checkout_log (pedido_id, operador_id, acao, numero_pedido, total_skus, total_itens) VALUES ($1, $2, $3, (SELECT numero FROM cache_pedidos WHERE id = $4), $5, $6)',
+                [orderId, operadorId || null, 'iniciar_checkout', orderId, totalSkus, totalItens]
+            );
+        }
+
         res.json({
             success: true,
             item: {
@@ -333,7 +348,7 @@ router.post('/conferir', autenticarToken, async (req, res) => {
 });
 
 router.post('/salvar-parcial', autenticarToken, async (req, res) => {
-    const { orderId, items } = req.body;
+    const { orderId, items, operadorId } = req.body;
 
     if (!orderId || !items) return res.status(400).json({ mensagem: 'Dados incompletos' });
 
@@ -354,14 +369,15 @@ router.post('/salvar-parcial', autenticarToken, async (req, res) => {
         for (const item of items) {
             if (item.quantityChecked > 0) {
                 const query = `
-                    INSERT INTO checkout_conferencias (pedido_id, sku, quantidade_conferida, atualizado_em)
-                    VALUES ($1, $2, $3, NOW())
+                    INSERT INTO checkout_conferencias (pedido_id, sku, quantidade_conferida, operador_id, atualizado_em)
+                    VALUES ($1, $2, $3, $4, NOW())
                     ON CONFLICT (pedido_id, sku)
                     DO UPDATE SET
                         quantidade_conferida = EXCLUDED.quantidade_conferida,
+                        operador_id = EXCLUDED.operador_id,
                         atualizado_em = NOW();
                 `;
-                await client.query(query, [orderId, item.sku, item.quantityChecked]);
+                await client.query(query, [orderId, item.sku, item.quantityChecked, operadorId || null]);
             } else {
                 await client.query(
                     "DELETE FROM checkout_conferencias WHERE pedido_id = $1 AND sku = $2",
@@ -372,17 +388,19 @@ router.post('/salvar-parcial', autenticarToken, async (req, res) => {
 
         await client.query('COMMIT');
 
-        try {
-            const statusAtual = await client.query('SELECT status_id FROM cache_pedidos WHERE id = $1', [orderId]);
-            const statusIdAtual = statusAtual.rows.length > 0 ? Number(statusAtual.rows[0].status_id) : null;
+        const totalSkus = items.length;
+        const totalItens = items.reduce((sum, i) => sum + (Number(i.quantityOrdered) || 0), 0);
 
-            if (statusIdAtual !== idCheckoutIncompleto) {
-                await alterarSituacaoPedidoBling(orderId, idCheckoutIncompleto);
-            }
+        await db.query(
+            'INSERT INTO checkout_log (pedido_id, operador_id, acao, numero_pedido, total_skus, total_itens) VALUES ($1, $2, $3, (SELECT numero FROM cache_pedidos WHERE id = $4), $5, $6)',
+            [orderId, operadorId || null, 'salvar_parcial', orderId, totalSkus, totalItens]
+        );
+
+        try {
+            await alterarSituacaoPedidoBling(orderId, idCheckoutIncompleto);
+            console.log(`[checkout] Status do pedido ${orderId} atualizado no Bling para "Checkout Incompleto"`);
         } catch (blingError) {
             console.error(`[checkout] Erro ao atualizar status no Bling (pedido ${orderId}):`, blingError.message);
-            console.error(`[checkout] Detalhes do erro:`, JSON.stringify(blingError.response?.data, null, 2));
-            console.error(`[checkout] Status HTTP:`, blingError.response?.status);
         }
 
         res.json({ success: true, message: 'Progresso salvo com segurança.' });
@@ -397,7 +415,7 @@ router.post('/salvar-parcial', autenticarToken, async (req, res) => {
 });
 
 router.post('/finalizar', autenticarToken, async (req, res) => {
-    const { orderId, items } = req.body;
+    const { orderId, items, operadorId } = req.body;
 
     if (!orderId || !items) return res.status(400).json({ mensagem: 'Dados incompletos' });
 
@@ -421,6 +439,14 @@ router.post('/finalizar', autenticarToken, async (req, res) => {
         );
 
         await client.query('COMMIT');
+
+        const totalSkus = items.length;
+        const totalItens = items.reduce((sum, i) => sum + (Number(i.quantityOrdered) || 0), 0);
+
+        await db.query(
+            'INSERT INTO checkout_log (pedido_id, operador_id, acao, numero_pedido, total_skus, total_itens) VALUES ($1, $2, $3, (SELECT numero FROM cache_pedidos WHERE id = $4), $5, $6)',
+            [orderId, operadorId || null, 'finalizar', orderId, totalSkus, totalItens]
+        );
 
         try {
             await alterarSituacaoPedidoBling(orderId, idCheckoutCompleto);
@@ -636,6 +662,19 @@ router.post('/substituir-produto', autenticarToken, async (req, res) => {
                     ...(pedidoAtualizado.desconto && { desconto: pedidoAtualizado.desconto }),
                 };
 
+                // Buscar transporte atual da Concept para preservar transportadora
+                try {
+                    const pedidoAtualConcept = await blingService.fetchDetalhesPedidoVenda(pedidoIdConcept, 'concept');
+                    if (pedidoAtualConcept.transporte || pedidoAtualizado.transporte) {
+                        payloadConcept.transporte = {
+                            ...(pedidoAtualConcept.transporte || {}),
+                            frete: parseFloat(pedidoAtualizado.transporte?.frete || pedidoAtualConcept.transporte?.frete || 0)
+                        };
+                    }
+                } catch (e) {
+                    console.log(`[checkout] Não foi possível buscar transporte da Concept: ${e.message}`);
+                }
+
                 if (pedidoAtualizado.parcelas && pedidoAtualizado.parcelas.length > 0) {
                     payloadConcept.parcelas = pedidoAtualizado.parcelas.map(p => {
                         const idFormaPgtoOrigem = String(p.formaPagamento?.id || '');
@@ -823,6 +862,19 @@ router.post('/adicionar-produto', autenticarToken, async (req, res) => {
                     ...(pedidoAtualizado.desconto && { desconto: pedidoAtualizado.desconto }),
                 };
 
+                // Buscar transporte atual da Concept para preservar transportadora
+                try {
+                    const pedidoAtualConcept = await blingService.fetchDetalhesPedidoVenda(pedidoIdConcept, 'concept');
+                    if (pedidoAtualConcept.transporte || pedidoAtualizado.transporte) {
+                        payloadConcept.transporte = {
+                            ...(pedidoAtualConcept.transporte || {}),
+                            frete: parseFloat(pedidoAtualizado.transporte?.frete || pedidoAtualConcept.transporte?.frete || 0)
+                        };
+                    }
+                } catch (e) {
+                    console.log(`[checkout] Não foi possível buscar transporte da Concept: ${e.message}`);
+                }
+
                 if (pedidoAtualizado.parcelas && pedidoAtualizado.parcelas.length > 0) {
                     payloadConcept.parcelas = pedidoAtualizado.parcelas.map(p => {
                         const idFormaPgtoOrigem = String(p.formaPagamento?.id || '');
@@ -868,7 +920,7 @@ router.post('/adicionar-produto', autenticarToken, async (req, res) => {
 });
 
 router.post('/saldo-pendente', autenticarToken, async (req, res) => {
-    const { orderId } = req.body;
+    const { orderId, operadorId } = req.body;
 
     console.log(`[checkout] Criando saldo pendente para pedido ${orderId}`);
 
@@ -1185,13 +1237,34 @@ router.post('/saldo-pendente', autenticarToken, async (req, res) => {
                         ...(pedidoAtualizadoDoBling.desconto && { desconto: pedidoAtualizadoDoBling.desconto }),
                     };
 
+                    // Buscar transporte atual da Concept para preservar transportadora
+                    try {
+                        const pedidoAtualConceptSaldo = await blingService.fetchDetalhesPedidoVenda(pedidoIdConcept, 'concept');
+                        if (pedidoAtualConceptSaldo.transporte || pedidoAtualizadoDoBling.transporte) {
+                            payloadOriginalConcept.transporte = {
+                                ...(pedidoAtualConceptSaldo.transporte || {}),
+                                frete: parseFloat(pedidoAtualizadoDoBling.transporte?.frete || pedidoAtualConceptSaldo.transporte?.frete || 0)
+                            };
+                        }
+                    } catch (e) {
+                        console.log(`[checkout] Não foi possível buscar transporte da Concept (saldo): ${e.message}`);
+                    }
+
                     if (pedidoAtualizadoDoBling.parcelas && pedidoAtualizadoDoBling.parcelas.length > 0) {
+                        const subtotalConcept = itensConferidosConceptTraduzidos.reduce((acc, item) => acc + (item.valor * item.quantidade), 0);
+                        const descontoConcept = pedidoAtualizadoDoBling.desconto?.valor || 0;
+                        const descontoReais = (subtotalConcept * descontoConcept) / 100;
+                        const freteConcept = parseFloat(pedidoAtualizadoDoBling.transporte?.frete || 0);
+                        const totalConcept = subtotalConcept - descontoReais + freteConcept;
+                        const numParcelas = pedidoAtualizadoDoBling.parcelas.length;
+                        const valorPorParcela = numParcelas > 0 ? (totalConcept / numParcelas) : totalConcept;
+
                         payloadOriginalConcept.parcelas = pedidoAtualizadoDoBling.parcelas.map(p => {
                             const idFormaPgtoOrigem = String(p.formaPagamento?.id || '');
                             const idFormaPgtoConcept = MAPA_FORMAS_PAGAMENTO[idFormaPgtoOrigem] || ID_FORMA_PAGAMENTO_CONCEPT_PADRAO;
                             return {
                                 dataVencimento: p.dataVencimento,
-                                valor: parseFloat(p.valor),
+                                valor: parseFloat(valorPorParcela.toFixed(2)),
                                 formaPagamento: { id: Number(idFormaPgtoConcept) }
                             };
                         });
@@ -1206,6 +1279,14 @@ router.post('/saldo-pendente', autenticarToken, async (req, res) => {
         }
 
         console.log(`[checkout] Saldo pendente criado com sucesso. Pedido original ${orderId} atualizado.`);
+
+        const totalSkus = itensOriginais.length;
+        const totalItens = itensOriginais.reduce((sum, i) => sum + (Number(i.quantidade) || 0), 0);
+
+        await db.query(
+            'INSERT INTO checkout_log (pedido_id, operador_id, acao, numero_pedido, total_skus, total_itens) VALUES ($1, $2, $3, (SELECT numero FROM cache_pedidos WHERE id = $4), $5, $6)',
+            [orderId, operadorId || null, 'saldo_pendente', orderId, totalSkus, totalItens]
+        );
 
         res.json({
             success: true,
@@ -1227,6 +1308,65 @@ router.post('/saldo-pendente', autenticarToken, async (req, res) => {
         res.status(500).json({ mensagem: `Falha ao criar saldo pendente: ${error.message}` });
     } finally {
         client.release();
+    }
+});
+
+router.get('/operadores', autenticarToken, async (req, res) => {
+    try {
+        const result = await db.query(
+            'SELECT id, nome FROM operadores_checkout WHERE ativo = true ORDER BY nome'
+        );
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Erro ao buscar operadores:', error.message);
+        res.status(500).json({ mensagem: 'Erro ao buscar operadores' });
+    }
+});
+
+router.post('/operadores', autenticarToken, async (req, res) => {
+    const { nome, senha } = req.body;
+    if (!nome || !nome.trim()) return res.status(400).json({ mensagem: 'Nome é obrigatório' });
+    if (!senha || !senha.trim()) return res.status(400).json({ mensagem: 'Senha é obrigatória' });
+
+    try {
+        const result = await db.query(
+            'INSERT INTO operadores_checkout (nome, senha) VALUES ($1, $2) RETURNING id, nome',
+            [nome.trim(), senha.trim()]
+        );
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Erro ao criar operador:', error.message);
+        res.status(500).json({ mensagem: 'Erro ao criar operador' });
+    }
+});
+
+router.post('/operadores/verificar', autenticarToken, async (req, res) => {
+    const { id, senha } = req.body;
+    if (!id || !senha) return res.status(400).json({ mensagem: 'ID e senha são obrigatórios' });
+
+    try {
+        const result = await db.query(
+            'SELECT id, nome FROM operadores_checkout WHERE id = $1 AND senha = $2 AND ativo = true',
+            [id, senha]
+        );
+        if (result.rows.length === 0) {
+            return res.status(401).json({ mensagem: 'Senha incorreta' });
+        }
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Erro ao verificar operador:', error.message);
+        res.status(500).json({ mensagem: 'Erro ao verificar operador' });
+    }
+});
+
+router.delete('/operadores/:id', autenticarToken, async (req, res) => {
+    const { id } = req.params;
+    try {
+        await db.query('UPDATE operadores_checkout SET ativo = false WHERE id = $1', [id]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Erro ao desativar operador:', error.message);
+        res.status(500).json({ mensagem: 'Erro ao desativar operador' });
     }
 });
 

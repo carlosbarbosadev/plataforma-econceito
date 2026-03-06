@@ -4,6 +4,11 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import api from '../services/api';
 import { Order, OrderItem } from '../types/checkout';
 
+export interface Operator {
+  id: number;
+  nome: string;
+}
+
 export type BlockingNotificationType = 'error' | 'warning';
 
 export interface BlockingNotification {
@@ -16,6 +21,7 @@ export interface BlockingNotification {
 interface CheckoutContextData {
   orders: Order[];
   selectedOrder: Order | null;
+  selectedOperator: Operator | null;
   loading: boolean;
   savingMessage: string | null;
   error: string | null;
@@ -29,6 +35,8 @@ interface CheckoutContextData {
     message: string
   ) => void;
   dismissBlockingNotification: () => void;
+  setOperator: (operator: Operator) => void;
+  clearOperator: () => void;
   savePartialOrder: () => Promise<void>;
   finalizeOrder: () => Promise<void>;
   createPendingBalance: () => Promise<void>;
@@ -45,6 +53,7 @@ export const CheckoutProvider = ({ children }: { children: ReactNode }) => {
   const [blockingNotification, setBlockingNotification] = useState<BlockingNotification | null>(
     null
   );
+  const [selectedOperator, setSelectedOperator] = useState<Operator | null>(null);
 
   const showBlockingNotification = (type: BlockingNotificationType, message: string) => {
     setBlockingNotification({
@@ -57,6 +66,16 @@ export const CheckoutProvider = ({ children }: { children: ReactNode }) => {
 
   const dismissBlockingNotification = () => {
     setBlockingNotification(null);
+  };
+
+  const setOperator = (operator: Operator) => {
+    setSelectedOperator(operator);
+  };
+
+  const clearOperator = () => {
+    setSelectedOperator(null);
+    setSelectedOrder(null);
+    fetchOrders();
   };
 
   const fetchOrders = async () => {
@@ -116,6 +135,7 @@ export const CheckoutProvider = ({ children }: { children: ReactNode }) => {
         orderId: selectedOrder.id,
         code,
         quantity: qty,
+        operadorId: selectedOperator?.id || null,
       });
 
       if (response.data.success) {
@@ -183,6 +203,7 @@ export const CheckoutProvider = ({ children }: { children: ReactNode }) => {
       await api.post('/api/checkout/salvar-parcial', {
         orderId: selectedOrder.id,
         items: selectedOrder.items,
+        operadorId: selectedOperator?.id || null,
       });
 
       setSelectedOrder((prev) => (prev ? { ...prev, status: 'Checkout Parcial' } : null));
@@ -205,6 +226,7 @@ export const CheckoutProvider = ({ children }: { children: ReactNode }) => {
       await api.post('/api/checkout/finalizar', {
         orderId: selectedOrder.id,
         items: selectedOrder.items,
+        operadorId: selectedOperator?.id || null,
       });
 
       setOrders((prev) => prev.filter((o) => o.id !== selectedOrder.id));
@@ -228,6 +250,7 @@ export const CheckoutProvider = ({ children }: { children: ReactNode }) => {
 
       const response = await api.post('/api/checkout/saldo-pendente', {
         orderId: selectedOrder.id,
+        operadorId: selectedOperator?.id || null,
       });
 
       if (response.data.success) {
@@ -252,6 +275,7 @@ export const CheckoutProvider = ({ children }: { children: ReactNode }) => {
       value={{
         orders,
         selectedOrder,
+        selectedOperator,
         loading,
         savingMessage,
         error,
@@ -261,6 +285,8 @@ export const CheckoutProvider = ({ children }: { children: ReactNode }) => {
         refreshOrders,
         showBlockingNotification,
         dismissBlockingNotification,
+        setOperator,
+        clearOperator,
         savePartialOrder,
         finalizeOrder,
         createPendingBalance,

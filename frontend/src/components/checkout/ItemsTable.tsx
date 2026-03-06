@@ -9,7 +9,7 @@ import ModalAddProduct from '../modals/checkout/ModalAddProduct';
 import ModalReplaceProduct from '../modals/checkout/ModalReplaceProduct';
 
 const ItemsTable: React.FC = () => {
-  const { selectedOrder, processBarcode, selectOrder } = useCheckout();
+  const { selectedOrder, selectedOperator, processBarcode, selectOrder } = useCheckout();
 
   const [showReplaceModal, setShowReplaceModal] = useState(false);
   const [itemToReplace, setItemToReplace] = useState<OrderItem | null>(null);
@@ -38,6 +38,7 @@ const ItemsTable: React.FC = () => {
         await api.post('/api/checkout/salvar-parcial', {
           orderId: selectedOrder.id,
           items: selectedOrder.items,
+          operadorId: selectedOperator?.id || null,
         });
       } catch (err) {
         console.error('Erro ao salvar progresso antes da substituição:', err);
