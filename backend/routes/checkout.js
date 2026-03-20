@@ -469,7 +469,7 @@ router.post('/finalizar', autenticarToken, async (req, res) => {
 });
 
 router.post('/substituir-produto', autenticarToken, async (req, res) => {
-    const { orderId, oldSku, newProductSku, newQuantity } = req.body;
+    const { orderId, oldSku, newProductSku, newQuantity, operadorId } = req.body;
 
     console.log(`[checkout] Substituição: Pedido ${orderId}, SKU antigo: ${oldSku}, SKU novo: ${newProductSku}, Nova qtd: ${newQuantity || 'manter original'}`);
 
@@ -695,6 +695,17 @@ router.post('/substituir-produto', autenticarToken, async (req, res) => {
         }
 
         console.log(`[checkout] Produto substituído com sucesso: ${oldSku} -> ${newProductSku}`);
+
+        await db.query(
+            'INSERT INTO checkout_log (pedido_id, operador_id, acao, numero_pedido, total_skus, total_itens, detalhes) VALUES ($1, $2, $3, (SELECT numero FROM cache_pedidos WHERE id = $4), $5, $6, $7)',
+            [orderId, operadorId || null, 'substituicao_produto', orderId, 1, qtdParaNovoItem, JSON.stringify({
+                skuAntigo: oldSku,
+                nomeAntigo: itemAntigo.descricao || oldSku,
+                skuNovo: novoProduto.codigo,
+                nomeNovo: novoProduto.nome,
+                quantidade: qtdParaNovoItem
+            })]
+        );
 
         res.json({
             success: true,
@@ -1367,6 +1378,128 @@ router.delete('/operadores/:id', autenticarToken, async (req, res) => {
     } catch (error) {
         console.error('Erro ao desativar operador:', error.message);
         res.status(500).json({ mensagem: 'Erro ao desativar operador' });
+    }
+});
+
+router.get('/relatorio', autenticarToken, async (req, res) => {
+    const { dataInicio, dataFim, operadorId } = req.query;
+
+    const inicio = dataInicio || new Date().toISOString().split('T')[0];
+    const fim = dataFim || new Date().toISOString().split('T')[0];
+
+    try {
+        const resumoQuery = `
+            SELECT 
+                COUNT(*) FILTER (WHERE acao = 'finalizar') as total_finalizados,
+                COALESCE(SUM(total_itens) FILTER (WHERE acao = 'finalizar'), 0) as total_itens_conferidos,
+                COUNT(DISTINCT pedido_id) FILTER (WHERE acao = 'finalizar') as pedidos_distintos
+            FROM checkout_log
+            WHERE criado_em::date BETWEEN $1 AND $2
+            ${operadorId ? 'AND operador_id = $3' : ''}
+        `;
+        const resumoParams = operadorId ? [inicio, fim, operadorId] : [inicio, fim];
+        const { rows: [resumo] } = await db.query(resumoQuery, resumoParams);
+
+        const tempoQuery = `
+            SELECT 
+                AVG(EXTRACT(EPOCH FROM (f.criado_em - i.criado_em))) as tempo_medio_segundos
+            FROM checkout_log f
+            JOIN checkout_log i ON i.pedido_id = f.pedido_id AND i.acao = 'iniciar_checkout'
+            WHERE f.acao = 'finalizar'
+            AND f.criado_em::date BETWEEN $1 AND $2
+            ${operadorId ? 'AND f.operador_id = $3' : ''}
+        `;
+        const tempoParams = operadorId ? [inicio, fim, operadorId] : [inicio, fim];
+        const { rows: [tempo] } = await db.query(tempoQuery, tempoParams);
+
+        const operadoresQuery = `
+            SELECT 
+                o.id,
+                o.nome,
+                COUNT(*) FILTER (WHERE cl.acao = 'finalizar') as pedidos_finalizados,
+                COALESCE(SUM(cl.total_itens) FILTER (WHERE cl.acao = 'finalizar'), 0) as total_itens,
+                AVG(EXTRACT(EPOCH FROM (f.criado_em - i.criado_em))) as tempo_medio_segundos
+            FROM operadores_checkout o
+            LEFT JOIN checkout_log cl ON cl.operador_id = o.id AND cl.criado_em::date BETWEEN $1 AND $2
+            LEFT JOIN checkout_log i ON i.pedido_id = cl.pedido_id AND i.acao = 'iniciar_checkout'
+            LEFT JOIN checkout_log f ON f.pedido_id = cl.pedido_id AND f.acao = 'finalizar' AND f.operador_id = cl.operador_id
+            WHERE o.ativo = true
+            GROUP BY o.id, o.nome
+            ORDER BY pedidos_finalizados DESC
+        `;
+        const { rows: operadores } = await db.query(operadoresQuery, [inicio, fim]);
+
+        const historicoQuery = `
+            SELECT 
+                cl.id,
+                cl.numero_pedido,
+                cl.acao,
+                cl.total_skus,
+                cl.total_itens,
+                cl.criado_em,
+                cl.detalhes,
+                o.nome as operador
+            FROM checkout_log cl
+            LEFT JOIN operadores_checkout o ON cl.operador_id = o.id
+            WHERE cl.criado_em::date BETWEEN $1 AND $2
+            ${operadorId ? 'AND cl.operador_id = $3' : ''}
+            ORDER BY cl.criado_em DESC
+            LIMIT 200
+        `;
+        const historicoParams = operadorId ? [inicio, fim, operadorId] : [inicio, fim];
+        const { rows: historico } = await db.query(historicoQuery, historicoParams);
+
+        const graficoDiarioQuery = `
+            SELECT 
+                cl.criado_em::date as dia,
+                o.nome as operador,
+                COUNT(*) as total
+            FROM checkout_log cl
+            LEFT JOIN operadores_checkout o ON cl.operador_id = o.id
+            WHERE cl.acao = 'finalizar'
+            AND cl.criado_em::date >= CURRENT_DATE - INTERVAL '6 days'
+            AND cl.criado_em::date <= CURRENT_DATE
+            GROUP BY cl.criado_em::date, o.nome
+            ORDER BY dia ASC, total DESC
+        `;
+        const { rows: graficoDiarioRaw } = await db.query(graficoDiarioQuery);
+
+        const graficoDiario = [];
+        const diasMap = {};
+        for (const row of graficoDiarioRaw) {
+            const dia = row.dia.toISOString().split('T')[0];
+            if (!diasMap[dia]) {
+                diasMap[dia] = { dia, total: 0, operadores: [] };
+                graficoDiario.push(diasMap[dia]);
+            }
+            diasMap[dia].total += parseInt(row.total);
+            diasMap[dia].operadores.push({ nome: row.operador || 'Sem operador', total: parseInt(row.total) });
+        }
+
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            const dia = d.toISOString().split('T')[0];
+            if (!diasMap[dia]) {
+                graficoDiario.push({ dia, total: 0, operadores: [] });
+            }
+        }
+        graficoDiario.sort((a, b) => a.dia.localeCompare(b.dia));
+
+        res.json({
+            resumo: {
+                totalFinalizados: parseInt(resumo.total_finalizados) || 0,
+                totalItensConferidos: parseInt(resumo.total_itens_conferidos) || 0,
+                tempoMedioSegundos: parseFloat(tempo.tempo_medio_segundos) || 0,
+            },
+            operadores,
+            historico,
+            graficoDiario,
+        });
+
+    } catch (error) {
+        console.error('Erro ao buscar relatório:', error.message);
+        res.status(500).json({ mensagem: 'Erro ao buscar relatório' });
     }
 });
 

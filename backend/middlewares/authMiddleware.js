@@ -17,7 +17,6 @@ function autenticarToken(req, res, next) {
     return res.status(401).json({ mensagem: 'Token não fornecido' });
   }
 
-  // 4) Verifica o JWT
   jwt.verify(token, SECRET_KEY_JWT, (err, decoded) => {
     if (err) {
       return res.status(403).json({ mensagem: 'Token inválido ou expirado' });
