@@ -16,7 +16,9 @@ const ItemsTable: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
 
   const pendingItems = selectedOrder
-    ? selectedOrder.items.filter((item) => item.quantityChecked < item.quantityOrdered)
+    ? selectedOrder.items
+      .filter((item) => item.quantityChecked < item.quantityOrdered)
+      .sort((a, b) => a.name.localeCompare(b.name))
     : [];
 
   const headerStyle = {
@@ -206,6 +208,7 @@ const ItemsTable: React.FC = () => {
         show={showReplaceModal}
         onHide={() => setShowReplaceModal(false)}
         orderId={selectedOrder?.id || ''}
+        operadorId={selectedOperator?.id || null}
         currentProduct={
           itemToReplace
             ? {

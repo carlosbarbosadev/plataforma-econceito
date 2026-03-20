@@ -26,6 +26,7 @@ type ModalReplaceProductProps = {
     orderId: string;
     currentProduct: CurrentProduct | null;
     onReplaceSuccess: () => void;
+    operadorId?: number | null;
 };
 
 export default function ModalReplaceProduct({
@@ -34,6 +35,7 @@ export default function ModalReplaceProduct({
     orderId,
     currentProduct,
     onReplaceSuccess,
+    operadorId,
 }: ModalReplaceProductProps) {
     const [selectedProduct, setSelectedProduct] = useState<ProductOption | null>(null);
     const [newQuantity, setNewQuantity] = useState<number>(1);
@@ -82,6 +84,7 @@ export default function ModalReplaceProduct({
                 oldSku: currentProduct.sku,
                 newProductSku: selectedProduct.codigo,
                 newQuantity,
+                operadorId: operadorId || null,
             });
 
             onReplaceSuccess();

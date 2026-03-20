@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FiUser } from 'react-icons/fi';
 import { Spinner, Alert } from 'react-bootstrap';
 
@@ -9,11 +9,13 @@ import BlockingNotification from 'src/components/checkout/BlockingNotification';
 import OrdersBar from '../../components/checkout/OrdersBar';
 import ItemsTable from '../../components/checkout/ItemsTable';
 import ScannerInput from '../../components/checkout/ScannerInput';
+import OperatorReports from '../../components/checkout/OperatorReports';
 import OperatorSelector from '../../components/checkout/OperatorSelector';
 import { CheckoutProvider, useCheckout } from '../../context/CheckoutContext';
 
 const CheckoutContent: React.FC = () => {
   const { loading, error, selectedOperator, setOperator, clearOperator } = useCheckout();
+  const [showReports, setShowReports] = useState(false);
 
   if (loading) {
     return (
@@ -36,7 +38,8 @@ const CheckoutContent: React.FC = () => {
   if (!selectedOperator) {
     return (
       <div className="min-vh-100 bg-light">
-        <OperatorSelector onSelect={setOperator} />
+        <OperatorSelector onSelect={setOperator} onOpenReports={() => setShowReports(true)} />
+        {showReports && <OperatorReports onClose={() => setShowReports(false)} />}
       </div>
     );
   }
