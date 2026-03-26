@@ -143,6 +143,8 @@ const mapSituacaoPedido = (idSituacao?: number): string => {
       return 'Natal 2025';
     case 710186:
       return 'Venda Páscoa 2026';
+    case 56755:
+      return 'Dia das Mães e Namorados'
     case 718171:
       return 'Checkout incompleto';
     case 722370:
@@ -179,6 +181,8 @@ const getSituacaoBadgeStyle = (idSituacao?: number): React.CSSProperties => {
       return { ...baseStyle, backgroundColor: '#def3fc', color: '#0680c4' };
     case 710186:
       return { ...baseStyle, backgroundColor: '#64f2e1', color: '#000029' };
+    case 56755:
+      return { ...baseStyle, backgroundColor: '#ff70a9', color: '#ffffff' };
     case 718171:
       return { ...baseStyle, backgroundColor: '#72a59f', color: '#ffffff' };
     case 722370:
@@ -685,6 +689,10 @@ export default function PedidosView() {
                   <option value="49956">Venda consignada</option>
                   <option value="24">Verificado</option>
                   <option value="710186">Páscoa 2026</option>
+                  <option value="722370">Saldo Pendente</option>
+                  <option value="718171">Checkout Incompleto</option>
+                  <option value="718183">Checkout Completo</option>
+                  <option value="56755">Dia das Mães e Namorados</option>
                 </Form.Select>
               </Form.Group>
             </Col>
@@ -857,8 +865,9 @@ export default function PedidosView() {
                           <option value="6">Em aberto</option>
                           <option value="47722">Orçamento</option>
                           <option value="710186">Venda Páscoa 2026</option>
+                          <option value="56755">Dia das Mães e Namorados</option>
 
-                          {![6, 47722, 710186].includes(selectedPedidoDetalhes?.situacao.id || 0) && (
+                          {![6, 47722, 710186, 56755].includes(selectedPedidoDetalhes?.situacao.id || 0) && (
                             <option value={selectedPedidoDetalhes?.situacao.id}>
                               {mapSituacaoPedido(selectedPedidoDetalhes?.situacao.id)}
                             </option>
@@ -868,7 +877,7 @@ export default function PedidosView() {
                     </Col>
                   </Row>
 
-                  <h6 style={{ fontWeight: 'bold' }} className="mt-5">
+                  <h6 style={{ fontWeight: 'bold' }} className="mt-5 mb-2">
                     Itens do pedido
                   </h6>
                   {editedPedido?.itens && editedPedido.itens.length > 0 ? (
@@ -1197,105 +1206,103 @@ export default function PedidosView() {
                     </div>
                   )}
 
-                  <div className="mt-3">
-                    <h6 style={{ fontWeight: 'bold' }}>Totais</h6>
-                    {totais && (
-                      <Row>
-                        <Col md={3}>
-                          <Form.Group>
-                            <Form.Label className="small text-muted">Nº de itens</Form.Label>
+                  <h6 style={{ fontWeight: 'bold', marginTop: '40px' }}>Totais</h6>
+                  {totais && (
+                    <Row>
+                      <Col md={3}>
+                        <Form.Group>
+                          <Form.Label className="small text-muted">Nº de itens</Form.Label>
+                          <Form.Control
+                            type="text"
+                            readOnly
+                            disabled
+                            value={totais.numeroDeItens}
+                          />
+                        </Form.Group>
+                      </Col>
+
+                      <Col md={3}>
+                        <Form.Group>
+                          <Form.Label className="small text-muted">Soma das quantidades</Form.Label>
+                          <Form.Control
+                            type="text"
+                            readOnly
+                            disabled
+                            value={totais.somaDasQuantidades.toLocaleString('pt-BR', {
+                              minimumFractionDigits: 2,
+                            })}
+                          />
+                        </Form.Group>
+                      </Col>
+
+                      <Col md={3}>
+                        <Form.Group>
+                          <Form.Label className="small text-muted">Desconto (%)</Form.Label>
+                          <InputGroup>
                             <Form.Control
                               type="text"
-                              readOnly
-                              disabled
-                              value={totais.numeroDeItens}
-                            />
-                          </Form.Group>
-                        </Col>
+                              readOnly={!isOrderEditable}
+                              disabled={!isOrderEditable}
+                              value={
+                                editingDesconto !== null
+                                  ? editingDesconto
+                                  : editedPedido?.desconto?.valor || 0
+                              }
+                              onFocus={(e) => {
+                                if (!isOrderEditable) return;
+                                setEditingDesconto(String(editedPedido?.desconto?.valor || 0));
+                                e.target.select();
+                              }}
+                              onChange={(e) => {
+                                setEditingDesconto(e.target.value);
+                              }}
+                              onBlur={() => {
+                                if (editingDesconto === null) return;
 
-                        <Col md={3}>
-                          <Form.Group>
-                            <Form.Label className="small text-muted">Soma das quantidades</Form.Label>
-                            <Form.Control
-                              type="text"
-                              readOnly
-                              disabled
-                              value={totais.somaDasQuantidades.toLocaleString('pt-BR', {
-                                minimumFractionDigits: 2,
-                              })}
-                            />
-                          </Form.Group>
-                        </Col>
+                                const novoPercentual =
+                                  parseFloat(editingDesconto.replace(',', '.')) || 0;
 
-                        <Col md={3}>
-                          <Form.Group>
-                            <Form.Label className="small text-muted">Desconto (%)</Form.Label>
-                            <InputGroup>
-                              <Form.Control
-                                type="text"
-                                readOnly={!isOrderEditable}
-                                disabled={!isOrderEditable}
-                                value={
-                                  editingDesconto !== null
-                                    ? editingDesconto
-                                    : editedPedido?.desconto?.valor || 0
+                                if (editedPedido) {
+                                  setEditedPedido({
+                                    ...editedPedido,
+                                    desconto: {
+                                      valor: novoPercentual,
+                                      unidade: 'PORCENTAGEM',
+                                    },
+                                  });
                                 }
-                                onFocus={(e) => {
-                                  if (!isOrderEditable) return;
-                                  setEditingDesconto(String(editedPedido?.desconto?.valor || 0));
-                                  e.target.select();
-                                }}
-                                onChange={(e) => {
-                                  setEditingDesconto(e.target.value);
-                                }}
-                                onBlur={() => {
-                                  if (editingDesconto === null) return;
 
-                                  const novoPercentual =
-                                    parseFloat(editingDesconto.replace(',', '.')) || 0;
-
-                                  if (editedPedido) {
-                                    setEditedPedido({
-                                      ...editedPedido,
-                                      desconto: {
-                                        valor: novoPercentual,
-                                        unidade: 'PORCENTAGEM',
-                                      },
-                                    });
-                                  }
-
-                                  setEditingDesconto(null);
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    (e.target as HTMLInputElement).blur();
-                                  }
-                                }}
-                              />
-                            </InputGroup>
-                          </Form.Group>
-                        </Col>
-
-                        <Col md={3}>
-                          <Form.Group>
-                            <Form.Label className="small text-muted">Total do pedido</Form.Label>
-                            <Form.Control
-                              type="text"
-                              readOnly
-                              disabled
-                              className="fw-bold"
-                              value={totais
-                                .totalDaVenda()
-                                .toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                setEditingDesconto(null);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  (e.target as HTMLInputElement).blur();
+                                }
+                              }}
                             />
-                          </Form.Group>
-                        </Col>
-                      </Row>
-                    )}
-                  </div>
+                          </InputGroup>
+                        </Form.Group>
+                      </Col>
+
+                      <Col md={3}>
+                        <Form.Group>
+                          <Form.Label className="small text-muted">Total do pedido</Form.Label>
+                          <Form.Control
+                            type="text"
+                            readOnly
+                            disabled
+                            className="fw-bold"
+                            value={totais
+                              .totalDaVenda()
+                              .toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                          />
+                        </Form.Group>
+                      </Col>
+                    </Row>
+                  )}
 
                   {editedPedido && (
-                    <div className="mt-5">
+                    <div className="mt-4">
                       <h6 style={{ fontWeight: 'bold' }}>Pagamento</h6>
 
                       {isOrderEditable && (
@@ -1388,7 +1395,7 @@ export default function PedidosView() {
                   )}
 
                   <>
-                    <h6 style={{ fontWeight: 'bold' }} className="mt-5">
+                    <h6 style={{ fontWeight: 'bold' }} className="mt-4">
                       Observações
                     </h6>
                     <Form.Group>
@@ -1407,7 +1414,7 @@ export default function PedidosView() {
                     </Form.Group>
                   </>
                   <>
-                    <h6 style={{ fontWeight: 'bold' }} className="mt-3">
+                    <h6 style={{ fontWeight: 'bold' }} className="mt-4">
                       Observações internas
                     </h6>
                     <Form.Group>
