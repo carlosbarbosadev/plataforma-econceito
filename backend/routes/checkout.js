@@ -631,7 +631,7 @@ router.post('/substituir-produto', autenticarToken, async (req, res) => {
                                 tipo: 'P'
                             });
                         }
-                        await sleep(200);
+                        await sleep(350);
                     }
                 }
 
@@ -842,7 +842,7 @@ router.post('/adicionar-produto', autenticarToken, async (req, res) => {
                                 tipo: 'P'
                             });
                         }
-                        await sleep(200);
+                        await sleep(350);
                     }
                 }
 
@@ -1175,7 +1175,7 @@ router.post('/saldo-pendente', autenticarToken, async (req, res) => {
                                 tipo: 'P'
                             });
                         }
-                        await sleep(200);
+                        await sleep(350);
                     }
                 }
 
@@ -1191,6 +1191,7 @@ router.post('/saldo-pendente', autenticarToken, async (req, res) => {
                     });
 
                     const novoPedidoConceptPayload = {
+                        numero: novoPedidoCompleto.numero,
                         data: dataHoje,
                         dataSaida: dataHoje,
                         ...(clienteIdConcept && { contato: { id: clienteIdConcept } }),
@@ -1235,7 +1236,7 @@ router.post('/saldo-pendente', autenticarToken, async (req, res) => {
                                     tipo: 'P'
                                 });
                             }
-                            await sleep(200);
+                            await sleep(350);
                         }
                     }
 

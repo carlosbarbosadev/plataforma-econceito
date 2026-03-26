@@ -420,7 +420,7 @@ router.post('/', autenticarToken, async (req, res) => {
                     throw new Error(`O produto SKU "${sku}" (${itemReal.descricao}) não foi encontrado na conta Concept. Cadastre-o lá com o mesmo código.`);
                 }
 
-                await new Promise(r => setTimeout(r, 200));
+                await new Promise(r => setTimeout(r, 350));
             }
 
             pedidoSecundario.itens = itensTraduzidos;
@@ -710,7 +710,7 @@ router.put('/:id', autenticarToken, async (req, res) => {
                                 tipo: 'P'
                             });
                         }
-                        await sleep(200);
+                        await sleep(350);
                     }
                 }
 

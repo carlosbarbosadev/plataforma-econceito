@@ -94,9 +94,12 @@ async function refreshBlingAccessToken(nomeConta = 'conceitofestas') {
 }
 
 /**
- * Função central que faz a chamada à API, com renovação automática de token.
+ * Função central que faz a chamada à API, com renovação automática de token
+ * e retry automático em caso de rate limit (429).
  */
-async function blingApiCall(requestConfig, nomeConta = 'conceitofestas') {
+async function blingApiCall(requestConfig, nomeConta = 'conceitofestas', tentativa = 1) {
+    const MAX_RETRIES_429 = 3;
+
     try {
         const accessToken = await getAccessToken(nomeConta);
 
@@ -108,6 +111,7 @@ async function blingApiCall(requestConfig, nomeConta = 'conceitofestas') {
         return await axios(requestConfig);
 
     } catch (error) {
+        // Tratamento de token expirado (401)
         if (error.response && error.response.status === 401) {
             if (!isRefreshing) {
                 isRefreshing = true;
@@ -125,9 +129,18 @@ async function blingApiCall(requestConfig, nomeConta = 'conceitofestas') {
                 console.log('Aguardando renovação de token que já está em andamento...');
                 await new Promise(resolve => setTimeout(resolve, 2000));
 
-                return blingApiCall(requestConfig, nomeConta);
+                return blingApiCall(requestConfig, nomeConta, tentativa);
             }
         }
+
+        // Tratamento de rate limit (429)
+        if (error.response && error.response.status === 429 && tentativa <= MAX_RETRIES_429) {
+            const delay = tentativa * 1000; // 1s, 2s, 3s
+            console.warn(`[Bling 429] Rate limit na conta ${nomeConta} (tentativa ${tentativa}/${MAX_RETRIES_429}). Aguardando ${delay}ms... URL: ${requestConfig.url}`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            return blingApiCall(requestConfig, nomeConta, tentativa + 1);
+        }
+
         throw error;
     }
 }
