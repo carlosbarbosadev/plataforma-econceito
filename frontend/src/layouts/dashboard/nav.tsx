@@ -135,8 +135,13 @@ export function NavContent({ data, slots, workspaces, sx }: NavContentProps) {
             }}
           >
             {data.map((item) => {
-              if (item.roles && item.roles.includes('admin') && !isAdmin) {
-                return null;
+              if (item.roles) {
+                const userPermissions = (user.permissions || []).map((p: string) => p.toLowerCase());
+                const hasAccess = item.roles.some((role) => {
+                  if (role === 'admin') return isAdmin;
+                  return userPermissions.includes(role);
+                });
+                if (!hasAccess) return null;
               }
               const isActived = item.path === pathname;
 

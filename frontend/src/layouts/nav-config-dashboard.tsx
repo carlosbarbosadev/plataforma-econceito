@@ -46,4 +46,11 @@ export const navData: NavItem[] = [
     bgcolor: '#f66c1d',
     roles: ['admin'],
   },
+  {
+    title: 'CRM',
+    path: '/crm',
+    icon: <img src="/assets/icons/glass/crm.svg" width="24" alt="CRM" />,
+    bgcolor: '#E91E63',
+    roles: ['crm'],
+  },
 ];

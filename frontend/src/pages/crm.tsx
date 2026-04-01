@@ -297,11 +297,12 @@ export default function CRMPage() {
   if (loading) {
     return (
       <Container
-        fluid
         className="d-flex justify-content-center align-items-center"
-        style={{ minHeight: '400px' }}
+        style={{ minHeight: 'calc(100vh - 200px)' }}
       >
-        <Spinner animation="border" variant="primary" />
+        <Spinner animation="border" role="status">
+          <span className="visually-hidden">Carregando...</span>
+        </Spinner>
       </Container>
     );
   }

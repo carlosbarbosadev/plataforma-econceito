@@ -71,14 +71,22 @@ router.post('/login', async (req, res) => {
 
     const token = jwt.sign(payload, secretKey, { expiresIn: '7d' }); // Token expira em 7 dias
 
+    // Buscar permissões do usuário
+    const permResult = await db.query(
+      'SELECT module_name FROM user_permissions WHERE user_id = $1',
+      [usuario.id]
+    );
+    const permissions = permResult.rows.map(r => r.module_name);
+
     res.json({
       mensagem: 'Login bem-sucedido!',
       token: token,
-      usuario: { // Opcional: enviar alguns dados do usuário de volta para o frontend
+      usuario: {
         id: usuario.id,
         email: usuario.email,
         nome: usuario.nome,
-        tipo: usuario.tipo_usuario
+        tipo: usuario.tipo_usuario,
+        permissions: permissions
       }
     });
 
