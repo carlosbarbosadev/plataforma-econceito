@@ -532,8 +532,9 @@ body.modal-open .desktop-sidebar {
 }
 
 .form-style {
-  font-size: 1.0rem;
-  border-radius: 4px;
+  font-size: 13px;
+  border-radius: 8px;
+  border: 1px solid #ccd4e0;
 }
 
 /* ######## BUTTONS ######## */
@@ -718,7 +719,7 @@ body.modal-open .desktop-sidebar {
 }
 
 .meu-modal-custom2 .modal-title {
-  color: #282829;
+  color: #495769;
   font-weight: 700;
 }
 
@@ -856,4 +857,55 @@ body.modal-open .desktop-sidebar {
 #filtro-pascoa:focus {
   box-shadow: none;
   border-color: #5cd4ff;
+}
+
+/* Força o fundo escuro e os modals do Bootstrap a ficarem por cima do Header */
+.modal-backdrop {
+  z-index: 1300 !important;
+}
+
+.modal {
+  z-index: 1305 !important;
+}
+
+/* Modal Section Titles */
+.section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #495769;
+}
+
+/* Modal Field Labels */
+.field-label {
+  font-size: 12px;
+  color: #495769;
+  font-weight: 400;
+  /* Padrão elegante para pequenos rótulos */
+}
+
+/* Estilo padrão para os inputs e selects dentro do modal de pedidos */
+.form-pequeno .form-control,
+.form-pequeno .form-select {
+  font-size: 13px;
+  border-radius: 8px;
+  border: 1px solid #ccd5e0;
+}
+
+/* Input completamente invisível (usado no campo de busca de novo item) */
+.input-invisivel,
+.input-invisivel:focus,
+.input-invisivel:active,
+.form-pequeno .input-invisivel,
+.form-pequeno .input-invisivel:focus,
+.form-pequeno .input-invisivel:active,
+.form-pequeno .form-control.input-invisivel,
+.form-pequeno .form-control.input-invisivel:focus {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  height: auto !important;
+  line-height: inherit !important;
 }

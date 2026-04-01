@@ -158,10 +158,19 @@ const mapSituacaoPedido = (idSituacao?: number): string => {
 
 const getSituacaoBadgeStyle = (idSituacao?: number): React.CSSProperties => {
   const baseStyle: React.CSSProperties = {
-    fontSize: '0.8em',
-    padding: '0.5em 0.75em',
+    fontFamily: 'Arial, sans-serif',
+    fontSize: '11px',
+    fontWeight: 700,
+    lineHeight: '17px',
+    height: '18px',
+    padding: '0px 8px',
+    display: 'inline-block',
+    boxSizing: 'border-box',
+    maxWidth: '150px',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
     color: '#fff',
-    fontWeight: 600,
   };
 
   switch (idSituacao) {
@@ -223,6 +232,7 @@ export default function PedidosView() {
   const [showUnsaveChangesModal, setShowUnsavedChangesModal] = useState(false);
   const [editingDesconto, setEditingDesconto] = useState<string | null>(null);
   const [isAddingItem, setIsAddingItem] = useState(false);
+  const [newlyAddedItemId, setNewlyAddedItemId] = useState<number | null>(null);
   const [newItemSearchTerm, setNewItemSearchTerm] = useState('');
   const [isLoadingSearch, setIsLoadingSearch] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -475,6 +485,7 @@ export default function PedidosView() {
       itens: [...editedPedido.itens, novoItem],
     });
 
+    setNewlyAddedItemId(novoItem.id);
     setIsAddingItem(false);
     setNewItemSearchTerm('');
   };
@@ -639,6 +650,9 @@ export default function PedidosView() {
 
   return (
     <>
+      <style>
+        {`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;400;500;600;700;800&display=swap');`}
+      </style>
       <title>Pedidos - GoStratto</title>
       <Container className="mt-4">
         <div
@@ -659,7 +673,7 @@ export default function PedidosView() {
         </div>
         <Form onSubmit={handleSearchSubmit}>
           <Row className="align-items-end">
-            <Col md={5}>
+            <Col md={3}>
               <Form.Group className="mb-4">
                 <Form.Control
                   type="text"
@@ -703,31 +717,31 @@ export default function PedidosView() {
         )}
 
         {pedidos.length > 0 && (
-          <Table striped hover responsive className="table-style">
+          <Table hover responsive className="table-style">
             <thead>
               <tr>
                 {/* <th>{headerId}</th> Removido */}
-                <th className="fw-normal small text-muted" style={{ width: '6%', fontSize: '0.8em' }}>
+                <th className="fw-normal small text-muted" style={{ width: '8%', fontSize: '11px' }}>
                   {headerNumero}
                 </th>
                 <th
                   className="fw-normal small text-muted"
-                  style={{ width: '18%', fontSize: '0.8em' }}
+                  style={{ width: '15%', fontSize: '11px' }}
                 >
                   {headerData}
                 </th>
                 <th
                   className="fw-normal small text-muted"
-                  style={{ width: '45%', fontSize: '0.8em' }}
+                  style={{ width: '42%', fontSize: '11px' }}
                 >
                   {headerCliente}
                 </th>
-                <th className="fw-normal small text-muted" style={{ width: '5%', fontSize: '0.8em' }}>
+                <th className="fw-normal small text-muted" style={{ textAlign: 'right', width: '12%', fontSize: '11px' }}>
                   {headerTotal}
                 </th>
                 <th
                   className="fw-normal small text-muted"
-                  style={{ textAlign: 'center', width: '30%', fontSize: '0.8em' }}
+                  style={{ textAlign: 'left', width: '18%', paddingLeft: '24px', fontSize: '11px' }}
                 >
                   {headerSituacao}
                 </th>
@@ -741,13 +755,13 @@ export default function PedidosView() {
                   onClick={() => handleVerDetalhesPedido(pedido.id)}
                   style={{ cursor: 'pointer' }}
                 >
-                  <td style={{ fontSize: '0.9em' }}>{pedido.numero}</td>
-                  <td style={{ fontSize: '0.9em' }}>{pedido.data_pedido}</td>
-                  <td style={{ fontSize: '0.9em' }}>{pedido.cliente_nome}</td>
-                  <td style={{ fontSize: '0.9em' }}>
-                    {pedido.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  <td style={{ fontSize: '13px', verticalAlign: 'middle' }}>{pedido.numero}</td>
+                  <td style={{ fontSize: '13px', verticalAlign: 'middle' }}>{pedido.data_pedido}</td>
+                  <td style={{ fontSize: '13px', verticalAlign: 'middle' }}>{pedido.cliente_nome}</td>
+                  <td style={{ textAlign: 'right', fontSize: '13px', verticalAlign: 'middle' }}>
+                    {pedido.total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
-                  <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
+                  <td style={{ textAlign: 'left', paddingLeft: '24px', verticalAlign: 'middle' }}>
                     <span
                       className="badge rounded-pill"
                       style={getSituacaoBadgeStyle(pedido.status_id)}
@@ -759,10 +773,11 @@ export default function PedidosView() {
                   <td className="text-center align-middle">
                     <Dropdown onClick={(e) => e.stopPropagation()}>
                       <Dropdown.Toggle as={CustomToggle} id={`dropdown-custom-${pedido.id}`}>
-                        <Iconify icon="eva:more-vertical-fill" width={20} />
+                        <img src="/assets/icons/glass/dots-vertical.svg" alt="Opções" width={20} height={20} />
                       </Dropdown.Toggle>
-                      <Dropdown.Menu>
+                      <Dropdown.Menu style={{ border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', borderRadius: '5px', padding: '8px 0' }}>
                         <Dropdown.Item
+                          style={{ fontSize: '13px' }}
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDownloadPdf(pedido.id);
@@ -782,10 +797,6 @@ export default function PedidosView() {
                           ) : (
                             <>Baixar cópia do pedido</>
                           )}
-                        </Dropdown.Item>
-                        <Dropdown.Divider />
-                        <Dropdown.Item href="#/action-3" className="text-danger">
-                          Ação Perigosa
                         </Dropdown.Item>
                       </Dropdown.Menu>
                     </Dropdown>
@@ -820,12 +831,12 @@ export default function PedidosView() {
               )}
               {!loadingDetalhes && !errorDetalhes && selectedPedidoDetalhes && (
                 <div className="form-pequeno">
-                  <h6 style={{ fontWeight: 'bold' }}>Dados do cliente</h6>
+                  <h6 className="section-title">Dados do cliente</h6>
 
                   <Row className="mb-3">
                     <Col md={5}>
                       <Form.Group>
-                        <Form.Label style={{ fontSize: '0.8rem' }}>Cliente</Form.Label>
+                        <Form.Label className="field-label">Cliente</Form.Label>
                         <Form.Control
                           type="text"
                           name="contato.nome"
@@ -840,7 +851,7 @@ export default function PedidosView() {
 
                     <Col md={3}>
                       <Form.Group>
-                        <Form.Label style={{ fontSize: '0.8rem' }}>Data da venda</Form.Label>
+                        <Form.Label className="field-label">Data da venda</Form.Label>
                         <Form.Control
                           type="text"
                           readOnly
@@ -856,7 +867,7 @@ export default function PedidosView() {
 
                     <Col md={4}>
                       <Form.Group>
-                        <Form.Label style={{ fontSize: '0.8rem' }}>Status do pedido</Form.Label>
+                        <Form.Label className="field-label">Status do pedido</Form.Label>
                         <Form.Select
                           value={editedPedido?.situacao.id || ''}
                           disabled={!isOrderEditable}
@@ -877,7 +888,7 @@ export default function PedidosView() {
                     </Col>
                   </Row>
 
-                  <h6 style={{ fontWeight: 'bold' }} className="mt-5 mb-2">
+                  <h6 className="section-title mt-5 mb-2">
                     Itens do pedido
                   </h6>
                   {editedPedido?.itens && editedPedido.itens.length > 0 ? (
@@ -919,13 +930,14 @@ export default function PedidosView() {
                                 <div
                                   style={{
                                     border: '1px solid #dee2e6',
-                                    borderRadius: '5px',
-                                    padding: '0.3rem',
+                                    borderRadius: '8px',
+                                    padding: isOrderEditable ? '0.1rem' : '0.4rem 0.3rem',
                                     paddingRight: isOrderEditable ? '45px' : '0.4rem',
+                                    fontSize: '13px',
                                   }}
                                 >
                                   <Row className="align-items-center h-100 d-flex">
-                                    <Col className="pe-3 flex-grow-1 border-end">
+                                    <Col className="pe-3 flex-grow-1 border-end" style={{ paddingLeft: isOrderEditable ? '24px' : '21px' }}>
                                       <div>{item.descricao}</div>
                                     </Col>
 
@@ -948,6 +960,15 @@ export default function PedidosView() {
                                       <span className="d-md-none fw-bold">Quantidade </span>
                                       {isOrderEditable ? (
                                         <Form.Control
+                                          ref={(el: HTMLInputElement | null) => {
+                                            if (newlyAddedItemId === item.id && el) {
+                                              setTimeout(() => {
+                                                el.focus();
+                                                el.select();
+                                                setNewlyAddedItemId(null);
+                                              }, 100);
+                                            }
+                                          }}
                                           type="text"
                                           size="sm"
                                           value={
@@ -973,15 +994,13 @@ export default function PedidosView() {
                                               e.currentTarget.blur();
                                             }
                                           }}
+                                          className="input-invisivel"
                                           style={{
-                                            background: 'none',
-                                            border: 'none',
-                                            boxShadow: 'none',
                                             textAlign: 'left',
                                             width: '100%',
                                             minWidth: '70px',
                                             color: 'inherit',
-                                            fontSize: '0.90rem',
+                                            fontSize: '13px',
                                           }}
                                         />
                                       ) : (
@@ -1048,7 +1067,7 @@ export default function PedidosView() {
                       })}
 
                       {isAddingItem && editedPedido && (
-                        <ListGroup.Item className="px-0">
+                        <ListGroup.Item className="px-0" style={{ border: 0 }}>
                           <Row className="align-items-center g-2">
                             <Col
                               xs="auto"
@@ -1075,52 +1094,53 @@ export default function PedidosView() {
                               <div
                                 style={{
                                   border: '1px solid #dee2e6',
-                                  borderRadius: '0.5rem',
+                                  borderRadius: '8px',
                                   padding: '0.4rem',
+                                  paddingRight: '45px',
+                                  position: 'relative',
+                                  fontSize: '13px',
                                 }}
                               >
                                 <Row className="align-items-center h-100 d-flex">
-                                  <Col
-                                    xs={12}
-                                    md={4}
-                                    className="pe-3"
-                                    style={{ borderRight: '1px solid #dee2e6' }}
-                                  >
-                                    <InputGroup>
-                                      <Form.Control
-                                        type="text"
-                                        placeholder="Pesquise por código ou descrição"
-                                        className="border-0 shadow-none"
-                                        value={newItemSearchTerm}
-                                        onChange={(e) => setNewItemSearchTerm(e.target.value)}
-                                        autoFocus
-                                      />
-                                    </InputGroup>
+                                  <Col className="pe-3 flex-grow-1 border-end" style={{ paddingLeft: '19px' }}>
+                                    <Form.Control
+                                      type="text"
+                                      placeholder="Pesquise por código ou descrição"
+                                      className="input-invisivel"
+                                      style={{ fontSize: '13px', padding: 0 }}
+                                      value={newItemSearchTerm}
+                                      onChange={(e) => setNewItemSearchTerm(e.target.value)}
+                                      autoFocus
+                                    />
                                   </Col>
+
                                   <Col
                                     xs={6}
                                     md={2}
                                     className="px-3"
                                     style={{ borderRight: '1px solid #dee2e6' }}
                                   >
-                                    ㅤㅤ
+                                    ㅤ
                                   </Col>
+
                                   <Col
                                     xs={6}
                                     md={2}
                                     className="px-3"
                                     style={{ borderRight: '1px solid #dee2e6' }}
                                   >
-                                    ㅤㅤ
+                                    ㅤ
                                   </Col>
+
                                   <Col
                                     xs={6}
                                     md={2}
                                     className="px-3"
-                                    style={{ borderRight: '1px solid #e6e0deff' }}
+                                    style={{ borderRight: '1px solid #dee2e6' }}
                                   >
                                     R$ 0,00
                                   </Col>
+
                                   <Col xs={6} md={2} className="ps-3">
                                     R$ 0,00
                                   </Col>
@@ -1144,6 +1164,7 @@ export default function PedidosView() {
                                         key={produto.id}
                                         action
                                         onClick={() => handleProductSelect(produto)}
+                                        style={{ fontSize: '13px' }}
                                       >
                                         {produto.descricao} <br />
                                         <small className="text-muted">
@@ -1161,27 +1182,29 @@ export default function PedidosView() {
                               </div>
                             </Col>
 
-                            {isOrderEditable && (
-                              <Col xs="auto" className="d-flex align-items-center">
-                                <div
-                                  style={{
-                                    position: 'absolute',
-                                    right: '40px',
-                                    top: '50%',
-                                    transform: 'translateY(-50%)',
-                                  }}
+                            <Col xs="auto" className="d-flex align-items-center">
+                              <div
+                                style={{
+                                  position: 'absolute',
+                                  right: '40px',
+                                  top: '50%',
+                                  transform: 'translateY(-50%)',
+                                }}
+                              >
+                                <Button
+                                  variant="link"
+                                  size="sm"
+                                  className="p-0"
+                                  onClick={() => setIsAddingItem(false)}
                                 >
-                                  <Button
-                                    variant="link"
-                                    size="sm"
-                                    className="p-0 text-danger"
-                                    onClick={() => setIsAddingItem(false)}
-                                  >
-                                    <i className="bi bi-trash" style={{ fontSize: '1rem' }} />
-                                  </Button>
-                                </div>
-                              </Col>
-                            )}
+                                  <img
+                                    alt="Remover"
+                                    src="/assets/icons/glass/trash.svg"
+                                    style={{ width: '20px', height: '20px' }}
+                                  />
+                                </Button>
+                              </div>
+                            </Col>
                           </Row>
                         </ListGroup.Item>
                       )}
@@ -1206,12 +1229,12 @@ export default function PedidosView() {
                     </div>
                   )}
 
-                  <h6 style={{ fontWeight: 'bold', marginTop: '40px' }}>Totais</h6>
+                  <h6 className="section-title" style={{ marginTop: '40px' }}>Totais</h6>
                   {totais && (
                     <Row>
                       <Col md={3}>
                         <Form.Group>
-                          <Form.Label className="small text-muted">Nº de itens</Form.Label>
+                          <Form.Label className="field-label">Nº de itens</Form.Label>
                           <Form.Control
                             type="text"
                             readOnly
@@ -1223,7 +1246,7 @@ export default function PedidosView() {
 
                       <Col md={3}>
                         <Form.Group>
-                          <Form.Label className="small text-muted">Soma das quantidades</Form.Label>
+                          <Form.Label className="field-label">Soma das quantidades</Form.Label>
                           <Form.Control
                             type="text"
                             readOnly
@@ -1237,7 +1260,7 @@ export default function PedidosView() {
 
                       <Col md={3}>
                         <Form.Group>
-                          <Form.Label className="small text-muted">Desconto (%)</Form.Label>
+                          <Form.Label className="field-label">Desconto (%)</Form.Label>
                           <InputGroup>
                             <Form.Control
                               type="text"
@@ -1286,7 +1309,7 @@ export default function PedidosView() {
 
                       <Col md={3}>
                         <Form.Group>
-                          <Form.Label className="small text-muted">Total do pedido</Form.Label>
+                          <Form.Label className="field-label">Total do pedido</Form.Label>
                           <Form.Control
                             type="text"
                             readOnly
@@ -1303,12 +1326,12 @@ export default function PedidosView() {
 
                   {editedPedido && (
                     <div className="mt-4">
-                      <h6 style={{ fontWeight: 'bold' }}>Pagamento</h6>
+                      <h6 className="section-title">Pagamento</h6>
 
                       {isOrderEditable && (
                         <Row className="align-items-end mb-3">
                           <Col md={7}>
-                            <Form.Label className="small text-muted">
+                            <Form.Label className="field-label">
                               Condições de pagamento
                             </Form.Label>
                             <Form.Select
@@ -1336,7 +1359,7 @@ export default function PedidosView() {
                         </Row>
                       )}
 
-                      <Row className="small text-muted">
+                      <Row className="field-label">
                         <Col md={2}>Dias</Col>
                         <Col md={3}>Data</Col>
                         <Col md={2}>Valor</Col>
@@ -1395,7 +1418,7 @@ export default function PedidosView() {
                   )}
 
                   <>
-                    <h6 style={{ fontWeight: 'bold' }} className="mt-4">
+                    <h6 className="section-title mt-4">
                       Observações
                     </h6>
                     <Form.Group>
@@ -1414,7 +1437,7 @@ export default function PedidosView() {
                     </Form.Group>
                   </>
                   <>
-                    <h6 style={{ fontWeight: 'bold' }} className="mt-4">
+                    <h6 className="section-title mt-4">
                       Observações internas
                     </h6>
                     <Form.Group>
